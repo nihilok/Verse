@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: verse-db-prod
+    environment:
+      POSTGRES_USER: verse_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: verse_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U verse_user -d verse_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: verse-backend-prod
+    environment:
+      DATABASE_URL: postgresql://verse_user:${POSTGRES_PASSWORD}@db:5432/verse_db
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      ENVIRONMENT: production
+      DEBUG: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: verse-frontend-prod
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
