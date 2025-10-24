@@ -80,7 +80,7 @@ You can get an API key from [Anthropic Console](https://console.anthropic.com/).
 Run the entire application stack with Docker Compose:
 
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
 
 This will:

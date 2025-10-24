@@ -108,7 +108,7 @@ cp .env.example .env
 
 # Start application
 ./start.sh
-# Or: docker-compose up --build
+# Or: docker compose up --build
 ```
 
 #### Access Points

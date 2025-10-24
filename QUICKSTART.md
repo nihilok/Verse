@@ -9,25 +9,25 @@
 ./start.sh
 
 # Or manually with Docker Compose
-docker-compose up --build
+docker compose up --build
 ```
 
 ### Stop the Application
 
 ```bash
-docker-compose down
+docker compose down
 ```
 
 ### View Logs
 
 ```bash
 # All services
-docker-compose logs -f
+docker compose logs -f
 
 # Specific service
-docker-compose logs -f backend
-docker-compose logs -f frontend
-docker-compose logs -f db
+docker compose logs -f backend
+docker compose logs -f frontend
+docker compose logs -f db
 ```
 
 ### Access Points
@@ -121,10 +121,10 @@ lsof -i :5432  # Database
 
 ```bash
 # Check database logs
-docker-compose logs db
+docker compose logs db
 
 # Restart services
-docker-compose restart backend
+docker compose restart backend
 ```
 
 ### Issue: Frontend Can't Connect to Backend
@@ -133,7 +133,7 @@ docker-compose restart backend
 
 ```bash
 # Check backend logs
-docker-compose logs backend
+docker compose logs backend
 
 # Verify backend is accessible
 curl http://localhost:8000/health
@@ -180,47 +180,47 @@ curl http://localhost:8000/health
 
 ```bash
 # Rebuild specific service
-docker-compose build backend
+docker compose build backend
 
 # Run without cache
-docker-compose build --no-cache
+docker compose build --no-cache
 
 # Remove all containers and volumes
-docker-compose down -v
+docker compose down -v
 
 # Execute command in container
-docker-compose exec backend bash
-docker-compose exec frontend sh
+docker compose exec backend bash
+docker compose exec frontend sh
 
 # View container resource usage
-docker-compose stats
+docker compose stats
 ```
 
 ## Database Commands
 
 ```bash
 # Connect to PostgreSQL
-docker-compose exec db psql -U verse_user -d verse_db
+docker compose exec db psql -U verse_user -d verse_db
 
 # Backup database
-docker-compose exec db pg_dump -U verse_user verse_db > backup.sql
+docker compose exec db pg_dump -U verse_user verse_db > backup.sql
 
 # Restore database
-cat backup.sql | docker-compose exec -T db psql -U verse_user verse_db
+cat backup.sql | docker compose exec -T db psql -U verse_user verse_db
 ```
 
 ## Production Deployment
 
 ```bash
 # Use production compose file
-docker-compose -f docker-compose.prod.yml up --build -d
+docker compose -f docker-compose.prod.yml up --build -d
 
 # Set production environment variables
 export ANTHROPIC_API_KEY=your_key
 export POSTGRES_PASSWORD=secure_password
 
 # Check status
-docker-compose -f docker-compose.prod.yml ps
+docker compose -f docker-compose.prod.yml ps
 ```
 
 ## Monitoring
@@ -230,10 +230,10 @@ docker-compose -f docker-compose.prod.yml ps
 curl http://localhost:8000/health
 
 # View recent logs
-docker-compose logs --tail=100 backend
+docker compose logs --tail=100 backend
 
 # Follow logs in real-time
-docker-compose logs -f backend
+docker compose logs -f backend
 ```
 
 ## Need Help?

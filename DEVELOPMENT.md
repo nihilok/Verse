@@ -186,7 +186,7 @@ If you encounter CORS errors, ensure the backend CORS settings in `app/core/conf
 
 Ensure PostgreSQL is running and accessible:
 ```bash
-docker-compose logs db
+docker compose logs db
 ```
 
 ### API Key Issues

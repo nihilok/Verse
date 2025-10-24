@@ -64,6 +64,6 @@ jobs:
     
     - name: Build Docker images
       run: |
-        docker-compose build
+        docker compose build
       env:
         ANTHROPIC_API_KEY: test_key_for_ci
