@@ -1,4 +1,5 @@
 import React from 'react';
+import { Sparkles, Loader, BookMarked, Church, Lightbulb, CheckCircle } from 'lucide-react';
 import { Insight } from '../types';
 
 interface InsightsPanelProps {
@@ -11,9 +12,12 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({ insight, loading, selecte
   if (loading) {
     return (
       <div className="insights-panel">
-        <h2>AI Insights</h2>
+        <div className="insights-header">
+          <Sparkles size={24} />
+          <h2>AI Insights</h2>
+        </div>
         <div className="loading">
-          <div className="spinner"></div>
+          <Loader size={40} className="spinner-icon" />
           <p>Generating insights...</p>
         </div>
       </div>
@@ -23,18 +27,29 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({ insight, loading, selecte
   if (!insight) {
     return (
       <div className="insights-panel empty">
-        <h2>AI Insights</h2>
-        <p>Highlight any passage in the Bible reader to explore its meaning</p>
+        <div className="insights-header">
+          <Sparkles size={24} />
+          <h2>AI Insights</h2>
+        </div>
+        <div className="empty-state">
+          <Sparkles size={48} className="empty-icon" />
+          <p>Highlight any passage in the Bible reader to explore its meaning</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="insights-panel">
-      <h2>AI Insights</h2>
+      <div className="insights-header">
+        <Sparkles size={24} />
+        <h2>AI Insights</h2>
+      </div>
+
       {insight.cached && (
         <div className="cached-badge">
-          <span>✓ Cached Result</span>
+          <CheckCircle size={16} />
+          <span>Cached Result</span>
         </div>
       )}
       
@@ -46,17 +61,26 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({ insight, loading, selecte
       )}
 
       <div className="insight-section">
-        <h3>📜 Historical Context</h3>
+        <h3>
+          <BookMarked size={20} />
+          Historical Context
+        </h3>
         <p>{insight.historical_context}</p>
       </div>
 
       <div className="insight-section">
-        <h3>⛪ Theological Significance</h3>
+        <h3>
+          <Church size={20} />
+          Theological Significance
+        </h3>
         <p>{insight.theological_significance}</p>
       </div>
 
       <div className="insight-section">
-        <h3>💡 Practical Application</h3>
+        <h3>
+          <Lightbulb size={20} />
+          Practical Application
+        </h3>
         <p>{insight.practical_application}</p>
       </div>
     </div>

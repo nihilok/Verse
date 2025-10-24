@@ -1,13 +1,109 @@
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@import "tailwindcss";
+
+@theme {
+  /* Light mode colors - using oklch for better color handling */
+  --color-background: oklch(100% 0 0);
+  --color-foreground: oklch(15.23% 0.0156 254.42);
+  --color-card: oklch(100% 0 0);
+  --color-card-foreground: oklch(15.23% 0.0156 254.42);
+  --color-popover: oklch(100% 0 0);
+  --color-popover-foreground: oklch(15.23% 0.0156 254.42);
+  --color-primary: oklch(50.36% 0.2175 254.32);
+  --color-primary-foreground: oklch(98.04% 0 0);
+  --color-secondary: oklch(96.08% 0 0);
+  --color-secondary-foreground: oklch(11.24% 0.0226 254.68);
+  --color-muted: oklch(96.08% 0 0);
+  --color-muted-foreground: oklch(46.93% 0.0108 254.14);
+  --color-accent: oklch(96.08% 0 0);
+  --color-accent-foreground: oklch(11.24% 0.0226 254.68);
+  --color-destructive: oklch(60.23% 0.1686 29.23);
+  --color-destructive-foreground: oklch(98.04% 0 0);
+  --color-border: oklch(91.41% 0.0119 254.08);
+  --color-input: oklch(91.41% 0.0119 254.08);
+  --color-ring: oklch(50.36% 0.2175 254.32);
+
+  /* Border radius */
+  --radius-lg: 0.5rem;
+  --radius-md: calc(0.5rem - 2px);
+  --radius-sm: calc(0.5rem - 4px);
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+/* Base styles */
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
 }
+
+/* HSL CSS variables for shadcn compatibility */
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 221.2 83.2% 53.3%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 210 40% 96.1%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 221.2 83.2% 53.3%;
+  --radius: 0.5rem;
+}
+
+.dark {
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222.2 84% 4.9%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 217.2 91.2% 59.8%;
+  --primary-foreground: 222.2 47.4% 11.2%;
+  --secondary: 217.2 32.6% 17.5%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --accent: 217.2 32.6% 17.5%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 217.2 32.6% 17.5%;
+  --input: 217.2 32.6% 17.5%;
+  --ring: 224.3 76.3% 48%;
+
+  /* Update oklch colors for dark mode */
+  --color-background: oklch(15.23% 0.0156 254.42);
+  --color-foreground: oklch(98.04% 0 0);
+  --color-card: oklch(15.23% 0.0156 254.42);
+  --color-card-foreground: oklch(98.04% 0 0);
+  --color-popover: oklch(15.23% 0.0156 254.42);
+  --color-popover-foreground: oklch(98.04% 0 0);
+  --color-primary: oklch(59.8% 0.2175 254.32);
+  --color-primary-foreground: oklch(11.24% 0.0226 254.68);
+  --color-secondary: oklch(17.5% 0.0226 254.68);
+  --color-secondary-foreground: oklch(98.04% 0 0);
+  --color-muted: oklch(17.5% 0.0226 254.68);
+  --color-muted-foreground: oklch(65.1% 0.0108 254.14);
+  --color-accent: oklch(17.5% 0.0226 254.68);
+  --color-accent-foreground: oklch(98.04% 0 0);
+  --color-destructive: oklch(30.6% 0.1686 29.23);
+  --color-destructive-foreground: oklch(98.04% 0 0);
+  --color-border: oklch(17.5% 0.0226 254.68);
+  --color-input: oklch(17.5% 0.0226 254.68);
+  --color-ring: oklch(48% 0.2175 254.32);
+}
+

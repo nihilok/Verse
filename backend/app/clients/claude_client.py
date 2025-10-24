@@ -34,7 +34,7 @@ PRACTICAL_APPLICATION: [your analysis]
 """
             
             message = self.client.messages.create(
-                model="claude-3-sonnet-20240229",
+                model="claude-sonnet-4-5-20250929",
                 max_tokens=1500,
                 messages=[
                     {"role": "user", "content": prompt}
