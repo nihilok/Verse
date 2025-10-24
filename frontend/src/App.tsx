@@ -6,6 +6,7 @@ import InsightsPanel from './components/InsightsPanel';
 import { ModeToggle } from './components/mode-toggle';
 import { bibleService } from './services/api';
 import { BiblePassage, Insight } from './types';
+import { Card } from './components/ui/card';
 import './App.css';
 
 function App() {
@@ -92,45 +93,51 @@ function App() {
 
       <div className="flex-1 max-w-[1800px] mx-auto w-full p-6">
         <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr_420px] gap-6 lg:h-[calc(100vh-180px)]">
-          <aside className="lg:overflow-y-auto">
-            <PassageSearch onSearch={handleSearch} />
-          </aside>
+          <Card className="lg:overflow-y-auto p-0">
+            <aside>
+              <PassageSearch onSearch={handleSearch} />
+            </aside>
+          </Card>
 
-          <main className="lg:overflow-y-auto bg-card rounded-lg border border-border shadow-sm p-6">
-            {error && (
-              <div className="mb-4 flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-                <AlertCircle size={20} />
-                <span className="flex-1">{error}</span>
-                <button
-                  onClick={() => setError(null)}
-                  className="hover:opacity-70 transition-opacity"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-            )}
+          <Card className="lg:overflow-y-auto p-6">
+            <main>
+              {error && (
+                <div className="mb-4 flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+                  <AlertCircle size={20} />
+                  <span className="flex-1">{error}</span>
+                  <button
+                    onClick={() => setError(null)}
+                    className="hover:opacity-70 transition-opacity"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+              )}
 
-            {loading ? (
-              <div className="flex flex-col items-center justify-center h-96 text-muted-foreground">
-                <Loader2 size={48} className="animate-spin mb-4" />
-                <p>Loading passage...</p>
-              </div>
-            ) : (
-              <BibleReader
-                passage={passage}
-                onTextSelected={handleTextSelected}
-                onNavigate={handleNavigate}
+              {loading ? (
+                <div className="flex flex-col items-center justify-center h-96 text-muted-foreground">
+                  <Loader2 size={48} className="animate-spin mb-4" />
+                  <p>Loading passage...</p>
+                </div>
+              ) : (
+                <BibleReader
+                  passage={passage}
+                  onTextSelected={handleTextSelected}
+                  onNavigate={handleNavigate}
+                />
+              )}
+            </main>
+          </Card>
+
+          <Card className="lg:overflow-y-auto p-6">
+            <aside>
+              <InsightsPanel
+                insight={insight}
+                loading={insightLoading}
+                selectedText={selectedText}
               />
-            )}
-          </main>
-
-          <aside className="lg:overflow-y-auto bg-card rounded-lg border border-border shadow-sm p-6">
-            <InsightsPanel
-              insight={insight}
-              loading={insightLoading}
-              selectedText={selectedText}
-            />
-          </aside>
+            </aside>
+          </Card>
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Sparkles, X } from 'lucide-react';
-import { BiblePassage } from '../types';
+import type { BiblePassage } from '../types';
+import { CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 
 interface BibleReaderProps {
   passage: BiblePassage | null;
@@ -57,34 +58,34 @@ const BibleReader: React.FC<BibleReaderProps> = ({ passage, onTextSelected, onNa
 
   if (!passage) {
     return (
-      <div className="bible-reader empty">
+      <div className="flex flex-col items-center justify-center h-96 text-muted-foreground">
         <p>Search for a passage to begin reading</p>
       </div>
     );
   }
 
   return (
-    <div className="bible-reader">
-      <div className="passage-header">
-        <h2>{passage.reference}</h2>
-        <span className="translation-badge">{passage.translation}</span>
-      </div>
-      
-      <div className="passage-content" ref={readerRef}>
+    <div className="flex flex-col h-full" ref={readerRef}>
+      <CardHeader className="flex flex-row items-center gap-2 pb-4 border-b">
+        <CardTitle className="text-lg">{passage.reference}</CardTitle>
+        <span className="ml-auto bg-secondary text-secondary-foreground px-3 py-1 rounded text-xs font-semibold">{passage.translation}</span>
+      </CardHeader>
+      <CardContent className="flex-1 relative">
         {passage.verses.map((verse) => (
-          <p key={`${verse.chapter}:${verse.verse}`} className="verse">
-            <span className="verse-number">{verse.verse}</span>
-            <span className="verse-text">{verse.text}</span>
-          </p>
+          <div key={`${verse.chapter}:${verse.verse}`} className="mb-4 flex items-start gap-2">
+            <span className="text-primary font-bold min-w-[30px]">{verse.verse}</span>
+            <span className="text-base">{verse.text}</span>
+          </div>
         ))}
 
         {/* Selection Tooltip */}
         {selectionPosition && selectedText && (
           <div
-            className="selection-tooltip"
+            className="absolute bg-popover border border-border rounded-md shadow-lg p-2 flex gap-2 z-50"
             style={{
               left: `${selectionPosition.x}px`,
-              top: `${selectionPosition.y}px`
+              top: `${selectionPosition.y}px`,
+              transform: 'translate(-50%, 0)'
             }}
           >
             <button onClick={handleGetInsights} className="tooltip-button">
@@ -96,18 +97,18 @@ const BibleReader: React.FC<BibleReaderProps> = ({ passage, onTextSelected, onNa
             </button>
           </div>
         )}
-      </div>
+      </CardContent>
 
       {/* Navigation Controls */}
       {onNavigate && (
-        <div className="navigation-controls">
-          <button onClick={() => onNavigate('prev')} className="nav-button">
-            <ChevronLeft size={20} />
-            <span>Previous Chapter</span>
+        <div className="flex justify-between p-4 border-t">
+          <button onClick={() => onNavigate('prev')} className="flex items-center text-sm text-muted-foreground">
+            <ChevronLeft size={16} className="mr-1" />
+            Previous Chapter
           </button>
-          <button onClick={() => onNavigate('next')} className="nav-button">
-            <span>Next Chapter</span>
-            <ChevronRight size={20} />
+          <button onClick={() => onNavigate('next')} className="flex items-center text-sm text-muted-foreground">
+            Next Chapter
+            <ChevronRight size={16} className="ml-1" />
           </button>
         </div>
       )}

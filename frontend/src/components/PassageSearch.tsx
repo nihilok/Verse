@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BookOpen, Search } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -56,7 +56,7 @@ const PassageSearch: React.FC<PassageSearchProps> = ({ onSearch }) => {
   };
 
   return (
-    <Card>
+    <>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <BookOpen size={24} />
@@ -71,7 +71,7 @@ const PassageSearch: React.FC<PassageSearchProps> = ({ onSearch }) => {
               <SelectTrigger id="book">
                 <SelectValue placeholder="Select a book" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="max-h-60 overflow-y-auto border border-border">
                 {BIBLE_BOOKS.map(bookName => (
                   <SelectItem key={bookName} value={bookName}>
                     {bookName}
@@ -139,7 +139,7 @@ const PassageSearch: React.FC<PassageSearchProps> = ({ onSearch }) => {
           </Button>
         </form>
       </CardContent>
-    </Card>
+    </>
   );
 };
 
