@@ -35,7 +35,7 @@ docker-compose logs -f db
 - **Frontend**: http://localhost:5173
 - **Backend API**: http://localhost:8000
 - **API Docs**: http://localhost:8000/docs
-- **Database**: localhost:5432 (postgres://verse_user:verse_password@localhost:5432/verse_db)
+- **Database**: localhost:5432 (connection details in docker-compose.yml)
 
 ## Development Workflows
 
