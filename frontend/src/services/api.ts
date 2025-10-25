@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { BiblePassage, Insight, PassageQuery } from '../types';
+import { BiblePassage, Insight, PassageQuery, InsightHistory } from '../types';
 
 const API_BASE_URL = '/api';
 
@@ -46,5 +46,14 @@ export const bibleService = {
       save: true,
     });
     return response.data;
+  },
+
+  async getInsightsHistory(limit: number = 50): Promise<InsightHistory[]> {
+    const response = await axios.get<InsightHistory[]>(`${API_BASE_URL}/insights/history?limit=${limit}`);
+    return response.data;
+  },
+
+  async clearInsightsHistory(): Promise<void> {
+    await axios.delete(`${API_BASE_URL}/insights/history`);
   },
 };

@@ -1,11 +1,19 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import get_settings
 from app.core.database import engine, Base
 from app.api.routes import router
 
-# Create database tables
-Base.metadata.create_all(bind=engine)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage application lifespan events."""
+    # Startup: Initialize database tables
+    Base.metadata.create_all(bind=engine)
+    yield
+    # Shutdown: cleanup if needed
+
 
 # Initialize FastAPI app
 settings = get_settings()
@@ -13,7 +21,8 @@ app = FastAPI(
     title="Verse API",
     description="Interactive Bible reader with AI-powered insights",
     version="1.0.0",
-    debug=settings.debug
+    debug=settings.debug,
+    lifespan=lifespan
 )
 
 # Configure CORS

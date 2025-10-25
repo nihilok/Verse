@@ -96,7 +96,11 @@ async def generate_insights(
     
     # Check if we already have insights for this passage
     if request.save:
-        existing = service.get_saved_insight(db, request.passage_reference)
+        existing = service.get_saved_insight(
+            db, 
+            request.passage_reference,
+            request.passage_text
+        )
         if existing:
             return {
                 "historical_context": existing.historical_context,
@@ -129,3 +133,39 @@ async def generate_insights(
         "practical_application": insights.practical_application,
         "cached": False
     }
+
+
+@router.get("/insights/history")
+async def get_insights_history(
+    limit: int = Query(50, description="Maximum number of insights to return"),
+    db: Session = Depends(get_db)
+):
+    """Get insights history from the database."""
+    service = InsightService()
+    insights = service.get_all_insights(db, limit=limit)
+    
+    return [
+        {
+            "id": str(insight.id),
+            "reference": insight.passage_reference,
+            "text": insight.passage_text,
+            "insight": {
+                "historical_context": insight.historical_context,
+                "theological_significance": insight.theological_significance,
+                "practical_application": insight.practical_application,
+            },
+            "timestamp": int(insight.created_at.timestamp() * 1000)
+        }
+        for insight in insights
+    ]
+
+
+@router.delete("/insights/history")
+async def clear_insights_history(
+    db: Session = Depends(get_db)
+):
+    """Clear all insights history from the database."""
+    service = InsightService()
+    count = service.clear_all_insights(db)
+    
+    return {"message": f"Cleared {count} insights from history"}

@@ -30,22 +30,18 @@ function App() {
   const [insightsModalOpen, setInsightsModalOpen] = useState(false);
   const [insightsHistory, setInsightsHistory] = useState<InsightHistory[]>([]);
 
-  // Load insights history from localStorage on mount
+  // Load insights history from backend on mount
   useEffect(() => {
-    const stored = localStorage.getItem('verse-insights-history');
-    if (stored) {
+    const loadHistory = async () => {
       try {
-        setInsightsHistory(JSON.parse(stored));
+        const history = await bibleService.getInsightsHistory(MAX_HISTORY_ITEMS);
+        setInsightsHistory(history);
       } catch (e) {
-        console.error('Failed to parse insights history:', e);
+        console.error('Failed to load insights history:', e);
       }
-    }
+    };
+    loadHistory();
   }, []);
-
-  // Save insights history to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem('verse-insights-history', JSON.stringify(insightsHistory));
-  }, [insightsHistory]);
 
   const handleSearch = async (
     book: string,
@@ -90,15 +86,13 @@ function App() {
       setInsight(result);
       setInsightsModalOpen(true);
       
-      // Add to history
-      const historyItem: InsightHistory = {
-        id: `${Date.now()}-${Math.random()}`,
-        reference,
-        text,
-        insight: result,
-        timestamp: Date.now(),
-      };
-      setInsightsHistory(prev => [historyItem, ...prev].slice(0, MAX_HISTORY_ITEMS));
+      // Reload history from backend to get the latest insights
+      try {
+        const history = await bibleService.getInsightsHistory(MAX_HISTORY_ITEMS);
+        setInsightsHistory(history);
+      } catch (historyErr) {
+        console.error('Failed to reload insights history:', historyErr);
+      }
     } catch (err) {
       setError('Failed to generate insights. Please try again.');
       console.error('Error generating insights:', err);
@@ -114,9 +108,15 @@ function App() {
     setInsightsModalOpen(true);
   };
 
-  const handleClearHistory = () => {
+  const handleClearHistory = async () => {
     if (confirm('Are you sure you want to clear all insights history?')) {
-      setInsightsHistory([]);
+      try {
+        await bibleService.clearInsightsHistory();
+        setInsightsHistory([]);
+      } catch (err) {
+        console.error('Failed to clear insights history:', err);
+        setError('Failed to clear history. Please try again.');
+      }
     }
   };
 

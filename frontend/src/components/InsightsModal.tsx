@@ -26,6 +26,7 @@ const InsightsModal: React.FC<InsightsModalProps> = ({
   selectedText,
   reference 
 }) => {
+  const [tab, setTab] = React.useState<'historical' | 'theological' | 'practical'>('historical');
   if (!insight) return null;
 
   return (
@@ -52,7 +53,7 @@ const InsightsModal: React.FC<InsightsModalProps> = ({
           </div>
         )}
 
-        <Tabs defaultValue="historical" className="flex-1 overflow-hidden flex flex-col">
+        <Tabs value={tab} onValueChange={(v) => setTab(v as 'historical' | 'theological' | 'practical')} className="flex-1 overflow-hidden flex flex-col">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="historical" className="flex items-center gap-2">
               <BookMarked size={16} />
@@ -68,7 +69,7 @@ const InsightsModal: React.FC<InsightsModalProps> = ({
             </TabsTrigger>
           </TabsList>
           
-          <div className="flex-1 overflow-y-auto mt-4">
+          <div key={`tab-content-${tab}`} className="flex-1 overflow-y-auto mt-4">
             <TabsContent value="historical" className="prose prose-sm dark:prose-invert max-w-none" role="tabpanel" aria-label="Historical context insights">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                 {insight.historical_context}
