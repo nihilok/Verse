@@ -154,7 +154,7 @@ async def get_insights_history(
                 "theological_significance": insight.theological_significance,
                 "practical_application": insight.practical_application,
             },
-            "timestamp": int(insight.created_at.timestamp() * 1000) if insight.created_at else 0
+            "timestamp": int(insight.created_at.timestamp() * 1000)
         }
         for insight in insights
     ]
