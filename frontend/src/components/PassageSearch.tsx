@@ -52,7 +52,7 @@ const PassageSearch: React.FC<PassageSearchProps> = ({ onSearch }) => {
       return;
     }
 
-    if (verseStart && isNaN(verseStartNum!)) {
+    if (verseStart && verseStartNum === undefined) {
       alert('Please enter a valid number for verse start');
       return;
     }

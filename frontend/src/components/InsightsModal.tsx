@@ -69,19 +69,19 @@ const InsightsModal: React.FC<InsightsModalProps> = ({
           </TabsList>
           
           <div className="flex-1 overflow-y-auto mt-4">
-            <TabsContent value="historical" className="prose prose-sm dark:prose-invert max-w-none">
+            <TabsContent value="historical" className="prose prose-sm dark:prose-invert max-w-none" role="tabpanel" aria-label="Historical context insights">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                 {insight.historical_context}
               </ReactMarkdown>
             </TabsContent>
             
-            <TabsContent value="theological" className="prose prose-sm dark:prose-invert max-w-none">
+            <TabsContent value="theological" className="prose prose-sm dark:prose-invert max-w-none" role="tabpanel" aria-label="Theological significance insights">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                 {insight.theological_significance}
               </ReactMarkdown>
             </TabsContent>
             
-            <TabsContent value="practical" className="prose prose-sm dark:prose-invert max-w-none">
+            <TabsContent value="practical" className="prose prose-sm dark:prose-invert max-w-none" role="tabpanel" aria-label="Practical application insights">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                 {insight.practical_application}
               </ReactMarkdown>

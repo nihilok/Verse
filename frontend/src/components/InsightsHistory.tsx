@@ -46,6 +46,7 @@ const InsightsHistoryComponent: React.FC<InsightsHistoryProps> = ({
             key={item.id}
             onClick={() => onSelect(item)}
             className="w-full text-left p-3 rounded-lg border bg-card hover:bg-accent transition-colors"
+            title={item.text}
           >
             <div className="font-semibold text-sm mb-1">{item.reference}</div>
             <div className="text-xs text-muted-foreground line-clamp-2">
