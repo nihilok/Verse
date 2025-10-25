@@ -152,6 +152,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({ passage, onTextSelected, onNa
             <button 
               onClick={clearSelection} 
               className="flex items-center justify-center p-2 rounded hover:bg-accent hover:text-accent-foreground transition-colors"
+              aria-label="Close"
             >
               <X size={16} />
             </button>
