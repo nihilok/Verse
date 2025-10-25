@@ -31,24 +31,29 @@ const TRANSLATIONS = [
 ];
 
 interface PassageSearchProps {
-  onSearch: (book: string, chapter: number, verseStart: number, verseEnd?: number, translation?: string) => void;
+  onSearch: (book: string, chapter: number, verseStart?: number, verseEnd?: number, translation?: string) => void;
 }
 
 const PassageSearch: React.FC<PassageSearchProps> = ({ onSearch }) => {
   const [book, setBook] = useState('John');
   const [chapter, setChapter] = useState('3');
-  const [verseStart, setVerseStart] = useState('16');
+  const [verseStart, setVerseStart] = useState('');
   const [verseEnd, setVerseEnd] = useState('');
   const [translation, setTranslation] = useState('WEB');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const chapterNum = parseInt(chapter);
-    const verseStartNum = parseInt(verseStart);
+    const verseStartNum = verseStart ? parseInt(verseStart) : undefined;
     const verseEndNum = verseEnd ? parseInt(verseEnd) : undefined;
 
-    if (isNaN(chapterNum) || isNaN(verseStartNum)) {
-      alert('Please enter valid numbers for chapter and verse');
+    if (isNaN(chapterNum)) {
+      alert('Please enter a valid number for chapter');
+      return;
+    }
+
+    if (verseStart && isNaN(verseStartNum!)) {
+      alert('Please enter a valid number for verse start');
       return;
     }
 
@@ -94,14 +99,14 @@ const PassageSearch: React.FC<PassageSearchProps> = ({ onSearch }) => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="verseStart">Verse Start</Label>
+            <Label htmlFor="verseStart">Verse Start (optional)</Label>
             <Input
               id="verseStart"
               type="number"
               value={verseStart}
               onChange={(e) => setVerseStart(e.target.value)}
               min="1"
-              required
+              placeholder="Optional - leave blank for full chapter"
             />
           </div>
 

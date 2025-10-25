@@ -19,6 +19,14 @@ export interface Insight {
   cached?: boolean;
 }
 
+export interface InsightHistory {
+  id: string;
+  reference: string;
+  text: string;
+  insight: Insight;
+  timestamp: number;
+}
+
 export interface PassageQuery {
   book: string;
   chapter: number;

@@ -29,7 +29,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({ passage, onTextSelected, onNa
 
         setSelectionPosition({
           x: rect.left + rect.width / 2 - containerRect.left,
-          y: rect.bottom - containerRect.top + 10
+          y: rect.bottom - containerRect.top + 5
         });
       }
     };
