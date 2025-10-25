@@ -23,7 +23,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
-    "@rollup/rollup-linux-arm64-gnu": "^4.52.5",
     "@tailwindcss/vite": "^4.1.16",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
