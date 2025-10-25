@@ -81,43 +81,10 @@
   color: var(--text-color);
 }
 
+
 .verse-text::selection {
   background-color: #ffd700;
   color: var(--text-color);
-}
-
-.selection-tooltip {
-  position: absolute;
-  transform: translateX(-50%);
-  background: #333;
-  border-radius: 6px;
-  padding: 0.25rem;
-  display: flex;
-  gap: 0.25rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  z-index: 100;
-}
-
-.tooltip-button {
-  background: transparent;
-  color: white;
-  border: none;
-  padding: 0.5rem 0.75rem;
-  border-radius: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.9rem;
-  transition: background-color 0.2s;
-}
-
-.tooltip-button:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.tooltip-button.close {
-  padding: 0.5rem;
 }
 
 .navigation-controls {
@@ -132,30 +99,6 @@
   gap: 1rem;
   background: var(--card-background);
   z-index: 10;
-}
-
-.nav-button {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  background: var(--primary-color);
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 1rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.nav-button:hover {
-  background: var(--secondary-color);
-}
-
-.nav-button:disabled {
-  background: var(--border-color);
-  cursor: not-allowed;
 }
 
 /* Insights Panel - custom component styles */

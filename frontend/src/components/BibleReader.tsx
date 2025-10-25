@@ -135,7 +135,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({ passage, onTextSelected, onNa
         {/* Selection Tooltip */}
         {selectionPosition && selectedText && (
           <div
-            className="absolute bg-popover border border-border rounded-md shadow-lg p-2 flex gap-2 z-50"
+            className="absolute bg-popover border border-border rounded-md shadow-lg p-1.5 flex gap-1.5 z-50"
             style={{
               left: `${selectionPosition.x}px`,
               top: `${selectionPosition.y}px`,
@@ -144,12 +144,15 @@ const BibleReader: React.FC<BibleReaderProps> = ({ passage, onTextSelected, onNa
           >
             <button 
               onClick={handleGetInsights}
-              className="tooltip-button"
+              className="flex items-center gap-2 px-3 py-2 rounded bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-sm font-medium"
             >
               <Sparkles size={16} />
               Get Insight
             </button>
-            <button onClick={clearSelection} className="tooltip-button close">
+            <button 
+              onClick={clearSelection} 
+              className="flex items-center justify-center p-2 rounded hover:bg-accent hover:text-accent-foreground transition-colors"
+            >
               <X size={16} />
             </button>
           </div>
@@ -158,14 +161,20 @@ const BibleReader: React.FC<BibleReaderProps> = ({ passage, onTextSelected, onNa
 
       {/* Navigation Controls */}
       {onNavigate && (
-        <div className="flex justify-between p-4 border-t">
-          <button onClick={() => onNavigate('prev')} className="flex items-center text-sm text-muted-foreground">
-            <ChevronLeft size={16} className="mr-1" />
+        <div className="flex justify-between p-4 border-t gap-4">
+          <button 
+            onClick={() => onNavigate('prev')} 
+            className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-foreground bg-secondary hover:bg-secondary/80 rounded-md transition-colors border border-border"
+          >
+            <ChevronLeft size={16} />
             Previous Chapter
           </button>
-          <button onClick={() => onNavigate('next')} className="flex items-center text-sm text-muted-foreground">
+          <button 
+            onClick={() => onNavigate('next')} 
+            className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-foreground bg-secondary hover:bg-secondary/80 rounded-md transition-colors border border-border"
+          >
             Next Chapter
-            <ChevronRight size={16} className="ml-1" />
+            <ChevronRight size={16} />
           </button>
         </div>
       )}
