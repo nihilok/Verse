@@ -43,10 +43,27 @@ const BibleReader: React.FC<BibleReaderProps> = ({ passage, onTextSelected, onNa
     };
   }, []);
 
-  const handleGetInsights = () => {
+  const handleGetInsights = (e: React.MouseEvent | React.TouchEvent) => {
+    // Prevent the event from bubbling up and triggering document handlers
+    e.preventDefault();
+    e.stopPropagation();
+    
     if (selectedText && passage) {
-      onTextSelected(selectedText, passage.reference);
-      clearSelection();
+      // Store the text before clearing
+      const textToSend = selectedText;
+      const referenceToSend = passage.reference;
+      
+      // Clear the UI immediately
+      setSelectedText('');
+      setSelectionPosition(null);
+      
+      // Send the text after clearing the selection
+      onTextSelected(textToSend, referenceToSend);
+      
+      // Clear the browser selection after a brief delay to ensure click is processed
+      setTimeout(() => {
+        window.getSelection()?.removeAllRanges();
+      }, 100);
     }
   };
 
@@ -88,7 +105,11 @@ const BibleReader: React.FC<BibleReaderProps> = ({ passage, onTextSelected, onNa
               transform: 'translate(-50%, 0)'
             }}
           >
-            <button onClick={handleGetInsights} className="tooltip-button">
+            <button 
+              onClick={handleGetInsights}
+              onTouchEnd={handleGetInsights}
+              className="tooltip-button"
+            >
               <Sparkles size={16} />
               Get Insight
             </button>
