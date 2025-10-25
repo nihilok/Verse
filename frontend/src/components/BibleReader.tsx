@@ -17,42 +17,62 @@ const BibleReader: React.FC<BibleReaderProps> = ({ passage, onTextSelected, onNa
   useEffect(() => {
     let selectionTimeout: ReturnType<typeof setTimeout>;
     
-    const handleSelection = () => {
+    const updateSelection = () => {
+      const selection = window.getSelection();
+      const text = selection?.toString().trim();
+      
+      if (text && text.length > 0 && selection && selection.rangeCount > 0 && readerRef.current?.contains(selection.anchorNode)) {
+        setSelectedText(text);
+
+        // Get selection position for tooltip (below selection to avoid native menu)
+        const range = selection.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        const containerRect = readerRef.current.getBoundingClientRect();
+
+        setSelectionPosition({
+          x: rect.left + rect.width / 2 - containerRect.left,
+          y: rect.bottom - containerRect.top + 5
+        });
+      } else if (!text) {
+        // Clear selection if no text is selected
+        setSelectedText('');
+        setSelectionPosition(null);
+      }
+    };
+    
+    const handleSelectionChange = () => {
       // Clear any pending timeout
       if (selectionTimeout) {
         clearTimeout(selectionTimeout);
       }
       
-      // Delay the selection capture slightly on mobile to allow selection to complete
-      selectionTimeout = setTimeout(() => {
-        const selection = window.getSelection();
-        const text = selection?.toString().trim();
-        
-        if (text && text.length > 0 && selection && readerRef.current?.contains(selection.anchorNode)) {
-          setSelectedText(text);
-
-          // Get selection position for tooltip (below selection to avoid native menu)
-          const range = selection.getRangeAt(0);
-          const rect = range.getBoundingClientRect();
-          const containerRect = readerRef.current.getBoundingClientRect();
-
-          setSelectionPosition({
-            x: rect.left + rect.width / 2 - containerRect.left,
-            y: rect.bottom - containerRect.top + 5
-          });
-        }
-      }, 50); // 50ms delay to allow selection to stabilize on mobile
+      // Delay the selection capture slightly to allow selection to complete
+      // This is especially important on mobile when using selection handles
+      selectionTimeout = setTimeout(updateSelection, 100);
+    };
+    
+    const handlePointerUp = () => {
+      // Immediate update on pointer/touch release
+      if (selectionTimeout) {
+        clearTimeout(selectionTimeout);
+      }
+      selectionTimeout = setTimeout(updateSelection, 50);
     };
 
-    document.addEventListener('mouseup', handleSelection);
-    document.addEventListener('touchend', handleSelection);
+    // Listen to selectionchange for when user modifies selection (e.g., dragging handles on mobile)
+    document.addEventListener('selectionchange', handleSelectionChange);
+    
+    // Also listen to mouse/touch events for initial selection
+    document.addEventListener('mouseup', handlePointerUp);
+    document.addEventListener('touchend', handlePointerUp);
 
     return () => {
       if (selectionTimeout) {
         clearTimeout(selectionTimeout);
       }
-      document.removeEventListener('mouseup', handleSelection);
-      document.removeEventListener('touchend', handleSelection);
+      document.removeEventListener('selectionchange', handleSelectionChange);
+      document.removeEventListener('mouseup', handlePointerUp);
+      document.removeEventListener('touchend', handlePointerUp);
     };
   }, []);
 
