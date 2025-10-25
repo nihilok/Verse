@@ -24,13 +24,14 @@ Verse is an interactive Bible reader with AI-powered insights. Users can highlig
 - Use consistent indentation (2 or 4 spaces depending on language convention)
 - Follow the existing code style in the repository
 - Use meaningful commit messages that explain the "why" behind changes
+- Use British English spelling conventions where applicable
 
 ## Security Guidelines
 
 - Never commit API keys, secrets, or credentials to the repository
 - Use environment variables for sensitive configuration
-- Validate and sanitize all user inputs
-- Follow security best practices for authentication and authorization
+- Validate and sanitise all user inputs
+- Follow security best practices for authentication and authorisation
 - Be mindful of rate limits when integrating with external APIs
 
 ## Testing Requirements
@@ -46,6 +47,7 @@ Verse is an interactive Bible reader with AI-powered insights. Users can highlig
 - Document API endpoints and data structures
 - Include usage examples for complex features
 - Keep README.md up to date with setup and usage instructions
+- Use British English spelling conventions
 
 ## AI Integration Guidelines
 
@@ -64,11 +66,11 @@ Verse is an interactive Bible reader with AI-powered insights. Users can highlig
 
 ## Best Practices
 
-- Prioritize user privacy and data security
-- Optimize for performance and loading times
-- Support multiple devices and screen sizes
+- Prioritise user privacy and data security
+- Optimise for performance and loading times
+- Support multiple devices and screen sises
 - Handle errors gracefully with helpful error messages
-- Consider internationalization and localization needs
+- Consider internationalisation and localisation needs
 
 ## Tooling
 
