@@ -47,4 +47,13 @@ export const bibleService = {
     });
     return response.data;
   },
+
+  async getInsightsHistory(limit: number = 50): Promise<any[]> {
+    const response = await axios.get(`${API_BASE_URL}/insights/history?limit=${limit}`);
+    return response.data;
+  },
+
+  async clearInsightsHistory(): Promise<void> {
+    await axios.delete(`${API_BASE_URL}/insights/history`);
+  },
 };

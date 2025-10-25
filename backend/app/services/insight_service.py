@@ -46,9 +46,30 @@ class InsightService:
     def get_saved_insight(
         self,
         db: Session,
-        passage_reference: str
+        passage_reference: str,
+        passage_text: str
     ) -> Optional[SavedInsight]:
         """Get a saved insight from the database."""
         return db.query(SavedInsight).filter(
-            SavedInsight.passage_reference == passage_reference
+            SavedInsight.passage_reference == passage_reference,
+            SavedInsight.passage_text == passage_text
         ).first()
+    
+    def get_all_insights(
+        self,
+        db: Session,
+        limit: int = 50
+    ) -> list[SavedInsight]:
+        """Get all saved insights ordered by creation date."""
+        return db.query(SavedInsight).order_by(
+            SavedInsight.created_at.desc()
+        ).limit(limit).all()
+    
+    def clear_all_insights(
+        self,
+        db: Session
+    ) -> int:
+        """Clear all saved insights from the database."""
+        count = db.query(SavedInsight).delete()
+        db.commit()
+        return count
