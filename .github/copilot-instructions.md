@@ -69,3 +69,9 @@ Verse is an interactive Bible reader with AI-powered insights. Users can highlig
 - Support multiple devices and screen sizes
 - Handle errors gracefully with helpful error messages
 - Consider internationalization and localization needs
+
+## Tooling
+
+- Use `bun` for JavaScript/TypeScript package management and scripts in the frontend. Prefer `bun` over `npm` or `yarn` for all relevant commands.
+- Use `uv` for Python environment management where possible.
+

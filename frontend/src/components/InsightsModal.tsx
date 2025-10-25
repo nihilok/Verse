@@ -26,9 +26,8 @@ const InsightsModal: React.FC<InsightsModalProps> = ({
   selectedText,
   reference 
 }) => {
-  if (!insight) return null;
-
   const [tab, setTab] = React.useState<'historical' | 'theological' | 'practical'>('historical');
+  if (!insight) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
