@@ -3,6 +3,10 @@ import { ChevronLeft, ChevronRight, Sparkles, X } from 'lucide-react';
 import type { BiblePassage } from '../types';
 import { CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 
+// Selection timing constants
+const SELECTION_CHANGE_DELAY = 100; // ms to wait after selection change before capturing
+const POINTER_UP_DELAY = 50; // ms to wait after pointer/touch up before capturing
+
 interface BibleReaderProps {
   passage: BiblePassage | null;
   onTextSelected: (text: string, reference: string) => void;
@@ -15,11 +19,13 @@ const BibleReader: React.FC<BibleReaderProps> = ({ passage, onTextSelected, onNa
   const readerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleSelection = () => {
+    let selectionTimeout: ReturnType<typeof setTimeout>;
+    
+    const updateSelection = () => {
       const selection = window.getSelection();
       const text = selection?.toString().trim();
       
-      if (text && text.length > 0 && selection && readerRef.current?.contains(selection.anchorNode)) {
+      if (text && text.length > 0 && selection && selection.rangeCount > 0 && readerRef.current?.contains(selection.anchorNode)) {
         setSelectedText(text);
 
         // Get selection position for tooltip (below selection to avoid native menu)
@@ -29,24 +35,72 @@ const BibleReader: React.FC<BibleReaderProps> = ({ passage, onTextSelected, onNa
 
         setSelectionPosition({
           x: rect.left + rect.width / 2 - containerRect.left,
-          y: rect.bottom - containerRect.top + 10
+          y: rect.bottom - containerRect.top + 5
         });
+      } else if (!text) {
+        // Clear selection if no text is selected
+        setSelectedText('');
+        setSelectionPosition(null);
       }
     };
+    
+    const handleSelectionChange = () => {
+      // Clear any pending timeout
+      if (selectionTimeout) {
+        clearTimeout(selectionTimeout);
+      }
+      
+      // Delay the selection capture slightly to allow selection to complete
+      // This is especially important on mobile when using selection handles
+      selectionTimeout = setTimeout(updateSelection, SELECTION_CHANGE_DELAY);
+    };
+    
+    const handlePointerUp = () => {
+      // Immediate update on pointer/touch release
+      if (selectionTimeout) {
+        clearTimeout(selectionTimeout);
+      }
+      selectionTimeout = setTimeout(updateSelection, POINTER_UP_DELAY);
+    };
 
-    document.addEventListener('mouseup', handleSelection);
-    document.addEventListener('touchend', handleSelection);
+    // Listen to selectionchange for when user modifies selection (e.g., dragging handles on mobile)
+    document.addEventListener('selectionchange', handleSelectionChange);
+    
+    // Also listen to mouse/touch events for initial selection
+    document.addEventListener('mouseup', handlePointerUp);
+    document.addEventListener('touchend', handlePointerUp);
 
     return () => {
-      document.removeEventListener('mouseup', handleSelection);
-      document.removeEventListener('touchend', handleSelection);
+      if (selectionTimeout) {
+        clearTimeout(selectionTimeout);
+      }
+      document.removeEventListener('selectionchange', handleSelectionChange);
+      document.removeEventListener('mouseup', handlePointerUp);
+      document.removeEventListener('touchend', handlePointerUp);
     };
   }, []);
 
-  const handleGetInsights = () => {
+  const handleGetInsights = (e: React.MouseEvent | React.TouchEvent) => {
+    // Prevent the event from bubbling up and triggering document handlers
+    e.preventDefault();
+    e.stopPropagation();
+    
     if (selectedText && passage) {
-      onTextSelected(selectedText, passage.reference);
-      clearSelection();
+      // Store the text before clearing
+      const textToSend = selectedText;
+      const referenceToSend = passage.reference;
+      
+      // Clear the UI immediately
+      setSelectedText('');
+      setSelectionPosition(null);
+      
+      // Send the text after clearing the selection
+      onTextSelected(textToSend, referenceToSend);
+      
+      // Clear the browser selection after a brief delay to ensure click is processed
+      setTimeout(() => {
+        window.getSelection()?.removeAllRanges();
+      }, 100);
     }
   };
 
@@ -88,7 +142,10 @@ const BibleReader: React.FC<BibleReaderProps> = ({ passage, onTextSelected, onNa
               transform: 'translate(-50%, 0)'
             }}
           >
-            <button onClick={handleGetInsights} className="tooltip-button">
+            <button 
+              onClick={handleGetInsights}
+              className="tooltip-button"
+            >
               <Sparkles size={16} />
               Get Insight
             </button>

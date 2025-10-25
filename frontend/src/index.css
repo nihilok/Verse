@@ -40,6 +40,61 @@
   }
 }
 
+/* Prose styles for markdown content */
+@layer utilities {
+  .prose {
+    @apply text-foreground;
+  }
+  
+  .prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+    @apply text-foreground font-semibold;
+  }
+  
+  .prose h1 {
+    @apply text-2xl mt-6 mb-4;
+  }
+  
+  .prose h2 {
+    @apply text-xl mt-5 mb-3;
+  }
+  
+  .prose h3 {
+    @apply text-lg mt-4 mb-2;
+  }
+  
+  .prose p {
+    @apply mb-4 leading-7;
+  }
+  
+  .prose ul, .prose ol {
+    @apply mb-4 ml-6;
+  }
+  
+  .prose li {
+    @apply mb-2;
+  }
+  
+  .prose strong {
+    @apply font-semibold;
+  }
+  
+  .prose em {
+    @apply italic;
+  }
+  
+  .prose code {
+    @apply bg-muted px-1.5 py-0.5 rounded text-sm font-mono;
+  }
+  
+  .prose blockquote {
+    @apply border-l-4 border-primary pl-4 italic my-4;
+  }
+  
+  .prose a {
+    @apply text-primary underline hover:text-primary/80;
+  }
+}
+
 /* HSL CSS variables for shadcn compatibility */
 :root {
   --background: 0 0% 100%;

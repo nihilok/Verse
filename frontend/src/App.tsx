@@ -1,13 +1,19 @@
-import { useState } from 'react';
-import { BookOpen, AlertCircle, X, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { BookOpen, AlertCircle, X, Loader2, Menu, History as HistoryIcon } from 'lucide-react';
 import PassageSearch from './components/PassageSearch';
 import BibleReader from './components/BibleReader';
-import InsightsPanel from './components/InsightsPanel';
+import InsightsModal from './components/InsightsModal';
+import InsightsHistoryComponent from './components/InsightsHistory';
 import { ModeToggle } from './components/mode-toggle';
 import { bibleService } from './services/api';
-import { BiblePassage, Insight } from './types';
-import { Card } from './components/ui/card';
+import { BiblePassage, Insight, InsightHistory } from './types';
+import { Sidebar, SidebarHeader, SidebarContent } from './components/ui/sidebar';
+import { Button } from './components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 import './App.css';
+
+// Maximum number of insights to keep in history
+const MAX_HISTORY_ITEMS = 50;
 
 function App() {
   const [passage, setPassage] = useState<BiblePassage | null>(null);
@@ -15,33 +21,48 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [insightLoading, setInsightLoading] = useState(false);
   const [selectedText, setSelectedText] = useState('');
+  const [selectedReference, setSelectedReference] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [currentBook, setCurrentBook] = useState('John');
   const [currentChapter, setCurrentChapter] = useState(3);
   const [currentTranslation, setCurrentTranslation] = useState('WEB');
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [insightsModalOpen, setInsightsModalOpen] = useState(false);
+  const [insightsHistory, setInsightsHistory] = useState<InsightHistory[]>([]);
+
+  // Load insights history from localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem('verse-insights-history');
+    if (stored) {
+      try {
+        setInsightsHistory(JSON.parse(stored));
+      } catch (e) {
+        console.error('Failed to parse insights history:', e);
+      }
+    }
+  }, []);
+
+  // Save insights history to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('verse-insights-history', JSON.stringify(insightsHistory));
+  }, [insightsHistory]);
 
   const handleSearch = async (
     book: string,
     chapter: number,
-    verseStart: number,
-    verseEnd?: number,
+    _verseStart?: number,
+    _verseEnd?: number,
     translation: string = 'WEB'
   ) => {
     setLoading(true);
     setError(null);
-    setInsight(null);
     setCurrentBook(book);
     setCurrentChapter(chapter);
     setCurrentTranslation(translation);
 
     try {
-      const result = await bibleService.getPassage({
-        book,
-        chapter,
-        verse_start: verseStart,
-        verse_end: verseEnd,
-        translation,
-      });
+      // Load full chapter by default for better reading experience
+      const result = await bibleService.getChapter(book, chapter, translation);
       setPassage(result);
     } catch (err) {
       setError('Failed to load passage. Please check your input and try again.');
@@ -55,22 +76,47 @@ function App() {
     const newChapter = direction === 'next' ? currentChapter + 1 : currentChapter - 1;
     if (newChapter < 1) return;
 
-    await handleSearch(currentBook, newChapter, 1, undefined, currentTranslation);
+    await handleSearch(currentBook, newChapter, undefined, undefined, currentTranslation);
   };
 
   const handleTextSelected = async (text: string, reference: string) => {
     setInsightLoading(true);
     setSelectedText(text);
+    setSelectedReference(reference);
     setError(null);
 
     try {
       const result = await bibleService.getInsights(text, reference);
       setInsight(result);
+      setInsightsModalOpen(true);
+      
+      // Add to history
+      const historyItem: InsightHistory = {
+        id: `${Date.now()}-${Math.random()}`,
+        reference,
+        text,
+        insight: result,
+        timestamp: Date.now(),
+      };
+      setInsightsHistory(prev => [historyItem, ...prev].slice(0, MAX_HISTORY_ITEMS));
     } catch (err) {
       setError('Failed to generate insights. Please try again.');
       console.error('Error generating insights:', err);
     } finally {
       setInsightLoading(false);
+    }
+  };
+
+  const handleHistorySelect = (item: InsightHistory) => {
+    setInsight(item.insight);
+    setSelectedText(item.text);
+    setSelectedReference(item.reference);
+    setInsightsModalOpen(true);
+  };
+
+  const handleClearHistory = () => {
+    if (confirm('Are you sure you want to clear all insights history?')) {
+      setInsightsHistory([]);
     }
   };
 
@@ -80,6 +126,14 @@ function App() {
         <div className="max-w-[1800px] mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="lg:hidden text-primary-foreground hover:bg-primary-foreground/10"
+              >
+                <Menu size={24} />
+              </Button>
               <BookOpen size={32} />
               <div>
                 <h1 className="text-3xl font-bold">Verse</h1>
@@ -91,55 +145,100 @@ function App() {
         </div>
       </header>
 
-      <div className="flex-1 max-w-[1800px] mx-auto w-full p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr_420px] gap-6 lg:h-[calc(100vh-180px)]">
-          <Card className="lg:overflow-y-auto p-0">
-            <aside>
-              <PassageSearch onSearch={handleSearch} />
-            </aside>
-          </Card>
+      <div className="flex-1 flex overflow-hidden">
+        {/* Sidebar */}
+        <div className={`${sidebarOpen ? 'block' : 'hidden'} lg:block fixed lg:relative inset-0 lg:inset-auto z-40 bg-black/50 lg:bg-transparent`}
+             onClick={(e) => {
+               if (e.target === e.currentTarget) setSidebarOpen(false);
+             }}>
+          <Sidebar className="h-full w-80 bg-card shadow-lg lg:shadow-none">
+            <SidebarHeader className="flex items-center justify-between">
+              <h2 className="font-semibold text-lg">Navigation</h2>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSidebarOpen(false)}
+                className="lg:hidden"
+              >
+                <X size={20} />
+              </Button>
+            </SidebarHeader>
+            <SidebarContent>
+              <Tabs defaultValue="search" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="search">Search</TabsTrigger>
+                  <TabsTrigger value="history" className="flex items-center gap-1">
+                    <HistoryIcon size={16} />
+                    History
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="search" className="mt-4">
+                  <PassageSearch onSearch={handleSearch} />
+                </TabsContent>
+                <TabsContent value="history" className="mt-4">
+                  <InsightsHistoryComponent
+                    history={insightsHistory}
+                    onSelect={handleHistorySelect}
+                    onClear={handleClearHistory}
+                  />
+                </TabsContent>
+              </Tabs>
+            </SidebarContent>
+          </Sidebar>
+        </div>
 
-          <Card className="lg:overflow-y-auto p-6">
-            <main>
-              {error && (
-                <div className="mb-4 flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-                  <AlertCircle size={20} />
-                  <span className="flex-1">{error}</span>
-                  <button
-                    onClick={() => setError(null)}
-                    className="hover:opacity-70 transition-opacity"
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
-              )}
+        {/* Main Content */}
+        <main className="flex-1 overflow-hidden p-6">
+          {error && (
+            <div className="mb-4 flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive max-w-4xl mx-auto">
+              <AlertCircle size={20} />
+              <span className="flex-1">{error}</span>
+              <button
+                onClick={() => setError(null)}
+                className="hover:opacity-70 transition-opacity"
+              >
+                <X size={20} />
+              </button>
+            </div>
+          )}
 
-              {loading ? (
-                <div className="flex flex-col items-center justify-center h-96 text-muted-foreground">
-                  <Loader2 size={48} className="animate-spin mb-4" />
-                  <p>Loading passage...</p>
-                </div>
-              ) : (
+          <div className="max-w-4xl mx-auto h-full">
+            {loading ? (
+              <div className="flex flex-col items-center justify-center h-96 text-muted-foreground">
+                <Loader2 size={48} className="animate-spin mb-4" />
+                <p>Loading passage...</p>
+              </div>
+            ) : (
+              <div className="bg-card rounded-lg shadow-sm border h-full overflow-y-auto">
                 <BibleReader
                   passage={passage}
                   onTextSelected={handleTextSelected}
                   onNavigate={handleNavigate}
                 />
-              )}
-            </main>
-          </Card>
-
-          <Card className="lg:overflow-y-auto p-6">
-            <aside>
-              <InsightsPanel
-                insight={insight}
-                loading={insightLoading}
-                selectedText={selectedText}
-              />
-            </aside>
-          </Card>
-        </div>
+              </div>
+            )}
+          </div>
+        </main>
       </div>
+
+      {/* Insights Modal */}
+      <InsightsModal
+        open={insightsModalOpen}
+        onOpenChange={setInsightsModalOpen}
+        insight={insight}
+        selectedText={selectedText}
+        reference={selectedReference}
+      />
+
+      {/* Loading overlay for insights */}
+      {insightLoading && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-card p-6 rounded-lg shadow-lg flex flex-col items-center gap-4">
+            <Loader2 size={48} className="animate-spin text-primary" />
+            <p className="text-lg">Generating insights...</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
