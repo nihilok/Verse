@@ -15,29 +15,42 @@ const BibleReader: React.FC<BibleReaderProps> = ({ passage, onTextSelected, onNa
   const readerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    let selectionTimeout: ReturnType<typeof setTimeout>;
+    
     const handleSelection = () => {
-      const selection = window.getSelection();
-      const text = selection?.toString().trim();
-      
-      if (text && text.length > 0 && selection && readerRef.current?.contains(selection.anchorNode)) {
-        setSelectedText(text);
-
-        // Get selection position for tooltip (below selection to avoid native menu)
-        const range = selection.getRangeAt(0);
-        const rect = range.getBoundingClientRect();
-        const containerRect = readerRef.current.getBoundingClientRect();
-
-        setSelectionPosition({
-          x: rect.left + rect.width / 2 - containerRect.left,
-          y: rect.bottom - containerRect.top + 5
-        });
+      // Clear any pending timeout
+      if (selectionTimeout) {
+        clearTimeout(selectionTimeout);
       }
+      
+      // Delay the selection capture slightly on mobile to allow selection to complete
+      selectionTimeout = setTimeout(() => {
+        const selection = window.getSelection();
+        const text = selection?.toString().trim();
+        
+        if (text && text.length > 0 && selection && readerRef.current?.contains(selection.anchorNode)) {
+          setSelectedText(text);
+
+          // Get selection position for tooltip (below selection to avoid native menu)
+          const range = selection.getRangeAt(0);
+          const rect = range.getBoundingClientRect();
+          const containerRect = readerRef.current.getBoundingClientRect();
+
+          setSelectionPosition({
+            x: rect.left + rect.width / 2 - containerRect.left,
+            y: rect.bottom - containerRect.top + 5
+          });
+        }
+      }, 50); // 50ms delay to allow selection to stabilize on mobile
     };
 
     document.addEventListener('mouseup', handleSelection);
     document.addEventListener('touchend', handleSelection);
 
     return () => {
+      if (selectionTimeout) {
+        clearTimeout(selectionTimeout);
+      }
       document.removeEventListener('mouseup', handleSelection);
       document.removeEventListener('touchend', handleSelection);
     };
