@@ -12,6 +12,9 @@ import { Button } from './components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 import './App.css';
 
+// Maximum number of insights to keep in history
+const MAX_HISTORY_ITEMS = 50;
+
 function App() {
   const [passage, setPassage] = useState<BiblePassage | null>(null);
   const [insight, setInsight] = useState<Insight | null>(null);
@@ -95,7 +98,7 @@ function App() {
         insight: result,
         timestamp: Date.now(),
       };
-      setInsightsHistory(prev => [historyItem, ...prev].slice(0, 50)); // Keep last 50
+      setInsightsHistory(prev => [historyItem, ...prev].slice(0, MAX_HISTORY_ITEMS));
     } catch (err) {
       setError('Failed to generate insights. Please try again.');
       console.error('Error generating insights:', err);

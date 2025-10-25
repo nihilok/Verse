@@ -3,6 +3,10 @@ import { ChevronLeft, ChevronRight, Sparkles, X } from 'lucide-react';
 import type { BiblePassage } from '../types';
 import { CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 
+// Selection timing constants
+const SELECTION_CHANGE_DELAY = 100; // ms to wait after selection change before capturing
+const POINTER_UP_DELAY = 50; // ms to wait after pointer/touch up before capturing
+
 interface BibleReaderProps {
   passage: BiblePassage | null;
   onTextSelected: (text: string, reference: string) => void;
@@ -48,7 +52,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({ passage, onTextSelected, onNa
       
       // Delay the selection capture slightly to allow selection to complete
       // This is especially important on mobile when using selection handles
-      selectionTimeout = setTimeout(updateSelection, 100);
+      selectionTimeout = setTimeout(updateSelection, SELECTION_CHANGE_DELAY);
     };
     
     const handlePointerUp = () => {
@@ -56,7 +60,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({ passage, onTextSelected, onNa
       if (selectionTimeout) {
         clearTimeout(selectionTimeout);
       }
-      selectionTimeout = setTimeout(updateSelection, 50);
+      selectionTimeout = setTimeout(updateSelection, POINTER_UP_DELAY);
     };
 
     // Listen to selectionchange for when user modifies selection (e.g., dragging handles on mobile)
@@ -140,7 +144,6 @@ const BibleReader: React.FC<BibleReaderProps> = ({ passage, onTextSelected, onNa
           >
             <button 
               onClick={handleGetInsights}
-              onTouchEnd={handleGetInsights}
               className="tooltip-button"
             >
               <Sparkles size={16} />
