@@ -165,7 +165,7 @@ function App() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-background">
+    <div className="mobile-viewport-height flex flex-col bg-background">
       <header className="bg-primary text-primary-foreground shadow-md flex-shrink-0 border-b-2 border-primary/20">
         <div className="max-w-[1800px] mx-auto px-6 py-4">
           <div className="flex items-center justify-between">

@@ -1,3 +1,12 @@
+/* Mobile-friendly viewport height with fallback */
+/* Use dvh (dynamic viewport height) which adjusts as the address bar shows/hides */
+/* With lvh (large viewport height) as fallback for browsers that don't support dvh */
+.mobile-viewport-height {
+  height: 100vh; /* Base fallback for older browsers */
+  height: 100lvh; /* Large viewport height fallback */
+  height: 100dvh; /* Dynamic viewport height (preferred) */
+}
+
 /* Custom CSS variables for component-specific styling */
 :root {
   --primary-color: #2c3e50;
