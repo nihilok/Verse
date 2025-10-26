@@ -121,8 +121,8 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <header className="bg-gradient-to-r from-primary to-blue-600 text-primary-foreground shadow-lg">
+    <div className="h-screen flex flex-col bg-background">
+      <header className="bg-gradient-to-r from-primary to-blue-600 text-primary-foreground shadow-lg flex-shrink-0">
         <div className="max-w-[1800px] mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -144,14 +144,14 @@ function App() {
         </div>
       </header>
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden min-h-0">
         {/* Sidebar */}
         <div className={`${sidebarOpen ? 'block' : 'hidden'} lg:block fixed lg:relative inset-0 lg:inset-auto z-40 bg-black/50 lg:bg-transparent`}
              onClick={(e) => {
                if (e.target === e.currentTarget) setSidebarOpen(false);
              }}>
-          <Sidebar className="h-full w-80 bg-card shadow-lg lg:shadow-none">
-            <SidebarHeader className="flex items-center justify-between">
+          <Sidebar className="h-full w-80 bg-card shadow-lg lg:shadow-none flex flex-col">
+            <SidebarHeader className="flex items-center justify-between flex-shrink-0">
               <h2 className="font-semibold text-lg">Navigation</h2>
               <Button
                 variant="ghost"
@@ -162,19 +162,19 @@ function App() {
                 <X size={20} />
               </Button>
             </SidebarHeader>
-            <SidebarContent>
-              <Tabs defaultValue="search" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
+            <SidebarContent className="flex-1 min-h-0 overflow-y-auto">
+              <Tabs defaultValue="search" className="w-full h-full flex flex-col">
+                <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
                   <TabsTrigger value="search">Search</TabsTrigger>
                   <TabsTrigger value="history" className="flex items-center gap-1">
                     <HistoryIcon size={16} />
                     History
                   </TabsTrigger>
                 </TabsList>
-                <TabsContent value="search" className="mt-4">
+                <TabsContent value="search" className="mt-4 flex-1 overflow-y-auto">
                   <PassageSearch onSearch={handleSearch} />
                 </TabsContent>
-                <TabsContent value="history" className="mt-4">
+                <TabsContent value="history" className="mt-4 flex-1 overflow-y-auto">
                   <InsightsHistoryComponent
                     history={insightsHistory}
                     onSelect={handleHistorySelect}
@@ -187,9 +187,9 @@ function App() {
         </div>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-hidden p-6">
+        <main className="flex-1 flex flex-col overflow-hidden p-6 min-h-0">
           {error && (
-            <div className="mb-4 flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive max-w-4xl mx-auto">
+            <div className="mb-4 flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive max-w-4xl mx-auto flex-shrink-0">
               <AlertCircle size={20} />
               <span className="flex-1">{error}</span>
               <button
@@ -201,14 +201,14 @@ function App() {
             </div>
           )}
 
-          <div className="max-w-4xl mx-auto h-full">
+          <div className="max-w-4xl mx-auto flex-1 w-full min-h-0">
             {loading ? (
-              <div className="flex flex-col items-center justify-center h-96 text-muted-foreground">
+              <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                 <Loader2 size={48} className="animate-spin mb-4" />
                 <p>Loading passage...</p>
               </div>
             ) : (
-              <div className="bg-card rounded-lg shadow-sm border h-full overflow-y-auto">
+              <div className="bg-card rounded-lg shadow-sm border h-full flex flex-col">
                 <BibleReader
                   passage={passage}
                   onTextSelected={handleTextSelected}

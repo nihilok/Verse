@@ -24,8 +24,8 @@ const InsightsHistoryComponent: React.FC<InsightsHistoryProps> = ({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 h-full flex flex-col">
+      <div className="flex items-center justify-between flex-shrink-0">
         <h3 className="font-semibold flex items-center gap-2">
           <History size={20} />
           Insights History
@@ -40,7 +40,7 @@ const InsightsHistoryComponent: React.FC<InsightsHistoryProps> = ({
         </Button>
       </div>
       
-      <div className="space-y-2 max-h-[400px] overflow-y-auto">
+      <div className="space-y-2 flex-1 overflow-y-auto min-h-0">
         {history.map((item) => (
           <button
             key={item.id}
