@@ -66,8 +66,14 @@ class HelloAOBibleClient(BibleClient):
         for item in content:
             if isinstance(item, str):
                 text_parts.append(item)
-            elif isinstance(item, dict) and 'text' in item:
-                text_parts.append(item['text'])
+            elif isinstance(item, dict):
+                # Handle footnotes and other non-text dictionaries by adding a space
+                # to prevent words from being concatenated together
+                if 'text' in item:
+                    text_parts.append(item['text'])
+                elif 'noteId' in item:
+                    # Footnote marker - add a space to separate surrounding words
+                    text_parts.append(' ')
         return ''.join(text_parts).strip()
 
     async def get_verse(
