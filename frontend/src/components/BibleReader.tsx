@@ -158,7 +158,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({
       </CardHeader>
       <CardContent
         ref={contentRef}
-        className="flex-1 relative overflow-y-auto min-h-0"
+        className="flex-1 relative overflow-y-auto min-h-0 pt-4"
       >
         <div className="relative">
           {passage.verses.map((verse) => (
