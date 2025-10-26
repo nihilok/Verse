@@ -5,6 +5,7 @@ import {
   X,
   Loader2,
   History as HistoryIcon,
+  Menu, // Add Menu icon for mobile sidebar toggle
 } from "lucide-react";
 import PassageSearch from "./components/PassageSearch";
 import BibleReader from "./components/BibleReader";
@@ -166,6 +167,16 @@ function App() {
 
   return (
     <div className="mobile-viewport-height flex flex-col bg-background">
+      {/* Mobile sidebar open button */}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="fixed top-4 left-4 z-50 lg:hidden"
+        aria-label="Open sidebar"
+        onClick={() => setSidebarOpen(true)}
+      >
+        <Menu size={24} />
+      </Button>
       <div className="flex-1 flex overflow-hidden min-h-0">
         {/* Sidebar */}
         <div
