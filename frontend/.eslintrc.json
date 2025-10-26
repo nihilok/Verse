@@ -13,13 +13,17 @@
     "sourceType": "module"
   },
   "plugins": ["react-hooks", "@typescript-eslint"],
-  "extends": [
-    "eslint:recommended",
-    "plugin:@typescript-eslint/recommended"
-  ],
+  "extends": ["eslint:recommended", "plugin:@typescript-eslint/recommended"],
   "rules": {
     "react-hooks/rules-of-hooks": "error",
     "react-hooks/exhaustive-deps": "warn"
-  }
+  },
+  "overrides": [
+    {
+      "files": ["**/generate-icons.mjs"],
+      "env": {
+        "node": true
+      }
+    }
+  ]
 }
-

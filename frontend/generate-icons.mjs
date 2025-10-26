@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+/* eslint-env node */
+/* eslint-disable no-undef */
+
 /**
  * Simple icon generator using Canvas
  * This creates placeholder icons if ImageMagick is not available

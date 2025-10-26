@@ -1,3 +1,9 @@
+/// <reference lib="dom" />
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// Type alias for NotificationPermission to satisfy linter if not present
+// Remove if your environment already provides this type
+type NotificationPermission = "default" | "denied" | "granted";
+
 // PWA utilities for service worker registration and installation
 
 interface BeforeInstallPromptEvent extends Event {
@@ -82,10 +88,17 @@ export const unregisterServiceWorker = async (): Promise<boolean> => {
 /**
  * Check if the app is running as a PWA
  */
+function hasStandalone(
+  nav: Navigator,
+): nav is Navigator & { standalone: boolean } {
+  return "standalone" in nav;
+}
+
 export const isPWA = (): boolean => {
+  const nav = navigator;
   return (
     window.matchMedia("(display-mode: standalone)").matches ||
-    (window.navigator as any).standalone === true ||
+    (hasStandalone(nav) && nav.standalone) ||
     document.referrer.includes("android-app://")
   );
 };
