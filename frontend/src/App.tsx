@@ -4,7 +4,6 @@ import {
   AlertCircle,
   X,
   Loader2,
-  Menu,
   History as HistoryIcon,
 } from "lucide-react";
 import PassageSearch from "./components/PassageSearch";
@@ -167,27 +166,6 @@ function App() {
 
   return (
     <div className="mobile-viewport-height flex flex-col bg-background">
-      <header className="bg-primary text-primary-foreground shadow-md flex-shrink-0 border-b-2 border-primary/20">
-        <div className="max-w-[1800px] mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="lg:hidden text-primary-foreground hover:bg-primary-foreground/10"
-              >
-                <Menu size={24} />
-              </Button>
-              <h1 className="text-2xl font-semibold tracking-tight text-secondary">
-                Verse
-              </h1>
-            </div>
-            <ModeToggle />
-          </div>
-        </div>
-      </header>
-
       <div className="flex-1 flex overflow-hidden min-h-0">
         {/* Sidebar */}
         <div
@@ -206,15 +184,19 @@ function App() {
               >
                 <X size={20} />
               </Button>
-              <div className="flex gap-2 w-full">
-                <BookOpen
-                  size={28}
-                  className="text-primary"
-                  strokeWidth={1.5}
-                />
-                <h2 className="font-semibold text-xl tracking-tight text-primary">
-                  Verse
-                </h2>
+              <div className="flex gap-2 w-full items-center justify-between">
+                <div className="flex gap-2 items-center">
+                  <BookOpen
+                    size={28}
+                    className="text-primary"
+                    strokeWidth={1.5}
+                  />
+                  <h2 className="font-semibold text-xl tracking-tight text-primary">
+                    Verse
+                  </h2>
+                </div>
+                {/* ModeToggle moved here from header */}
+                <ModeToggle />
               </div>
               <p className="w-full text-xs text-muted-foreground italic">
                 Discover wisdom through AI-powered insights
