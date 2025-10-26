@@ -30,7 +30,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "${VERSE_BACKEND_PORT:-7776}:8000"
 
   frontend:
     build:
@@ -38,7 +38,7 @@ services:
       dockerfile: Dockerfile
     container_name: verse-frontend-prod
     ports:
-      - "${VERSE_PORT:-8080}:80"
+      - "${VERSE_PORT:-7777}:80"
     depends_on:
       - backend
     restart: unless-stopped
