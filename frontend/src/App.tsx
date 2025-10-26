@@ -178,7 +178,9 @@ function App() {
               >
                 <Menu size={24} />
               </Button>
-              <h1 className="text-2xl font-semibold tracking-tight">Verse</h1>
+              <h1 className="text-2xl font-semibold tracking-tight text-secondary">
+                Verse
+              </h1>
             </div>
             <ModeToggle />
           </div>
