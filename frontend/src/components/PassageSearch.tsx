@@ -87,6 +87,8 @@ const TRANSLATIONS = [
   { code: "LSV", name: "Literal Standard Version" },
   { code: "WEB", name: "World English Bible" },
   { code: "BSB", name: "Berean Standard Bible" },
+  { code: "BES", name: "La Biblia en Español Sencillo" },
+  { code: "SRV", name: "Santa Biblia - Reina-Valera 1909" },
 ];
 
 interface PassageSearchProps {

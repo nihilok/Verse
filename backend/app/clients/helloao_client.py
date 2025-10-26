@@ -14,6 +14,8 @@ class HelloAOBibleClient(BibleClient):
         "KJV": "eng_kjv",   # King James Version
         "BSB": "BSB",   # Berean Standard Bible
         "LSV": "eng_lsv",   # Literal Standard Version
+        "SRV": "spa_r09",  # Spanish Reina-Valera 1909
+        "BES": "spa_bes"  # Spanish Biblia en Español Sencillo
     }
 
     BOOK_IDS = {
