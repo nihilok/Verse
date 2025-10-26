@@ -150,33 +150,35 @@ const BibleReader: React.FC<BibleReaderProps> = ({
 
   return (
     <div className="flex flex-col h-full" ref={readerRef}>
-      <CardHeader className="flex flex-row items-center gap-2 pb-4 border-b flex-shrink-0">
-        <CardTitle className="text-lg">{passage.reference}</CardTitle>
-        <span className="ml-auto bg-secondary text-secondary-foreground px-3 py-1 rounded text-xs font-semibold">
+      <CardHeader className="flex flex-row items-center gap-2 pb-4 border-b flex-shrink-0 bg-muted/30">
+        <CardTitle className="text-xl font-semibold tracking-tight">
+          {passage.reference}
+        </CardTitle>
+        <span className="ml-auto bg-accent/80 text-accent-foreground px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide">
           {passage.translation}
         </span>
       </CardHeader>
       <CardContent
         ref={contentRef}
-        className="flex-1 relative overflow-y-auto min-h-0 pt-4"
+        className="flex-1 relative overflow-y-auto min-h-0 pt-6 px-4 sm:px-6"
       >
-        <div className="relative">
-          {passage.verses.map((verse) => (
+        <div className="relative max-w-2xl mx-auto">
+          {passage.verses.map((verse, index) => (
             <div
               key={`${verse.chapter}:${verse.verse}`}
-              className="mb-4 flex items-start gap-2"
+              className={`mb-3 flex items-start gap-2 group ${index === 0 ? "mt-2" : ""}`}
             >
-              <span className="text-primary font-bold min-w-[30px]">
+              <span className="verse-number text-primary/70 font-semibold min-w-[28px] text-right select-none">
                 {verse.verse}
               </span>
-              <span className="text-base">{verse.text}</span>
+              <span className="text-base leading-relaxed">{verse.text}</span>
             </div>
           ))}
 
           {/* Selection Tooltip */}
           {selectionPosition && selectedText && (
             <div
-              className="absolute bg-popover border border-border rounded-md shadow-lg p-1 flex gap-1 z-50"
+              className="absolute bg-popover border-2 border-primary/20 rounded-lg shadow-xl p-1.5 flex gap-1.5 z-50"
               style={{
                 left: `${selectionPosition.x}px`,
                 top: `${selectionPosition.y}px`,
@@ -185,17 +187,17 @@ const BibleReader: React.FC<BibleReaderProps> = ({
             >
               <button
                 onClick={handleGetInsights}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-sm font-medium whitespace-nowrap"
+                className="flex items-center gap-2 px-3.5 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-all text-sm font-semibold whitespace-nowrap shadow-sm"
               >
-                <Sparkles size={14} />
+                <Sparkles size={16} />
                 Get Insight
               </button>
               <button
                 onClick={clearSelection}
-                className="flex items-center justify-center p-1.5 rounded hover:bg-accent hover:text-accent-foreground transition-colors"
+                className="flex items-center justify-center p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
                 aria-label="Close"
               >
-                <X size={14} />
+                <X size={16} />
               </button>
             </div>
           )}
@@ -204,17 +206,17 @@ const BibleReader: React.FC<BibleReaderProps> = ({
 
       {/* Navigation Controls */}
       {onNavigate && (
-        <div className="flex justify-between p-4 border-t gap-4 flex-shrink-0">
+        <div className="flex justify-between p-4 border-t bg-muted/20 gap-4 flex-shrink-0">
           <button
             onClick={() => onNavigate("prev")}
-            className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-foreground bg-secondary hover:bg-secondary/80 rounded-md transition-colors border border-border"
+            className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-medium text-foreground bg-background hover:bg-accent hover:text-accent-foreground rounded-lg transition-all border border-border shadow-sm hover:shadow"
           >
             <ChevronLeft size={16} />
             Previous Chapter
           </button>
           <button
             onClick={() => onNavigate("next")}
-            className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-foreground bg-secondary hover:bg-secondary/80 rounded-md transition-colors border border-border"
+            className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-medium text-foreground bg-background hover:bg-accent hover:text-accent-foreground rounded-lg transition-all border border-border shadow-sm hover:shadow"
           >
             Next Chapter
             <ChevronRight size={16} />

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { BookOpen, Search } from "lucide-react";
-import { CardHeader, CardContent, CardTitle } from "@/components/ui/card";
+import { Search } from "lucide-react";
+import { CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -154,13 +154,10 @@ const PassageSearch: React.FC<PassageSearchProps> = ({ onSearch }) => {
 
   return (
     <>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <BookOpen size={24} />
-          Bible Passage
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
+      <CardContent className="pt-0 px-4">
+        <p className="text-sm text-muted-foreground mb-4">
+          Search for any Bible passage by book, chapter, and verse
+        </p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="book">Book</Label>

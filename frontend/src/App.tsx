@@ -91,6 +91,9 @@ function App() {
 
       // Save the current passage to localStorage for persistence
       saveLastPassage({ book, chapter, translation });
+
+      // Close sidebar on mobile after successfully loading passage
+      setSidebarOpen(false);
     } catch (err) {
       setError(
         "Failed to load passage. Please check your input and try again.",
@@ -163,10 +166,10 @@ function App() {
 
   return (
     <div className="h-screen flex flex-col bg-background">
-      <header className="bg-gradient-to-r from-primary to-blue-600 text-primary-foreground shadow-lg flex-shrink-0">
+      <header className="bg-primary text-primary-foreground shadow-md flex-shrink-0 border-b-2 border-primary/20">
         <div className="max-w-[1800px] mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
                 size="icon"
@@ -175,10 +178,7 @@ function App() {
               >
                 <Menu size={24} />
               </Button>
-              <BookOpen size={32} />
-              <div>
-                <h1 className="text-3xl font-bold">Verse</h1>
-              </div>
+              <h1 className="text-2xl font-semibold tracking-tight">Verse</h1>
             </div>
             <ModeToggle />
           </div>
@@ -194,16 +194,28 @@ function App() {
           }}
         >
           <Sidebar className="h-full w-80 bg-card shadow-lg lg:shadow-none flex flex-col">
-            <SidebarHeader className="flex items-center justify-between flex-shrink-0">
-              <h2 className="font-semibold text-lg">Navigation</h2>
+            <SidebarHeader className="flex flex-col gap-2 flex-shrink-0 pb-4 border-b relative">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setSidebarOpen(false)}
-                className="lg:hidden"
+                className="lg:hidden absolute top-0 right-0"
               >
                 <X size={20} />
               </Button>
+              <div className="flex gap-2 w-full">
+                <BookOpen
+                  size={28}
+                  className="text-primary"
+                  strokeWidth={1.5}
+                />
+                <h2 className="font-semibold text-xl tracking-tight text-primary">
+                  Verse
+                </h2>
+              </div>
+              <p className="w-full text-xs text-muted-foreground italic">
+                Discover wisdom through AI-powered insights
+              </p>
             </SidebarHeader>
             <SidebarContent className="flex-1 min-h-0 overflow-y-auto">
               <Tabs
@@ -228,7 +240,7 @@ function App() {
                 </TabsContent>
                 <TabsContent
                   value="history"
-                  className="mt-4 flex-1 overflow-y-auto"
+                  className="mt-4 flex-1 overflow-y-auto px-4"
                 >
                   <InsightsHistoryComponent
                     history={insightsHistory}

@@ -41,23 +41,25 @@ const InsightsModal: React.FC<InsightsModalProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Sparkles size={24} />
+          <DialogTitle className="flex items-center gap-2 text-2xl">
+            <Sparkles size={28} className="text-primary" />
             AI Insights
           </DialogTitle>
         </DialogHeader>
 
         {insight.cached && (
-          <div className="flex items-center gap-2 text-green-600 text-sm">
+          <div className="flex items-center gap-2 text-green-600 dark:text-green-400 text-sm bg-green-50 dark:bg-green-950/30 px-3 py-1.5 rounded-md">
             <CheckCircle size={16} />
-            <span>Cached Result</span>
+            <span className="font-medium">Cached Result</span>
           </div>
         )}
 
         {selectedText && (
-          <div className="mb-2 p-3 rounded bg-muted">
-            <h3 className="font-semibold text-sm mb-1">{reference}</h3>
-            <p className="italic text-sm">"{selectedText}"</p>
+          <div className="mb-2 p-4 rounded-lg bg-muted/50 border border-border">
+            <h3 className="font-semibold text-sm mb-2 text-primary">
+              {reference}
+            </h3>
+            <p className="italic text-sm leading-relaxed">"{selectedText}"</p>
           </div>
         )}
 
