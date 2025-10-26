@@ -37,7 +37,7 @@ services:
       dockerfile: Dockerfile
     container_name: verse-frontend-prod
     ports:
-      - "80:80"
+      - "${VERSE_PORT:-8080}:80"
     depends_on:
       - backend
     restart: unless-stopped
