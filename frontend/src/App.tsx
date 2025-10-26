@@ -137,7 +137,6 @@ function App() {
               <BookOpen size={32} />
               <div>
                 <h1 className="text-3xl font-bold">Verse</h1>
-                <p className="text-sm opacity-90">Interactive Bible Reader with AI-Powered Insights</p>
               </div>
             </div>
             <ModeToggle />
