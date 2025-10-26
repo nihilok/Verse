@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BookOpen, Search } from 'lucide-react';
 import { CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { loadPassageSearch, savePassageSearch } from '@/lib/storage';
 
 const BIBLE_BOOKS = [
   'Genesis', 'Exodus', 'Leviticus', 'Numbers', 'Deuteronomy', 'Joshua', 'Judges', 'Ruth',
@@ -35,11 +36,34 @@ interface PassageSearchProps {
 }
 
 const PassageSearch: React.FC<PassageSearchProps> = ({ onSearch }) => {
-  const [book, setBook] = useState('John');
-  const [chapter, setChapter] = useState('3');
-  const [verseStart, setVerseStart] = useState('');
-  const [verseEnd, setVerseEnd] = useState('');
-  const [translation, setTranslation] = useState('WEB');
+  // Load saved values from localStorage once during initialization
+  // useMemo with empty deps ensures this only runs once
+  const savedState = useMemo(() => loadPassageSearch(), []);
+  
+  const [book, setBook] = useState(savedState?.book || 'John');
+  const [chapter, setChapter] = useState(savedState?.chapter || '3');
+  const [verseStart, setVerseStart] = useState(savedState?.verseStart || '');
+  const [verseEnd, setVerseEnd] = useState(savedState?.verseEnd || '');
+  const [translation, setTranslation] = useState(savedState?.translation || 'WEB');
+
+  // Track if this is the first render to avoid saving during initialization
+  const isFirstRender = useRef(true);
+
+  // Save to localStorage whenever values change (except on first render)
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    
+    savePassageSearch({
+      book,
+      chapter,
+      verseStart,
+      verseEnd,
+      translation,
+    });
+  }, [book, chapter, verseStart, verseEnd, translation]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
