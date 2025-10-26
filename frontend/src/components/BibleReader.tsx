@@ -47,7 +47,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({ passage, onTextSelected, onNa
 
         setSelectionPosition({
           x: rect.left - containerRect.left + scrollLeft + rect.width / 2,
-          y: rect.bottom - containerRect.top + scrollTop + 2
+          y: rect.bottom - containerRect.top + scrollTop + 32
         });
       } else if (!text) {
         // Clear selection if no text is selected
