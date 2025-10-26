@@ -1,4 +1,4 @@
-import { cva } from "class-variance-authority"
+import { cva } from "class-variance-authority";
 
 export const buttonVariants = cva(
   "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
@@ -12,7 +12,8 @@ export const buttonVariants = cva(
           "border border-border bg-background hover:bg-accent hover:text-accent-foreground",
         secondary:
           "border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "border border-transparent hover:bg-accent hover:text-accent-foreground",
+        ghost:
+          "border border-transparent hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
@@ -26,5 +27,5 @@ export const buttonVariants = cva(
       variant: "default",
       size: "default",
     },
-  }
-)
+  },
+);

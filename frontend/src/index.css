@@ -36,7 +36,9 @@
 
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-feature-settings:
+      "rlig" 1,
+      "calt" 1;
   }
 }
 
@@ -45,51 +47,57 @@
   .prose {
     @apply text-foreground;
   }
-  
-  .prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+
+  .prose h1,
+  .prose h2,
+  .prose h3,
+  .prose h4,
+  .prose h5,
+  .prose h6 {
     @apply text-foreground font-semibold;
   }
-  
+
   .prose h1 {
     @apply text-2xl mt-6 mb-4;
   }
-  
+
   .prose h2 {
     @apply text-xl mt-5 mb-3;
   }
-  
+
   .prose h3 {
     @apply text-lg mt-4 mb-2;
   }
-  
+
   .prose p {
     @apply mb-4 leading-7;
   }
-  
-  .prose ul, .prose ol {
+
+  .prose ul,
+  .prose ol {
     @apply mb-4 ml-6;
   }
-  
+
   .prose li {
     @apply mb-2;
   }
-  
+
   .prose strong {
     @apply font-semibold;
   }
-  
+
   .prose em {
     @apply italic;
   }
-  
+
   .prose code {
     @apply bg-muted px-1.5 py-0.5 rounded text-sm font-mono;
   }
-  
+
   .prose blockquote {
     @apply border-l-4 border-primary pl-4 italic my-4;
   }
-  
+
   .prose a {
     @apply text-primary underline hover:text-primary/80;
   }
@@ -161,4 +169,3 @@
   --color-input: oklch(17.5% 0.0226 254.68);
   --color-ring: oklch(48% 0.2175 254.32);
 }
-

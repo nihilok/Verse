@@ -1,17 +1,28 @@
-import { useState, useEffect } from 'react';
-import { BookOpen, AlertCircle, X, Loader2, Menu, History as HistoryIcon } from 'lucide-react';
-import PassageSearch from './components/PassageSearch';
-import BibleReader from './components/BibleReader';
-import InsightsModal from './components/InsightsModal';
-import InsightsHistoryComponent from './components/InsightsHistory';
-import { ModeToggle } from './components/mode-toggle';
-import { bibleService } from './services/api';
-import { BiblePassage, Insight, InsightHistory } from './types';
-import { Sidebar, SidebarHeader, SidebarContent } from './components/ui/sidebar';
-import { Button } from './components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
-import { loadLastPassage, saveLastPassage } from './lib/storage';
-import './App.css';
+import { useState, useEffect } from "react";
+import {
+  BookOpen,
+  AlertCircle,
+  X,
+  Loader2,
+  Menu,
+  History as HistoryIcon,
+} from "lucide-react";
+import PassageSearch from "./components/PassageSearch";
+import BibleReader from "./components/BibleReader";
+import InsightsModal from "./components/InsightsModal";
+import InsightsHistoryComponent from "./components/InsightsHistory";
+import { ModeToggle } from "./components/mode-toggle";
+import { bibleService } from "./services/api";
+import { BiblePassage, Insight, InsightHistory } from "./types";
+import {
+  Sidebar,
+  SidebarHeader,
+  SidebarContent,
+} from "./components/ui/sidebar";
+import { Button } from "./components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
+import { loadLastPassage, saveLastPassage } from "./lib/storage";
+import "./App.css";
 
 // Maximum number of insights to keep in history
 const MAX_HISTORY_ITEMS = 50;
@@ -21,12 +32,12 @@ function App() {
   const [insight, setInsight] = useState<Insight | null>(null);
   const [loading, setLoading] = useState(false);
   const [insightLoading, setInsightLoading] = useState(false);
-  const [selectedText, setSelectedText] = useState('');
-  const [selectedReference, setSelectedReference] = useState('');
+  const [selectedText, setSelectedText] = useState("");
+  const [selectedReference, setSelectedReference] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [currentBook, setCurrentBook] = useState('John');
+  const [currentBook, setCurrentBook] = useState("John");
   const [currentChapter, setCurrentChapter] = useState(3);
-  const [currentTranslation, setCurrentTranslation] = useState('WEB');
+  const [currentTranslation, setCurrentTranslation] = useState("WEB");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [insightsModalOpen, setInsightsModalOpen] = useState(false);
   const [insightsHistory, setInsightsHistory] = useState<InsightHistory[]>([]);
@@ -35,10 +46,11 @@ function App() {
   useEffect(() => {
     const loadHistory = async () => {
       try {
-        const history = await bibleService.getInsightsHistory(MAX_HISTORY_ITEMS);
+        const history =
+          await bibleService.getInsightsHistory(MAX_HISTORY_ITEMS);
         setInsightsHistory(history);
       } catch (e) {
-        console.error('Failed to load insights history:', e);
+        console.error("Failed to load insights history:", e);
       }
     };
     loadHistory();
@@ -54,7 +66,7 @@ function App() {
         lastPassage.chapter,
         undefined,
         undefined,
-        lastPassage.translation
+        lastPassage.translation,
       );
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -64,7 +76,7 @@ function App() {
     chapter: number,
     _verseStart?: number,
     _verseEnd?: number,
-    translation: string = 'WEB'
+    translation: string = "WEB",
   ) => {
     setLoading(true);
     setError(null);
@@ -76,22 +88,31 @@ function App() {
       // Load full chapter by default for better reading experience
       const result = await bibleService.getChapter(book, chapter, translation);
       setPassage(result);
-      
+
       // Save the current passage to localStorage for persistence
       saveLastPassage({ book, chapter, translation });
     } catch (err) {
-      setError('Failed to load passage. Please check your input and try again.');
-      console.error('Error loading passage:', err);
+      setError(
+        "Failed to load passage. Please check your input and try again.",
+      );
+      console.error("Error loading passage:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleNavigate = async (direction: 'prev' | 'next') => {
-    const newChapter = direction === 'next' ? currentChapter + 1 : currentChapter - 1;
+  const handleNavigate = async (direction: "prev" | "next") => {
+    const newChapter =
+      direction === "next" ? currentChapter + 1 : currentChapter - 1;
     if (newChapter < 1) return;
 
-    await handleSearch(currentBook, newChapter, undefined, undefined, currentTranslation);
+    await handleSearch(
+      currentBook,
+      newChapter,
+      undefined,
+      undefined,
+      currentTranslation,
+    );
   };
 
   const handleTextSelected = async (text: string, reference: string) => {
@@ -104,17 +125,18 @@ function App() {
       const result = await bibleService.getInsights(text, reference);
       setInsight(result);
       setInsightsModalOpen(true);
-      
+
       // Reload history from backend to get the latest insights
       try {
-        const history = await bibleService.getInsightsHistory(MAX_HISTORY_ITEMS);
+        const history =
+          await bibleService.getInsightsHistory(MAX_HISTORY_ITEMS);
         setInsightsHistory(history);
       } catch (historyErr) {
-        console.error('Failed to reload insights history:', historyErr);
+        console.error("Failed to reload insights history:", historyErr);
       }
     } catch (err) {
-      setError('Failed to generate insights. Please try again.');
-      console.error('Error generating insights:', err);
+      setError("Failed to generate insights. Please try again.");
+      console.error("Error generating insights:", err);
     } finally {
       setInsightLoading(false);
     }
@@ -128,13 +150,13 @@ function App() {
   };
 
   const handleClearHistory = async () => {
-    if (confirm('Are you sure you want to clear all insights history?')) {
+    if (confirm("Are you sure you want to clear all insights history?")) {
       try {
         await bibleService.clearInsightsHistory();
         setInsightsHistory([]);
       } catch (err) {
-        console.error('Failed to clear insights history:', err);
-        setError('Failed to clear history. Please try again.');
+        console.error("Failed to clear insights history:", err);
+        setError("Failed to clear history. Please try again.");
       }
     }
   };
@@ -165,10 +187,12 @@ function App() {
 
       <div className="flex-1 flex overflow-hidden min-h-0">
         {/* Sidebar */}
-        <div className={`${sidebarOpen ? 'block' : 'hidden'} lg:block fixed lg:relative inset-0 lg:inset-auto z-40 bg-black/50 lg:bg-transparent`}
-             onClick={(e) => {
-               if (e.target === e.currentTarget) setSidebarOpen(false);
-             }}>
+        <div
+          className={`${sidebarOpen ? "block" : "hidden"} lg:block fixed lg:relative inset-0 lg:inset-auto z-40 bg-black/50 lg:bg-transparent`}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSidebarOpen(false);
+          }}
+        >
           <Sidebar className="h-full w-80 bg-card shadow-lg lg:shadow-none flex flex-col">
             <SidebarHeader className="flex items-center justify-between flex-shrink-0">
               <h2 className="font-semibold text-lg">Navigation</h2>
@@ -182,18 +206,30 @@ function App() {
               </Button>
             </SidebarHeader>
             <SidebarContent className="flex-1 min-h-0 overflow-y-auto">
-              <Tabs defaultValue="search" className="w-full h-full flex flex-col">
+              <Tabs
+                defaultValue="search"
+                className="w-full h-full flex flex-col"
+              >
                 <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
                   <TabsTrigger value="search">Search</TabsTrigger>
-                  <TabsTrigger value="history" className="flex items-center gap-1">
+                  <TabsTrigger
+                    value="history"
+                    className="flex items-center gap-1"
+                  >
                     <HistoryIcon size={16} />
                     History
                   </TabsTrigger>
                 </TabsList>
-                <TabsContent value="search" className="mt-4 flex-1 overflow-y-auto">
+                <TabsContent
+                  value="search"
+                  className="mt-4 flex-1 overflow-y-auto"
+                >
                   <PassageSearch onSearch={handleSearch} />
                 </TabsContent>
-                <TabsContent value="history" className="mt-4 flex-1 overflow-y-auto">
+                <TabsContent
+                  value="history"
+                  className="mt-4 flex-1 overflow-y-auto"
+                >
                   <InsightsHistoryComponent
                     history={insightsHistory}
                     onSelect={handleHistorySelect}

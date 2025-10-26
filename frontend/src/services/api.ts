@@ -1,7 +1,7 @@
-import axios from 'axios';
-import { BiblePassage, Insight, PassageQuery, InsightHistory } from '../types';
+import axios from "axios";
+import { BiblePassage, Insight, PassageQuery, InsightHistory } from "../types";
 
-const API_BASE_URL = '/api';
+const API_BASE_URL = "/api";
 
 export const bibleService = {
   async getPassage(query: PassageQuery): Promise<BiblePassage> {
@@ -14,7 +14,7 @@ export const bibleService = {
     });
 
     const response = await axios.get<BiblePassage>(
-      `${API_BASE_URL}/passage?${params}`
+      `${API_BASE_URL}/passage?${params}`,
     );
     return response.data;
   },
@@ -22,7 +22,7 @@ export const bibleService = {
   async getChapter(
     book: string,
     chapter: number,
-    translation: string = 'WEB'
+    translation: string = "WEB",
   ): Promise<BiblePassage> {
     const params = new URLSearchParams({
       book,
@@ -31,14 +31,14 @@ export const bibleService = {
     });
 
     const response = await axios.get<BiblePassage>(
-      `${API_BASE_URL}/chapter?${params}`
+      `${API_BASE_URL}/chapter?${params}`,
     );
     return response.data;
   },
 
   async getInsights(
     passageText: string,
-    passageReference: string
+    passageReference: string,
   ): Promise<Insight> {
     const response = await axios.post<Insight>(`${API_BASE_URL}/insights`, {
       passage_text: passageText,
@@ -49,7 +49,9 @@ export const bibleService = {
   },
 
   async getInsightsHistory(limit: number = 50): Promise<InsightHistory[]> {
-    const response = await axios.get<InsightHistory[]>(`${API_BASE_URL}/insights/history?limit=${limit}`);
+    const response = await axios.get<InsightHistory[]>(
+      `${API_BASE_URL}/insights/history?limit=${limit}`,
+    );
     return response.data;
   },
 

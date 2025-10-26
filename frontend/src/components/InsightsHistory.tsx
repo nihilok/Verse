@@ -1,7 +1,7 @@
-import React from 'react';
-import { History, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import type { InsightHistory } from '../types';
+import React from "react";
+import { History, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import type { InsightHistory } from "../types";
 
 interface InsightsHistoryProps {
   history: InsightHistory[];
@@ -9,10 +9,10 @@ interface InsightsHistoryProps {
   onClear: () => void;
 }
 
-const InsightsHistoryComponent: React.FC<InsightsHistoryProps> = ({ 
-  history, 
-  onSelect, 
-  onClear 
+const InsightsHistoryComponent: React.FC<InsightsHistoryProps> = ({
+  history,
+  onSelect,
+  onClear,
 }) => {
   if (history.length === 0) {
     return (
@@ -39,7 +39,7 @@ const InsightsHistoryComponent: React.FC<InsightsHistoryProps> = ({
           <Trash2 size={16} />
         </Button>
       </div>
-      
+
       <div className="space-y-2 flex-1 overflow-y-auto min-h-0">
         {history.map((item) => (
           <button

@@ -81,7 +81,6 @@
   color: var(--text-color);
 }
 
-
 .verse-text::selection {
   background-color: #ffd700;
   color: var(--text-color);
@@ -209,6 +208,10 @@
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }

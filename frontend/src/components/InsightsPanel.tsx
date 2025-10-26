@@ -1,7 +1,14 @@
-import React from 'react';
-import { CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Sparkles, Loader, CheckCircle, BookMarked, Landmark, Lightbulb } from 'lucide-react';
-import type { Insight } from '../types';
+import React from "react";
+import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import {
+  Sparkles,
+  Loader,
+  CheckCircle,
+  BookMarked,
+  Landmark,
+  Lightbulb,
+} from "lucide-react";
+import type { Insight } from "../types";
 
 interface InsightsPanelProps {
   insight: Insight | null;
@@ -9,7 +16,11 @@ interface InsightsPanelProps {
   selectedText: string;
 }
 
-const InsightsPanel: React.FC<InsightsPanelProps> = ({ insight, loading, selectedText }) => {
+const InsightsPanel: React.FC<InsightsPanelProps> = ({
+  insight,
+  loading,
+  selectedText,
+}) => {
   if (loading) {
     return (
       <div className="flex flex-col h-full">
@@ -34,7 +45,9 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({ insight, loading, selecte
         </CardHeader>
         <CardContent className="flex flex-1 flex-col items-center justify-center text-center text-muted-foreground">
           <Sparkles size={48} className="mb-4 opacity-40" />
-          <p>Highlight any passage in the Bible reader to explore its meaning</p>
+          <p>
+            Highlight any passage in the Bible reader to explore its meaning
+          </p>
         </CardContent>
       </div>
     );

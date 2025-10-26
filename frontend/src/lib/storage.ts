@@ -3,8 +3,8 @@
  */
 
 const STORAGE_KEYS = {
-  PASSAGE_SEARCH: 'verse_passage_search',
-  LAST_PASSAGE: 'verse_last_passage',
+  PASSAGE_SEARCH: "verse_passage_search",
+  LAST_PASSAGE: "verse_last_passage",
 } as const;
 
 /**
@@ -61,7 +61,7 @@ export function savePassageSearch(state: PassageSearchState): void {
 export function loadPassageSearch(): PassageSearchState | null {
   return getStorageItem<PassageSearchState | null>(
     STORAGE_KEYS.PASSAGE_SEARCH,
-    null
+    null,
   );
 }
 
@@ -79,6 +79,6 @@ export function saveLastPassage(state: LastPassageState): void {
 export function loadLastPassage(): LastPassageState | null {
   return getStorageItem<LastPassageState | null>(
     STORAGE_KEYS.LAST_PASSAGE,
-    null
+    null,
   );
 }
