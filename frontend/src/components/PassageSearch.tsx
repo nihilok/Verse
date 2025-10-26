@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BookOpen, Search } from 'lucide-react';
 import { CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { loadPassageSearch, savePassageSearch } from '@/lib/storage';
 
 const BIBLE_BOOKS = [
   'Genesis', 'Exodus', 'Leviticus', 'Numbers', 'Deuteronomy', 'Joshua', 'Judges', 'Ruth',
@@ -35,11 +36,25 @@ interface PassageSearchProps {
 }
 
 const PassageSearch: React.FC<PassageSearchProps> = ({ onSearch }) => {
-  const [book, setBook] = useState('John');
-  const [chapter, setChapter] = useState('3');
-  const [verseStart, setVerseStart] = useState('');
-  const [verseEnd, setVerseEnd] = useState('');
-  const [translation, setTranslation] = useState('WEB');
+  // Load saved values from localStorage or use defaults
+  const savedState = loadPassageSearch();
+  
+  const [book, setBook] = useState(savedState?.book || 'John');
+  const [chapter, setChapter] = useState(savedState?.chapter || '3');
+  const [verseStart, setVerseStart] = useState(savedState?.verseStart || '');
+  const [verseEnd, setVerseEnd] = useState(savedState?.verseEnd || '');
+  const [translation, setTranslation] = useState(savedState?.translation || 'WEB');
+
+  // Save to localStorage whenever values change
+  useEffect(() => {
+    savePassageSearch({
+      book,
+      chapter,
+      verseStart,
+      verseEnd,
+      translation,
+    });
+  }, [book, chapter, verseStart, verseEnd, translation]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

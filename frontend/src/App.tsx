@@ -10,6 +10,7 @@ import { BiblePassage, Insight, InsightHistory } from './types';
 import { Sidebar, SidebarHeader, SidebarContent } from './components/ui/sidebar';
 import { Button } from './components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
+import { loadLastPassage, saveLastPassage } from './lib/storage';
 import './App.css';
 
 // Maximum number of insights to keep in history
@@ -43,6 +44,21 @@ function App() {
     loadHistory();
   }, []);
 
+  // Load last viewed passage on mount
+  useEffect(() => {
+    const lastPassage = loadLastPassage();
+    if (lastPassage) {
+      // Auto-load the last passage the user was viewing
+      handleSearch(
+        lastPassage.book,
+        lastPassage.chapter,
+        undefined,
+        undefined,
+        lastPassage.translation
+      );
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleSearch = async (
     book: string,
     chapter: number,
@@ -60,6 +76,9 @@ function App() {
       // Load full chapter by default for better reading experience
       const result = await bibleService.getChapter(book, chapter, translation);
       setPassage(result);
+      
+      // Save the current passage to localStorage for persistence
+      saveLastPassage({ book, chapter, translation });
     } catch (err) {
       setError('Failed to load passage. Please check your input and try again.');
       console.error('Error loading passage:', err);
