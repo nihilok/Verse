@@ -5,8 +5,9 @@ WORKDIR /app
 # Copy package files
 COPY package.json bun.lock ./
 
-# Install dependencies
-RUN bun install
+# Install dependencies and explicitly add ARM64 Rollup support
+RUN bun install && \
+    bun add -D @rollup/rollup-linux-arm64-gnu
 
 # Copy source code
 COPY . .
