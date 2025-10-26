@@ -11,6 +11,7 @@ import PassageSearch from "./components/PassageSearch";
 import BibleReader from "./components/BibleReader";
 import InsightsModal from "./components/InsightsModal";
 import InsightsHistoryComponent from "./components/InsightsHistory";
+import InstallPrompt from "./components/InstallPrompt";
 import { ModeToggle } from "./components/mode-toggle";
 import { bibleService } from "./services/api";
 import { BiblePassage, Insight, InsightHistory } from "./types";
@@ -307,6 +308,9 @@ function App() {
           </div>
         </div>
       )}
+
+      {/* PWA Install Prompt */}
+      <InstallPrompt />
     </div>
   );
 }
