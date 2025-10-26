@@ -30,6 +30,7 @@
   "devDependencies": {
     "@eslint/js": "^8.57.0",
     "@tailwindcss/vite": "^4.1.16",
+    "@types/node": "^24.9.1",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",

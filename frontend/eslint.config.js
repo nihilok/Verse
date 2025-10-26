@@ -32,6 +32,15 @@ export default [
     },
   },
   {
+    files: ['vite.config.ts'],
+    languageOptions: {
+      parser: tsparser,
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
+  {
     ignores: ['dist/**', '.eslintrc.cjs'],
   },
 ];
