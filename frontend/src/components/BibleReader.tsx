@@ -6,6 +6,7 @@ import { CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 // Selection timing constants
 const SELECTION_CHANGE_DELAY = 100; // ms to wait after selection change before capturing
 const POINTER_UP_DELAY = 50; // ms to wait after pointer/touch up before capturing
+const SELECTION_TOOLTIP_OFFSET = 32;
 
 interface BibleReaderProps {
   passage: BiblePassage | null;
@@ -47,7 +48,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({ passage, onTextSelected, onNa
 
         setSelectionPosition({
           x: rect.left - containerRect.left + scrollLeft + rect.width / 2,
-          y: rect.bottom - containerRect.top + scrollTop + 32
+          y: rect.bottom - containerRect.top + scrollTop + SELECTION_TOOLTIP_OFFSET
         });
       } else if (!text) {
         // Clear selection if no text is selected
