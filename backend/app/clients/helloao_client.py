@@ -11,8 +11,9 @@ class HelloAOBibleClient(BibleClient):
     # Map user-friendly translation names to HelloAO API IDs
     TRANSLATION_IDS = {
         "WEB": "ENGWEBP",  # World English Bible
-        "KJV": "ENGKJV",   # King James Version (if available)
-        "ASV": "ENGASV",   # American Standard Version (if available)
+        "KJV": "eng_kjv",   # King James Version
+        "BSB": "BSB",   # Berean Standard Bible
+        "LSV": "eng_lsv",   # Literal Standard Version
     }
 
     BOOK_IDS = {

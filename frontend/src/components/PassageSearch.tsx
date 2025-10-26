@@ -1,50 +1,116 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { BookOpen, Search } from 'lucide-react';
-import { CardHeader, CardContent, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import { BookOpen, Search } from "lucide-react";
+import { CardHeader, CardContent, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { loadPassageSearch, savePassageSearch } from '@/lib/storage';
+} from "@/components/ui/select";
+import { loadPassageSearch, savePassageSearch } from "@/lib/storage";
 
 const BIBLE_BOOKS = [
-  'Genesis', 'Exodus', 'Leviticus', 'Numbers', 'Deuteronomy', 'Joshua', 'Judges', 'Ruth',
-  '1 Samuel', '2 Samuel', '1 Kings', '2 Kings', '1 Chronicles', '2 Chronicles', 'Ezra',
-  'Nehemiah', 'Esther', 'Job', 'Psalms', 'Proverbs', 'Ecclesiastes', 'Song of Solomon',
-  'Isaiah', 'Jeremiah', 'Lamentations', 'Ezekiel', 'Daniel', 'Hosea', 'Joel', 'Amos',
-  'Obadiah', 'Jonah', 'Micah', 'Nahum', 'Habakkuk', 'Zephaniah', 'Haggai', 'Zechariah',
-  'Malachi', 'Matthew', 'Mark', 'Luke', 'John', 'Acts', 'Romans', '1 Corinthians',
-  '2 Corinthians', 'Galatians', 'Ephesians', 'Philippians', 'Colossians', '1 Thessalonians',
-  '2 Thessalonians', '1 Timothy', '2 Timothy', 'Titus', 'Philemon', 'Hebrews', 'James',
-  '1 Peter', '2 Peter', '1 John', '2 John', '3 John', 'Jude', 'Revelation'
+  "Genesis",
+  "Exodus",
+  "Leviticus",
+  "Numbers",
+  "Deuteronomy",
+  "Joshua",
+  "Judges",
+  "Ruth",
+  "1 Samuel",
+  "2 Samuel",
+  "1 Kings",
+  "2 Kings",
+  "1 Chronicles",
+  "2 Chronicles",
+  "Ezra",
+  "Nehemiah",
+  "Esther",
+  "Job",
+  "Psalms",
+  "Proverbs",
+  "Ecclesiastes",
+  "Song of Solomon",
+  "Isaiah",
+  "Jeremiah",
+  "Lamentations",
+  "Ezekiel",
+  "Daniel",
+  "Hosea",
+  "Joel",
+  "Amos",
+  "Obadiah",
+  "Jonah",
+  "Micah",
+  "Nahum",
+  "Habakkuk",
+  "Zephaniah",
+  "Haggai",
+  "Zechariah",
+  "Malachi",
+  "Matthew",
+  "Mark",
+  "Luke",
+  "John",
+  "Acts",
+  "Romans",
+  "1 Corinthians",
+  "2 Corinthians",
+  "Galatians",
+  "Ephesians",
+  "Philippians",
+  "Colossians",
+  "1 Thessalonians",
+  "2 Thessalonians",
+  "1 Timothy",
+  "2 Timothy",
+  "Titus",
+  "Philemon",
+  "Hebrews",
+  "James",
+  "1 Peter",
+  "2 Peter",
+  "1 John",
+  "2 John",
+  "3 John",
+  "Jude",
+  "Revelation",
 ];
 
 const TRANSLATIONS = [
-  { code: 'WEB', name: 'World English Bible' },
-  { code: 'KJV', name: 'King James Version' },
-  { code: 'OEB', name: 'Open English Bible' }
+  { code: "KJV", name: "King James Version" },
+  { code: "LSV", name: "Literal Standard Version" },
+  { code: "WEB", name: "World English Bible" },
+  { code: "BSB", name: "Berean Standard Bible" },
 ];
 
 interface PassageSearchProps {
-  onSearch: (book: string, chapter: number, verseStart?: number, verseEnd?: number, translation?: string) => void;
+  onSearch: (
+    book: string,
+    chapter: number,
+    verseStart?: number,
+    verseEnd?: number,
+    translation?: string,
+  ) => void;
 }
 
 const PassageSearch: React.FC<PassageSearchProps> = ({ onSearch }) => {
   // Load saved values from localStorage once during initialization
   // useMemo with empty deps ensures this only runs once
   const savedState = useMemo(() => loadPassageSearch(), []);
-  
-  const [book, setBook] = useState(savedState?.book || 'John');
-  const [chapter, setChapter] = useState(savedState?.chapter || '3');
-  const [verseStart, setVerseStart] = useState(savedState?.verseStart || '');
-  const [verseEnd, setVerseEnd] = useState(savedState?.verseEnd || '');
-  const [translation, setTranslation] = useState(savedState?.translation || 'WEB');
+
+  const [book, setBook] = useState(savedState?.book || "John");
+  const [chapter, setChapter] = useState(savedState?.chapter || "3");
+  const [verseStart, setVerseStart] = useState(savedState?.verseStart || "");
+  const [verseEnd, setVerseEnd] = useState(savedState?.verseEnd || "");
+  const [translation, setTranslation] = useState(
+    savedState?.translation || "WEB",
+  );
 
   // Track if this is the first render to avoid saving during initialization
   const isFirstRender = useRef(true);
@@ -55,7 +121,7 @@ const PassageSearch: React.FC<PassageSearchProps> = ({ onSearch }) => {
       isFirstRender.current = false;
       return;
     }
-    
+
     savePassageSearch({
       book,
       chapter,
@@ -72,12 +138,12 @@ const PassageSearch: React.FC<PassageSearchProps> = ({ onSearch }) => {
     const verseEndNum = verseEnd ? parseInt(verseEnd) : undefined;
 
     if (isNaN(chapterNum)) {
-      alert('Please enter a valid number for chapter');
+      alert("Please enter a valid number for chapter");
       return;
     }
 
     if (verseStart && verseStartNum === undefined) {
-      alert('Please enter a valid number for verse start');
+      alert("Please enter a valid number for verse start");
       return;
     }
 
@@ -101,7 +167,7 @@ const PassageSearch: React.FC<PassageSearchProps> = ({ onSearch }) => {
                 <SelectValue placeholder="Select a book" />
               </SelectTrigger>
               <SelectContent className="max-h-60 overflow-y-auto border border-border">
-                {BIBLE_BOOKS.map(bookName => (
+                {BIBLE_BOOKS.map((bookName) => (
                   <SelectItem key={bookName} value={bookName}>
                     {bookName}
                   </SelectItem>
@@ -153,7 +219,7 @@ const PassageSearch: React.FC<PassageSearchProps> = ({ onSearch }) => {
                 <SelectValue placeholder="Select translation" />
               </SelectTrigger>
               <SelectContent>
-                {TRANSLATIONS.map(trans => (
+                {TRANSLATIONS.map((trans) => (
                   <SelectItem key={trans.code} value={trans.code}>
                     {trans.name}
                   </SelectItem>
