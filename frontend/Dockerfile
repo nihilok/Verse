@@ -3,7 +3,7 @@ FROM oven/bun:1 as build
 WORKDIR /app
 
 # Copy package files
-COPY package.json bun.lockb* ./
+COPY package.json bun.lock ./
 
 # Install dependencies and explicitly add ARM64 Rollup support
 RUN bun install && \
