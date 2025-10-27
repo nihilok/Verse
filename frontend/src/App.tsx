@@ -50,6 +50,23 @@ function App() {
   const [insightsModalOpen, setInsightsModalOpen] = useState(false);
   const [insightsHistory, setInsightsHistory] = useState<InsightHistory[]>([]);
 
+  // Check if we're on desktop (lg breakpoint)
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const desktop = window.innerWidth >= 1024;
+      setIsDesktop(desktop);
+      // Keep sidebar open on desktop
+      if (desktop) {
+        setSidebarOpen(true);
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   // Track sidebar x position for precise visibility control
   const sidebarX = useMotionValue(0);
 
@@ -110,7 +127,9 @@ function App() {
       saveLastPassage({ book, chapter, translation });
 
       // Close sidebar on mobile after successfully loading passage
-      setSidebarOpen(false);
+      if (!isDesktop) {
+        setSidebarOpen(false);
+      }
     } catch (err) {
       setError(
         "Failed to load passage. Please check your input and try again.",
@@ -254,14 +273,16 @@ function App() {
         >
           <Sidebar className="h-full w-80 bg-card shadow-lg lg:shadow-none flex flex-col">
             <SidebarHeader className="flex flex-col gap-2 flex-shrink-0 pb-4 border-b relative">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setSidebarOpen(false)}
-                className="lg:hidden absolute top-0 right-0"
-              >
-                <X size={20} />
-              </Button>
+              {!isDesktop && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setSidebarOpen(false)}
+                  className="absolute top-0 right-0"
+                >
+                  <X size={20} />
+                </Button>
+              )}
               <div className="flex gap-2 w-full items-center justify-between">
                 <div className="flex gap-2 items-center">
                   <BookOpen
