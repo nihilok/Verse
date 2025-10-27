@@ -152,7 +152,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({
 
   return (
     <div className="flex flex-col h-full" ref={readerRef}>
-      <CardHeader className="flex flex-row items-center gap-2 pb-4 border-b flex-shrink-0 bg-muted/30">
+      <CardHeader className="flex flex-row items-center gap-2 pb-4 border-b flex-shrink-0 bg-muted/30 rounded-t-none lg:rounded-t-lg px-4 lg:px-6">
         <CardTitle className="text-xl font-semibold tracking-tight">
           {passage ? (
             passage.reference
@@ -218,10 +218,10 @@ const BibleReader: React.FC<BibleReaderProps> = ({
       </CardContent>
       {/* Navigation Controls */}
       {onNavigate && (
-        <div className="flex justify-between p-4 border-t bg-muted/20 gap-4 flex-shrink-0">
+        <div className="flex justify-between p-4 border-t bg-muted/20 gap-4 flex-shrink-0 sticky lg:relative bottom-0 left-0 right-0 z-10">
           <button
             onClick={() => onNavigate("prev")}
-            className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-medium text-foreground bg-background hover:bg-accent hover:text-accent-foreground rounded-lg transition-all border border-border shadow-sm hover:shadow"
+            className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-medium text-foreground bg-background hover:bg-accent hover:text-accent-foreground rounded-lg transition-all border border-border shadow-sm hover:shadow disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={loading}
           >
             <ChevronLeft size={16} />
@@ -229,7 +229,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({
           </button>
           <button
             onClick={() => onNavigate("next")}
-            className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-medium text-foreground bg-background hover:bg-accent hover:text-accent-foreground rounded-lg transition-all border border-border shadow-sm hover:shadow"
+            className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-medium text-foreground bg-background hover:bg-accent hover:text-accent-foreground rounded-lg transition-all border border-border shadow-sm hover:shadow disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={loading}
           >
             Next Chapter

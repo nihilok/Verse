@@ -234,7 +234,7 @@ function App() {
         <button
           aria-label="Open sidebar"
           onClick={() => setSidebarOpen(true)}
-          className="fixed left-0 top-15 -translate-y-1/2 z-50 lg:hidden"
+          className="fixed left-0 top-32 -translate-y-1/2 z-50 lg:hidden"
           style={{
             width: 20,
             height: 60,
@@ -367,9 +367,9 @@ function App() {
         </motion.div>
 
         {/* Main Content */}
-        <main className="flex-1 flex flex-col overflow-hidden p-6 min-h-0">
+        <main className="flex-1 flex flex-col overflow-hidden p-0 lg:p-6 min-h-0">
           {error && (
-            <div className="mb-4 flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive max-w-4xl mx-auto flex-shrink-0">
+            <div className="mb-0 lg:mb-4 mx-0 lg:mx-auto flex items-center gap-2 rounded-none lg:rounded-lg border-x-0 lg:border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive max-w-4xl flex-shrink-0">
               <AlertCircle size={20} />
               <span className="flex-1">{error}</span>
               <button
@@ -381,8 +381,8 @@ function App() {
             </div>
           )}
 
-          <div className="max-w-4xl mx-auto flex-1 w-full min-h-0">
-            <div className="bg-card rounded-lg shadow-sm border h-full flex flex-col">
+          <div className="max-w-4xl lg:mx-auto flex-1 w-full min-h-0">
+            <div className="bg-card rounded-none lg:rounded-lg shadow-none lg:shadow-sm border-0 lg:border h-full flex flex-col">
               <BibleReader
                 passage={passage}
                 onTextSelected={handleTextSelected}
