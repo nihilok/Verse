@@ -29,6 +29,7 @@ import {
 import { Button } from "./components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 import { loadLastPassage, saveLastPassage } from "./lib/storage";
+import { BIBLE_BOOKS, getBookIndex } from "./lib/bibleStructure";
 import "./App.css";
 
 // Maximum number of insights to keep in history
@@ -141,12 +142,38 @@ function App() {
   };
 
   const handleNavigate = async (direction: "prev" | "next") => {
-    const newChapter =
-      direction === "next" ? currentChapter + 1 : currentChapter - 1;
-    if (newChapter < 1) return;
+    const bookIdx = getBookIndex(currentBook);
+    if (bookIdx === -1) return;
+    const currentBookInfo = BIBLE_BOOKS[bookIdx];
+    let newBook = currentBook;
+    let newChapter = currentChapter;
+
+    if (direction === "next") {
+      if (currentChapter < currentBookInfo.chapters) {
+        newChapter = currentChapter + 1;
+      } else if (bookIdx < BIBLE_BOOKS.length - 1) {
+        // Move to first chapter of next book
+        newBook = BIBLE_BOOKS[bookIdx + 1].name;
+        newChapter = 1;
+      } else {
+        // At last chapter of last book, do nothing or loop (optional)
+        return;
+      }
+    } else if (direction === "prev") {
+      if (currentChapter > 1) {
+        newChapter = currentChapter - 1;
+      } else if (bookIdx > 0) {
+        // Move to last chapter of previous book
+        newBook = BIBLE_BOOKS[bookIdx - 1].name;
+        newChapter = BIBLE_BOOKS[bookIdx - 1].chapters;
+      } else {
+        // At first chapter of first book, do nothing or loop (optional)
+        return;
+      }
+    }
 
     await handleSearch(
-      currentBook,
+      newBook,
       newChapter,
       undefined,
       undefined,
