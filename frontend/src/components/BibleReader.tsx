@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Sparkles, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Sparkles, X } from "lucide-react";
 import type { BiblePassage } from "../types";
 import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
@@ -12,12 +12,14 @@ interface BibleReaderProps {
   passage: BiblePassage | null;
   onTextSelected: (text: string, reference: string) => void;
   onNavigate?: (direction: "prev" | "next") => void;
+  loading?: boolean;
 }
 
 const BibleReader: React.FC<BibleReaderProps> = ({
   passage,
   onTextSelected,
   onNavigate,
+  loading = false,
 }) => {
   const [selectedText, setSelectedText] = useState("");
   const [selectionPosition, setSelectionPosition] = useState<{
@@ -140,7 +142,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({
     window.getSelection()?.removeAllRanges();
   };
 
-  if (!passage) {
+  if (!passage && !loading) {
     return (
       <div className="flex flex-col items-center justify-center h-96 text-muted-foreground">
         <p>Search for a passage to begin reading</p>
@@ -152,31 +154,42 @@ const BibleReader: React.FC<BibleReaderProps> = ({
     <div className="flex flex-col h-full" ref={readerRef}>
       <CardHeader className="flex flex-row items-center gap-2 pb-4 border-b flex-shrink-0 bg-muted/30">
         <CardTitle className="text-xl font-semibold tracking-tight">
-          {passage.reference}
+          {passage ? (
+            passage.reference
+          ) : (
+            <span className="opacity-60">Loading...</span>
+          )}
         </CardTitle>
         <span className="ml-auto bg-accent/80 text-accent-foreground px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide">
-          {passage.translation}
+          {passage ? passage.translation : null}
         </span>
       </CardHeader>
       <CardContent
         ref={contentRef}
         className="flex-1 relative overflow-y-auto min-h-0 pt-6 px-4 sm:px-6 scrollbar-thin"
       >
-        <div className="relative max-w-2xl mx-auto">
-          {passage.verses.map((verse, index) => (
-            <div
-              key={`${verse.chapter}:${verse.verse}`}
-              className={`mb-3 flex items-start gap-2 group ${index === 0 ? "mt-2" : ""}`}
-            >
-              <span className="verse-number text-primary/70 font-semibold min-w-[28px] text-right select-none">
-                {verse.verse}
-              </span>
-              <span className="text-base leading-relaxed">{verse.text}</span>
+        <div className="relative max-w-2xl min-h-full mx-auto">
+          {loading ? (
+            <div className="flex flex-col items-center justify-center min-h-[400px] text-muted-foreground fade-in-loading">
+              <Loader2 size={48} className="animate-spin mb-4 text-primary" />
+              <p>Loading passage...</p>
             </div>
-          ))}
+          ) : passage ? (
+            passage.verses.map((verse, index) => (
+              <div
+                key={`${verse.chapter}:${verse.verse}`}
+                className={`mb-3 flex items-start gap-2 group ${index === 0 ? "mt-2" : ""}`}
+              >
+                <span className="verse-number text-primary/70 font-semibold min-w-[28px] text-right select-none">
+                  {verse.verse}
+                </span>
+                <span className="text-base leading-relaxed">{verse.text}</span>
+              </div>
+            ))
+          ) : null}
 
           {/* Selection Tooltip */}
-          {selectionPosition && selectedText && (
+          {selectionPosition && selectedText && !loading && (
             <div
               className="absolute bg-popover border-2 border-primary/20 rounded-lg shadow-xl p-1.5 flex gap-1.5 z-50"
               style={{
@@ -203,13 +216,13 @@ const BibleReader: React.FC<BibleReaderProps> = ({
           )}
         </div>
       </CardContent>
-
       {/* Navigation Controls */}
       {onNavigate && (
         <div className="flex justify-between p-4 border-t bg-muted/20 gap-4 flex-shrink-0">
           <button
             onClick={() => onNavigate("prev")}
             className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-medium text-foreground bg-background hover:bg-accent hover:text-accent-foreground rounded-lg transition-all border border-border shadow-sm hover:shadow"
+            disabled={loading}
           >
             <ChevronLeft size={16} />
             Previous Chapter
@@ -217,6 +230,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({
           <button
             onClick={() => onNavigate("next")}
             className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-medium text-foreground bg-background hover:bg-accent hover:text-accent-foreground rounded-lg transition-all border border-border shadow-sm hover:shadow"
+            disabled={loading}
           >
             Next Chapter
             <ChevronRight size={16} />

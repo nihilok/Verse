@@ -382,20 +382,14 @@ function App() {
           )}
 
           <div className="max-w-4xl mx-auto flex-1 w-full min-h-0">
-            {loading ? (
-              <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                <Loader2 size={48} className="animate-spin mb-4" />
-                <p>Loading passage...</p>
-              </div>
-            ) : (
-              <div className="bg-card rounded-lg shadow-sm border h-full flex flex-col">
-                <BibleReader
-                  passage={passage}
-                  onTextSelected={handleTextSelected}
-                  onNavigate={handleNavigate}
-                />
-              </div>
-            )}
+            <div className="bg-card rounded-lg shadow-sm border h-full flex flex-col">
+              <BibleReader
+                passage={passage}
+                onTextSelected={handleTextSelected}
+                onNavigate={handleNavigate}
+                loading={loading}
+              />
+            </div>
           </div>
         </main>
       </div>
