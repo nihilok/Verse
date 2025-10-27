@@ -99,8 +99,8 @@ function App() {
       handleSearch(
         lastPassage.book,
         lastPassage.chapter,
-        undefined,
-        undefined,
+        lastPassage.verse_start,
+        lastPassage.verse_end,
         lastPassage.translation,
       );
     }
@@ -109,8 +109,8 @@ function App() {
   const handleSearch = async (
     book: string,
     chapter: number,
-    _verseStart?: number,
-    _verseEnd?: number,
+    verseStart?: number,
+    verseEnd?: number,
     translation: string = "WEB",
   ) => {
     setLoading(true);
@@ -120,12 +120,30 @@ function App() {
     setCurrentTranslation(translation);
 
     try {
-      // Load full chapter by default for better reading experience
-      const result = await bibleService.getChapter(book, chapter, translation);
+      let result: BiblePassage;
+      if (verseStart !== undefined) {
+        // Load specific verses
+        result = await bibleService.getPassage({
+          book,
+          chapter,
+          verse_start: verseStart,
+          verse_end: verseEnd,
+          translation,
+        });
+      } else {
+        // Load full chapter for better reading experience
+        result = await bibleService.getChapter(book, chapter, translation);
+      }
       setPassage(result);
 
       // Save the current passage to localStorage for persistence
-      saveLastPassage({ book, chapter, translation });
+      saveLastPassage({
+        book,
+        chapter,
+        verse_start: verseStart,
+        verse_end: verseEnd,
+        translation,
+      });
 
       // Close sidebar on mobile after successfully loading passage
       if (!isDesktop) {
@@ -264,9 +282,9 @@ function App() {
               letterSpacing: 1,
               userSelect: "none",
             }}
-            className="p-5 text-muted"
+            className="p-5 text-secondary"
           >
-            <Menu className="text-muted" />
+            <Menu />
           </span>
         </button>
       )}

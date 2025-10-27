@@ -69,6 +69,8 @@ export function loadPassageSearch(): PassageSearchState | null {
 export interface LastPassageState {
   book: string;
   chapter: number;
+  verse_start?: number;
+  verse_end?: number;
   translation: string;
 }
 
