@@ -93,6 +93,30 @@
   ::-webkit-scrollbar-thumb:hover {
     background: oklch(65% 0.06 40);
   }
+
+  /* Thin scrollbar for insights modal - more subtle */
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: oklch(85% 0.03 50 / 0.4);
+    border-radius: 3px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: oklch(75% 0.04 45 / 0.6);
+  }
+
+  /* Firefox scrollbar styling */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: oklch(85% 0.03 50 / 0.4) transparent;
+  }
 }
 
 /* Prose styles for markdown content - enhanced for biblical reading */

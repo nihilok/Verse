@@ -90,7 +90,7 @@ const InsightsModal: React.FC<InsightsModalProps> = ({
 
           <div
             key={`tab-content-${tab}`}
-            className="flex-1 overflow-y-auto mt-4"
+            className="flex-1 overflow-y-auto mt-0 px-3 scrollbar-thin"
           >
             <TabsContent
               value="historical"
