@@ -1,19 +1,18 @@
-FROM oven/bun:1
+FROM oven/bun:1-alpine
 
 WORKDIR /app
 
 # Copy package files
-COPY package.json bun.lock ./
+COPY package.json bun.lockb* bun.lock* ./
 
-# Install dependencies and explicitly add ARM64 Rollup support
-RUN bun install && \
-    bun add -D @rollup/rollup-linux-arm64-gnu
+# Install dependencies with bun
+RUN bun install
 
-# Copy source code
+# Copy the rest of the application
 COPY . .
 
-# Expose port
+# Expose Vite dev server port
 EXPOSE 5173
 
-# Run development server
-CMD ["bun", "run", "dev", "--host"]
+# Start the development server
+CMD ["bun", "run", "dev", "--host", "0.0.0.0"]

@@ -1,11 +1,17 @@
 import { useState, useEffect } from "react";
 import {
+  motion,
+  AnimatePresence,
+  useMotionValue,
+  useMotionValueEvent,
+} from "framer-motion";
+import {
   BookOpen,
   AlertCircle,
   X,
   Loader2,
   History as HistoryIcon,
-  Menu, // Add Menu icon for mobile sidebar toggle
+  Menu,
 } from "lucide-react";
 import PassageSearch from "./components/PassageSearch";
 import BibleReader from "./components/BibleReader";
@@ -40,8 +46,18 @@ function App() {
   const [currentChapter, setCurrentChapter] = useState(3);
   const [currentTranslation, setCurrentTranslation] = useState("WEB");
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarFullyHidden, setSidebarFullyHidden] = useState(false);
   const [insightsModalOpen, setInsightsModalOpen] = useState(false);
   const [insightsHistory, setInsightsHistory] = useState<InsightHistory[]>([]);
+
+  // Track sidebar x position for precise visibility control
+  const sidebarX = useMotionValue(0);
+
+  // Update button visibility based on sidebar position
+  useMotionValueEvent(sidebarX, "change", (latest) => {
+    // Button appears when sidebar is at -320 (fully hidden) or beyond
+    setSidebarFullyHidden(latest <= -320);
+  });
 
   // Load insights history from backend on mount
   useEffect(() => {
@@ -167,23 +183,74 @@ function App() {
 
   return (
     <div className="mobile-viewport-height flex flex-col bg-background">
-      {/* Mobile sidebar open button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="fixed top-4 left-4 z-50 lg:hidden"
-        aria-label="Open sidebar"
-        onClick={() => setSidebarOpen(true)}
-      >
-        <Menu size={24} />
-      </Button>
+      {/* Book tab for opening sidebar on mobile, only visible when sidebar is fully hidden */}
+      {!sidebarOpen && sidebarFullyHidden && (
+        <button
+          aria-label="Open sidebar"
+          onClick={() => setSidebarOpen(true)}
+          className="fixed left-0 top-15 -translate-y-1/2 z-50 lg:hidden"
+          style={{
+            width: 20,
+            height: 60,
+            borderTopRightRadius: 40,
+            borderBottomRightRadius: 40,
+            background: "var(--color-card)",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            border: "1px solid var(--color-border)",
+            borderLeft: "none",
+            padding: 0,
+          }}
+        >
+          <span
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "100%",
+              height: "100%",
+              color: "var(--primary)",
+              fontWeight: 600,
+              fontSize: 18,
+              letterSpacing: 1,
+              userSelect: "none",
+            }}
+            className="p-5 text-muted"
+          >
+            <Menu className="text-muted" />
+          </span>
+        </button>
+      )}
       <div className="flex-1 flex overflow-hidden min-h-0">
         {/* Sidebar */}
-        <div
-          className={`${sidebarOpen ? "block" : "hidden"} lg:block fixed lg:relative inset-0 lg:inset-auto z-40 bg-black/50 lg:bg-transparent`}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setSidebarOpen(false);
+        <AnimatePresence>
+          {sidebarOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="lg:hidden fixed inset-0 z-40 bg-black/50"
+              onClick={() => setSidebarOpen(false)}
+            />
+          )}
+        </AnimatePresence>
+
+        <motion.div
+          initial={false}
+          animate={{
+            x: sidebarOpen ? 0 : -320,
           }}
+          transition={{
+            type: "spring",
+            damping: 30,
+            stiffness: 300,
+          }}
+          style={{ x: sidebarX }}
+          className="fixed lg:relative z-40 h-full"
         >
           <Sidebar className="h-full w-80 bg-card shadow-lg lg:shadow-none flex flex-col">
             <SidebarHeader className="flex flex-col gap-2 flex-shrink-0 pb-4 border-b relative">
@@ -206,8 +273,6 @@ function App() {
                     Verse
                   </h2>
                 </div>
-                {/* ModeToggle moved here from header */}
-                <ModeToggle />
               </div>
               <p className="w-full text-xs text-muted-foreground italic">
                 Discover wisdom through AI-powered insights
@@ -246,8 +311,12 @@ function App() {
                 </TabsContent>
               </Tabs>
             </SidebarContent>
+            {/* ModeToggle at the bottom of the sidebar */}
+            <div className="w-full flex justify-center py-4 border-t mt-auto">
+              <ModeToggle />
+            </div>
           </Sidebar>
-        </div>
+        </motion.div>
 
         {/* Main Content */}
         <main className="flex-1 flex flex-col overflow-hidden p-6 min-h-0">
