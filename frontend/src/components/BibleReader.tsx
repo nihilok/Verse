@@ -8,6 +8,10 @@ const SELECTION_CHANGE_DELAY = 100; // ms to wait after selection change before 
 const POINTER_UP_DELAY = 50; // ms to wait after pointer/touch up before capturing
 const SELECTION_TOOLTIP_OFFSET = 32;
 
+// Swipe constants
+const SWIPE_THRESHOLD = 50; // minimum distance for swipe
+const SWIPE_MAX_VERTICAL = 100; // maximum vertical movement allowed for horizontal swipe
+
 interface BibleReaderProps {
   passage: BiblePassage | null;
   onTextSelected: (text: string, reference: string) => void;
@@ -28,6 +32,14 @@ const BibleReader: React.FC<BibleReaderProps> = ({
   } | null>(null);
   const readerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+
+  // Swipe state
+  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(
+    null,
+  );
+  const [touchEnd, setTouchEnd] = useState<{ x: number; y: number } | null>(
+    null,
+  );
 
   useEffect(() => {
     let selectionTimeout: ReturnType<typeof setTimeout>;
@@ -142,6 +154,51 @@ const BibleReader: React.FC<BibleReaderProps> = ({
     window.getSelection()?.removeAllRanges();
   };
 
+  // Swipe handling functions
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null); // Reset touch end
+    setTouchStart({
+      x: e.targetTouches[0].clientX,
+      y: e.targetTouches[0].clientY,
+    });
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd({
+      x: e.targetTouches[0].clientX,
+      y: e.targetTouches[0].clientY,
+    });
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd || !onNavigate || loading) return;
+
+    const distanceX = touchStart.x - touchEnd.x;
+    const distanceY = touchStart.y - touchEnd.y;
+    const isLeftSwipe = distanceX > SWIPE_THRESHOLD;
+    const isRightSwipe = distanceX < -SWIPE_THRESHOLD;
+    const isVerticalSwipe = Math.abs(distanceY) > SWIPE_MAX_VERTICAL;
+
+    // Only trigger swipe if it's horizontal and not too vertical
+    if ((isLeftSwipe || isRightSwipe) && !isVerticalSwipe) {
+      // Check if there's any selected text - if so, don't treat as swipe
+      const selection = window.getSelection();
+      const hasSelection = selection && selection.toString().trim().length > 0;
+
+      if (!hasSelection) {
+        if (isLeftSwipe) {
+          onNavigate("next");
+        } else if (isRightSwipe) {
+          onNavigate("prev");
+        }
+      }
+    }
+  };
+
+  // Check if device supports touch (mobile)
+  const isTouchDevice =
+    "ontouchstart" in window || navigator.maxTouchPoints > 0;
+
   if (!passage && !loading) {
     return (
       <div className="flex flex-col items-center justify-center h-96 text-muted-foreground">
@@ -167,6 +224,9 @@ const BibleReader: React.FC<BibleReaderProps> = ({
       <CardContent
         ref={contentRef}
         className="flex-1 relative overflow-y-auto min-h-0 pt-6 px-4 sm:px-6 scrollbar-thin"
+        onTouchStart={isTouchDevice ? handleTouchStart : undefined}
+        onTouchMove={isTouchDevice ? handleTouchMove : undefined}
+        onTouchEnd={isTouchDevice ? handleTouchEnd : undefined}
       >
         <div className="relative max-w-2xl min-h-full mx-auto">
           {loading ? (
