@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from typing import Optional, List
+from typing import Optional
 from pydantic import BaseModel
 
 from app.core.database import get_db
@@ -222,7 +222,7 @@ async def get_chat_messages(
             "id": msg.id,
             "role": msg.role,
             "content": msg.content,
-            "timestamp": int(msg.created_at.timestamp() * 1000)
+            "timestamp": int(msg.created_at.timestamp() * 1000) if msg.created_at else None
         }
         for msg in messages
     ]

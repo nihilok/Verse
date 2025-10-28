@@ -102,16 +102,22 @@ PRACTICAL_APPLICATION: [your analysis]
             The AI's response text
         """
         try:
+            # Truncate passage text if too long to avoid token limits
+            # Claude has a context window, so we limit each field to reasonable size
+            max_text_length = 2000
+            truncated_passage = passage_text[:max_text_length] + ("..." if len(passage_text) > max_text_length else "")
+            truncated_reference = passage_reference[:200]  # References should be short
+            
             # Build the system message with context
             system_prompt = f"""You are a knowledgeable biblical scholar and theologian having a conversation about a Bible passage. 
 
-Passage Reference: {passage_reference}
-Passage Text: {passage_text}
+Passage Reference: {truncated_reference}
+Passage Text: {truncated_passage}
 
 You previously provided these insights:
-- Historical Context: {insight_context.get('historical_context', '')}
-- Theological Significance: {insight_context.get('theological_significance', '')}
-- Practical Application: {insight_context.get('practical_application', '')}
+- Historical Context: {insight_context.get('historical_context', '')[:1000]}
+- Theological Significance: {insight_context.get('theological_significance', '')[:1000]}
+- Practical Application: {insight_context.get('practical_application', '')[:1000]}
 
 Continue the conversation by answering the user's questions thoughtfully and in depth. Draw from biblical scholarship, theology, and practical wisdom. Keep your responses focused and relevant to the passage and previous insights."""
 

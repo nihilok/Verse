@@ -1,7 +1,7 @@
 from typing import Optional, List
 from sqlalchemy.orm import Session
 from app.clients.claude_client import ClaudeAIClient
-from app.models.models import ChatMessage, SavedInsight
+from app.models.models import ChatMessage
 
 
 class ChatService:
@@ -48,23 +48,30 @@ class ChatService:
         if not ai_response:
             return None
         
-        # Save user message
-        user_msg = ChatMessage(
-            insight_id=insight_id,
-            role="user",
-            content=user_message
-        )
-        db.add(user_msg)
-        
-        # Save AI response
-        ai_msg = ChatMessage(
-            insight_id=insight_id,
-            role="assistant",
-            content=ai_response
-        )
-        db.add(ai_msg)
-        
-        db.commit()
+        # Save user message and AI response in a transaction
+        try:
+            # Save user message
+            user_msg = ChatMessage(
+                insight_id=insight_id,
+                role="user",
+                content=user_message
+            )
+            db.add(user_msg)
+            
+            # Save AI response
+            ai_msg = ChatMessage(
+                insight_id=insight_id,
+                role="assistant",
+                content=ai_response
+            )
+            db.add(ai_msg)
+            
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            print(f"Error saving chat messages: {e}")
+            # Return None to indicate failure even though we got an AI response
+            return None
         
         return ai_response
     

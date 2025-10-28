@@ -100,6 +100,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ask a follow-up question..."
+            aria-label="Ask a follow-up question about the passage"
             disabled={loading}
             className="flex-1"
           />
@@ -107,6 +108,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             type="submit"
             size="icon"
             disabled={!inputValue.trim() || loading}
+            aria-label="Send message"
           >
             {loading ? (
               <Loader2 size={20} className="animate-spin" />

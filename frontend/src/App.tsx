@@ -230,6 +230,9 @@ function App() {
           // Load chat messages for this insight
           const messages = await bibleService.getChatMessages(insightId);
           setChatMessages(messages);
+        } else {
+          setCurrentInsightId(null);
+          setChatMessages([]);
         }
       } catch (historyErr) {
         console.error("Failed to reload insights history:", historyErr);
