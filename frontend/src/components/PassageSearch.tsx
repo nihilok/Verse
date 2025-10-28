@@ -12,7 +12,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { loadPassageSearch, savePassageSearch } from "@/lib/storage";
-import { BIBLE_BOOKS, getBookIndex } from "@/lib/bibleStructure";
+import {
+  BIBLE_BOOKS,
+  getBookIndex,
+  clampChapterForBook,
+} from "@/lib/bibleStructure";
+import toast from "@/lib/toast";
 
 // Derive a simple list of book names from the canonical structure
 const BOOK_NAMES = BIBLE_BOOKS.map((b) => b.name);
@@ -93,27 +98,31 @@ const PassageSearch: React.FC<PassageSearchProps> = ({ onSearch }) => {
     const verseEndNum = verseEnd ? parseInt(verseEnd) : undefined;
 
     if (isNaN(chapterNum)) {
-      alert("Please enter a valid number for chapter");
+      toast({
+        title: "Invalid input",
+        description: "Please enter a valid number for chapter",
+      });
       return;
     }
 
-    // Enforce maximum chapter for the selected book
-    const bookIdx = getBookIndex(book);
-    if (bookIdx !== -1) {
-      const bookMax = BIBLE_BOOKS[bookIdx].chapters;
-      if (chapterNum > bookMax) {
-        // Clamp to the last chapter of the book and inform the user
-        alert(
-          `Chapter ${chapterNum} is beyond the last chapter of ${book}. Loading chapter ${bookMax} instead.`,
-        );
-        onSearch(book, bookMax, verseStartNum, verseEndNum, translation);
-        setChapter(String(bookMax));
-        return;
-      }
+    // Enforce maximum chapter for the selected book using helper
+    const clamped = clampChapterForBook(book, chapterNum);
+    if (clamped !== chapterNum) {
+      const bookMax = clamped;
+      toast({
+        title: "Chapter out of range",
+        description: `Requested chapter ${chapterNum} is beyond the last chapter of ${book}. Loading chapter ${bookMax} instead.`,
+      });
+      onSearch(book, bookMax, verseStartNum, verseEndNum, translation);
+      setChapter(String(bookMax));
+      return;
     }
 
     if (verseStart && verseStartNum === undefined) {
-      alert("Please enter a valid number for verse start");
+      toast({
+        title: "Invalid input",
+        description: "Please enter a valid number for verse start",
+      });
       return;
     }
 
@@ -183,7 +192,7 @@ const PassageSearch: React.FC<PassageSearchProps> = ({ onSearch }) => {
               value={verseStart}
               onChange={(e) => setVerseStart(e.target.value)}
               min="1"
-              placeholder="Optional - leave blank for full chapter"
+              placeholder="Optional"
             />
           </div>
 

@@ -78,3 +78,25 @@ export function getBookIndex(bookName: string): number {
     (b) => b.name.toLowerCase() === bookName.toLowerCase(),
   );
 }
+
+/**
+ * Return the maximum chapters for a given book name, or undefined if unknown
+ */
+export function getBookMaxChapters(bookName: string): number | undefined {
+  const idx = getBookIndex(bookName);
+  return idx === -1 ? undefined : BIBLE_BOOKS[idx].chapters;
+}
+
+/**
+ * Clamp a requested chapter to the bounds of the given book (min 1).
+ * If the book is unknown, returns the requestedChapter.
+ */
+export function clampChapterForBook(
+  bookName: string,
+  requestedChapter: number,
+): number {
+  const max = getBookMaxChapters(bookName);
+  if (isNaN(requestedChapter) || requestedChapter < 1) return 1;
+  if (max === undefined) return requestedChapter;
+  return Math.min(requestedChapter, max);
+}
