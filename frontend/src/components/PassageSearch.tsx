@@ -12,75 +12,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { loadPassageSearch, savePassageSearch } from "@/lib/storage";
+import { BIBLE_BOOKS, getBookIndex } from "@/lib/bibleStructure";
 
-const BIBLE_BOOKS = [
-  "Genesis",
-  "Exodus",
-  "Leviticus",
-  "Numbers",
-  "Deuteronomy",
-  "Joshua",
-  "Judges",
-  "Ruth",
-  "1 Samuel",
-  "2 Samuel",
-  "1 Kings",
-  "2 Kings",
-  "1 Chronicles",
-  "2 Chronicles",
-  "Ezra",
-  "Nehemiah",
-  "Esther",
-  "Job",
-  "Psalms",
-  "Proverbs",
-  "Ecclesiastes",
-  "Song of Solomon",
-  "Isaiah",
-  "Jeremiah",
-  "Lamentations",
-  "Ezekiel",
-  "Daniel",
-  "Hosea",
-  "Joel",
-  "Amos",
-  "Obadiah",
-  "Jonah",
-  "Micah",
-  "Nahum",
-  "Habakkuk",
-  "Zephaniah",
-  "Haggai",
-  "Zechariah",
-  "Malachi",
-  "Matthew",
-  "Mark",
-  "Luke",
-  "John",
-  "Acts",
-  "Romans",
-  "1 Corinthians",
-  "2 Corinthians",
-  "Galatians",
-  "Ephesians",
-  "Philippians",
-  "Colossians",
-  "1 Thessalonians",
-  "2 Thessalonians",
-  "1 Timothy",
-  "2 Timothy",
-  "Titus",
-  "Philemon",
-  "Hebrews",
-  "James",
-  "1 Peter",
-  "2 Peter",
-  "1 John",
-  "2 John",
-  "3 John",
-  "Jude",
-  "Revelation",
-];
+// Derive a simple list of book names from the canonical structure
+const BOOK_NAMES = BIBLE_BOOKS.map((b) => b.name);
 
 const TRANSLATIONS = [
   { code: "KJV", name: "King James Version" },
@@ -114,6 +49,24 @@ const PassageSearch: React.FC<PassageSearchProps> = ({ onSearch }) => {
     savedState?.translation || "WEB",
   );
 
+  // Compute the maximum chapter for the currently selected book
+  const currentBookIndex = getBookIndex(book);
+  const maxChapters =
+    currentBookIndex === -1
+      ? undefined
+      : BIBLE_BOOKS[currentBookIndex].chapters;
+
+  // If the selected book changes and the current chapter is greater than the
+  // book's maximum, clamp it to the last chapter of the book.
+  useEffect(() => {
+    if (!maxChapters) return;
+    const chapterNum = parseInt(chapter);
+    if (!isNaN(chapterNum) && chapterNum > maxChapters) {
+      setChapter(String(maxChapters));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [book]);
+
   // Track if this is the first render to avoid saving during initialization
   const isFirstRender = useRef(true);
 
@@ -144,6 +97,21 @@ const PassageSearch: React.FC<PassageSearchProps> = ({ onSearch }) => {
       return;
     }
 
+    // Enforce maximum chapter for the selected book
+    const bookIdx = getBookIndex(book);
+    if (bookIdx !== -1) {
+      const bookMax = BIBLE_BOOKS[bookIdx].chapters;
+      if (chapterNum > bookMax) {
+        // Clamp to the last chapter of the book and inform the user
+        alert(
+          `Chapter ${chapterNum} is beyond the last chapter of ${book}. Loading chapter ${bookMax} instead.`,
+        );
+        onSearch(book, bookMax, verseStartNum, verseEndNum, translation);
+        setChapter(String(bookMax));
+        return;
+      }
+    }
+
     if (verseStart && verseStartNum === undefined) {
       alert("Please enter a valid number for verse start");
       return;
@@ -166,7 +134,7 @@ const PassageSearch: React.FC<PassageSearchProps> = ({ onSearch }) => {
                 <SelectValue placeholder="Select a book" />
               </SelectTrigger>
               <SelectContent className="max-h-60 overflow-y-auto border border-border">
-                {BIBLE_BOOKS.map((bookName) => (
+                {BOOK_NAMES.map((bookName) => (
                   <SelectItem key={bookName} value={bookName}>
                     {bookName}
                   </SelectItem>
@@ -181,8 +149,28 @@ const PassageSearch: React.FC<PassageSearchProps> = ({ onSearch }) => {
               id="chapter"
               type="number"
               value={chapter}
-              onChange={(e) => setChapter(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value;
+                // allow empty while typing but clamp to max if provided
+                if (v === "") {
+                  setChapter(v);
+                  return;
+                }
+                const num = parseInt(v);
+                if (isNaN(num)) {
+                  setChapter(v);
+                  return;
+                }
+                if (maxChapters && num > maxChapters) {
+                  setChapter(String(maxChapters));
+                } else if (num < 1) {
+                  setChapter("1");
+                } else {
+                  setChapter(String(num));
+                }
+              }}
               min="1"
+              max={maxChapters}
               required
             />
           </div>
