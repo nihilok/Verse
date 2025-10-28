@@ -202,6 +202,10 @@ function App() {
     );
   };
 
+  const normaliseWhitespace = (text: string) => {
+    return text.replace(/\s+/g, " ").trim();
+  };
+
   const handleTextSelected = async (text: string, reference: string) => {
     setInsightLoading(true);
     setSelectedText(text);
@@ -218,15 +222,17 @@ function App() {
         const history =
           await bibleService.getInsightsHistory(MAX_HISTORY_ITEMS);
         setInsightsHistory(history);
-        
+
         // Get the insight ID from the history (it should be the most recent one)
         const matchingInsight = history.find(
-          (item) => item.text === text && item.reference === reference
+          (item) =>
+            normaliseWhitespace(item.text) === normaliseWhitespace(text) &&
+            item.reference === reference,
         );
         if (matchingInsight) {
           const insightId = parseInt(matchingInsight.id);
           setCurrentInsightId(insightId);
-          
+
           // Load chat messages for this insight
           const messages = await bibleService.getChatMessages(insightId);
           setChatMessages(messages);
@@ -251,7 +257,7 @@ function App() {
     setSelectedReference(item.reference);
     const insightId = parseInt(item.id);
     setCurrentInsightId(insightId);
-    
+
     // Load chat messages for this insight
     try {
       const messages = await bibleService.getChatMessages(insightId);
@@ -260,13 +266,13 @@ function App() {
       console.error("Failed to load chat messages:", err);
       setChatMessages([]);
     }
-    
+
     setInsightsModalOpen(true);
   };
 
   const handleSendChatMessage = async (message: string) => {
     if (!currentInsightId || !insight) return;
-    
+
     setChatLoading(true);
     try {
       await bibleService.sendChatMessage(
@@ -274,9 +280,9 @@ function App() {
         message,
         selectedText,
         selectedReference,
-        insight
+        insight,
       );
-      
+
       // Reload chat messages
       const messages = await bibleService.getChatMessages(currentInsightId);
       setChatMessages(messages);
