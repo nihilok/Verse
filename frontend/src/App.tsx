@@ -20,7 +20,7 @@ import InsightsHistoryComponent from "./components/InsightsHistory";
 import InstallPrompt from "./components/InstallPrompt";
 import { ModeToggle } from "./components/mode-toggle";
 import { bibleService } from "./services/api";
-import { BiblePassage, Insight, InsightHistory } from "./types";
+import { BiblePassage, Insight, InsightHistory, ChatMessage } from "./types";
 import {
   Sidebar,
   SidebarHeader,
@@ -50,6 +50,9 @@ function App() {
   const [sidebarFullyHidden, setSidebarFullyHidden] = useState(false);
   const [insightsModalOpen, setInsightsModalOpen] = useState(false);
   const [insightsHistory, setInsightsHistory] = useState<InsightHistory[]>([]);
+  const [currentInsightId, setCurrentInsightId] = useState<number | null>(null);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatLoading, setChatLoading] = useState(false);
 
   // Check if we're on desktop (lg breakpoint)
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
@@ -215,6 +218,19 @@ function App() {
         const history =
           await bibleService.getInsightsHistory(MAX_HISTORY_ITEMS);
         setInsightsHistory(history);
+        
+        // Get the insight ID from the history (it should be the most recent one)
+        const matchingInsight = history.find(
+          (item) => item.text === text && item.reference === reference
+        );
+        if (matchingInsight) {
+          const insightId = parseInt(matchingInsight.id);
+          setCurrentInsightId(insightId);
+          
+          // Load chat messages for this insight
+          const messages = await bibleService.getChatMessages(insightId);
+          setChatMessages(messages);
+        }
       } catch (historyErr) {
         console.error("Failed to reload insights history:", historyErr);
       }
@@ -226,11 +242,47 @@ function App() {
     }
   };
 
-  const handleHistorySelect = (item: InsightHistory) => {
+  const handleHistorySelect = async (item: InsightHistory) => {
     setInsight(item.insight);
     setSelectedText(item.text);
     setSelectedReference(item.reference);
+    const insightId = parseInt(item.id);
+    setCurrentInsightId(insightId);
+    
+    // Load chat messages for this insight
+    try {
+      const messages = await bibleService.getChatMessages(insightId);
+      setChatMessages(messages);
+    } catch (err) {
+      console.error("Failed to load chat messages:", err);
+      setChatMessages([]);
+    }
+    
     setInsightsModalOpen(true);
+  };
+
+  const handleSendChatMessage = async (message: string) => {
+    if (!currentInsightId || !insight) return;
+    
+    setChatLoading(true);
+    try {
+      const response = await bibleService.sendChatMessage(
+        currentInsightId,
+        message,
+        selectedText,
+        selectedReference,
+        insight
+      );
+      
+      // Reload chat messages
+      const messages = await bibleService.getChatMessages(currentInsightId);
+      setChatMessages(messages);
+    } catch (err) {
+      console.error("Failed to send chat message:", err);
+      setError("Failed to send message. Please try again.");
+    } finally {
+      setChatLoading(false);
+    }
   };
 
   const handleClearHistory = async () => {
@@ -419,6 +471,10 @@ function App() {
         insight={insight}
         selectedText={selectedText}
         reference={selectedReference}
+        insightId={currentInsightId}
+        chatMessages={chatMessages}
+        onSendChatMessage={handleSendChatMessage}
+        chatLoading={chatLoading}
       />
 
       {/* Loading overlay for insights */}

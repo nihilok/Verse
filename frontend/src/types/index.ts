@@ -34,3 +34,10 @@ export interface PassageQuery {
   verse_end?: number;
   translation?: string;
 }
+
+export interface ChatMessage {
+  id: number;
+  role: "user" | "assistant";
+  content: string;
+  timestamp: number;
+}

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
@@ -7,6 +7,7 @@ import {
   Lightbulb,
   Sparkles,
   CheckCircle,
+  MessageCircle,
 } from "lucide-react";
 import {
   Dialog,
@@ -15,7 +16,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { Insight } from "../types";
+import ChatInterface from "./ChatInterface";
+import type { Insight, ChatMessage } from "../types";
 
 interface InsightsModalProps {
   open: boolean;
@@ -23,6 +25,10 @@ interface InsightsModalProps {
   insight: Insight | null;
   selectedText: string;
   reference: string;
+  insightId: number | null;
+  chatMessages: ChatMessage[];
+  onSendChatMessage: (message: string) => Promise<void>;
+  chatLoading: boolean;
 }
 
 const InsightsModal: React.FC<InsightsModalProps> = ({
@@ -31,9 +37,13 @@ const InsightsModal: React.FC<InsightsModalProps> = ({
   insight,
   selectedText,
   reference,
+  insightId,
+  chatMessages,
+  onSendChatMessage,
+  chatLoading,
 }) => {
   const [tab, setTab] = React.useState<
-    "historical" | "theological" | "practical"
+    "historical" | "theological" | "practical" | "chat"
   >("historical");
   if (!insight) return null;
 
@@ -66,11 +76,11 @@ const InsightsModal: React.FC<InsightsModalProps> = ({
         <Tabs
           value={tab}
           onValueChange={(v) =>
-            setTab(v as "historical" | "theological" | "practical")
+            setTab(v as "historical" | "theological" | "practical" | "chat")
           }
           className="flex-1 overflow-hidden flex flex-col"
         >
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="historical" className="flex items-center gap-2">
               <BookMarked size={16} />
               Historical
@@ -85,6 +95,10 @@ const InsightsModal: React.FC<InsightsModalProps> = ({
             <TabsTrigger value="practical" className="flex items-center gap-2">
               <Lightbulb size={16} />
               Practical
+            </TabsTrigger>
+            <TabsTrigger value="chat" className="flex items-center gap-2">
+              <MessageCircle size={16} />
+              Chat
             </TabsTrigger>
           </TabsList>
 
@@ -123,6 +137,28 @@ const InsightsModal: React.FC<InsightsModalProps> = ({
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                 {insight.practical_application}
               </ReactMarkdown>
+            </TabsContent>
+
+            <TabsContent
+              value="chat"
+              className="h-full flex flex-col"
+              role="tabpanel"
+              aria-label="Chat with AI"
+            >
+              {insightId ? (
+                <ChatInterface
+                  insightId={insightId}
+                  messages={chatMessages}
+                  onSendMessage={onSendChatMessage}
+                  loading={chatLoading}
+                />
+              ) : (
+                <div className="text-center text-muted-foreground py-8">
+                  <p className="text-sm">
+                    Chat is only available for saved insights.
+                  </p>
+                </div>
+              )}
             </TabsContent>
           </div>
         </Tabs>

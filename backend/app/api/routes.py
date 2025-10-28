@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel
 
 from app.core.database import get_db
 from app.services.bible_service import BibleService
 from app.services.insight_service import InsightService
+from app.services.chat_service import ChatService
 
 router = APIRouter()
 
@@ -24,6 +25,15 @@ class InsightRequestModel(BaseModel):
     passage_text: str
     passage_reference: str
     save: bool = False
+
+
+class ChatMessageRequest(BaseModel):
+    """Request model for sending a chat message."""
+    insight_id: int
+    message: str
+    passage_text: str
+    passage_reference: str
+    insight_context: dict  # Contains historical_context, theological_significance, practical_application
 
 
 @router.get("/passage")
@@ -169,3 +179,62 @@ async def clear_insights_history(
     count = service.clear_all_insights(db)
     
     return {"message": f"Cleared {count} insights from history"}
+
+
+@router.post("/chat/message")
+async def send_chat_message(
+    request: ChatMessageRequest,
+    db: Session = Depends(get_db)
+):
+    """Send a chat message and get AI response."""
+    service = ChatService()
+    
+    try:
+        response = await service.send_message(
+            db=db,
+            insight_id=request.insight_id,
+            user_message=request.message,
+            passage_text=request.passage_text,
+            passage_reference=request.passage_reference,
+            insight_context=request.insight_context
+        )
+        
+        if not response:
+            raise HTTPException(status_code=500, detail="Failed to generate chat response")
+        
+        return {"response": response}
+    except Exception as e:
+        print(f"Error in chat endpoint: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/chat/messages/{insight_id}")
+async def get_chat_messages(
+    insight_id: int,
+    db: Session = Depends(get_db)
+):
+    """Get all chat messages for an insight."""
+    service = ChatService()
+    messages = service.get_chat_messages(db, insight_id)
+    
+    return [
+        {
+            "id": msg.id,
+            "role": msg.role,
+            "content": msg.content,
+            "timestamp": int(msg.created_at.timestamp() * 1000)
+        }
+        for msg in messages
+    ]
+
+
+@router.delete("/chat/messages/{insight_id}")
+async def clear_chat_messages(
+    insight_id: int,
+    db: Session = Depends(get_db)
+):
+    """Clear all chat messages for an insight."""
+    service = ChatService()
+    count = service.clear_chat_messages(db, insight_id)
+    
+    return {"message": f"Cleared {count} chat messages"}

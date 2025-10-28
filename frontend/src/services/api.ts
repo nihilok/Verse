@@ -1,5 +1,5 @@
 import axios from "axios";
-import { BiblePassage, Insight, PassageQuery, InsightHistory } from "../types";
+import { BiblePassage, Insight, PassageQuery, InsightHistory, ChatMessage } from "../types";
 
 const API_BASE_URL = "/api";
 
@@ -57,5 +57,40 @@ export const bibleService = {
 
   async clearInsightsHistory(): Promise<void> {
     await axios.delete(`${API_BASE_URL}/insights/history`);
+  },
+
+  async sendChatMessage(
+    insightId: number,
+    message: string,
+    passageText: string,
+    passageReference: string,
+    insightContext: Insight,
+  ): Promise<string> {
+    const response = await axios.post<{ response: string }>(
+      `${API_BASE_URL}/chat/message`,
+      {
+        insight_id: insightId,
+        message,
+        passage_text: passageText,
+        passage_reference: passageReference,
+        insight_context: {
+          historical_context: insightContext.historical_context,
+          theological_significance: insightContext.theological_significance,
+          practical_application: insightContext.practical_application,
+        },
+      },
+    );
+    return response.data.response;
+  },
+
+  async getChatMessages(insightId: number): Promise<ChatMessage[]> {
+    const response = await axios.get<ChatMessage[]>(
+      `${API_BASE_URL}/chat/messages/${insightId}`,
+    );
+    return response.data;
+  },
+
+  async clearChatMessages(insightId: number): Promise<void> {
+    await axios.delete(`${API_BASE_URL}/chat/messages/${insightId}`);
   },
 };
