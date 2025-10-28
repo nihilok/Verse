@@ -7,14 +7,12 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 interface ChatInterfaceProps {
-  insightId: number;
   messages: ChatMessage[];
   onSendMessage: (message: string) => Promise<void>;
   loading: boolean;
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({
-  insightId,
   messages,
   onSendMessage,
   loading,

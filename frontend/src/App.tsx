@@ -266,7 +266,7 @@ function App() {
     
     setChatLoading(true);
     try {
-      const response = await bibleService.sendChatMessage(
+      await bibleService.sendChatMessage(
         currentInsightId,
         message,
         selectedText,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
@@ -147,7 +147,6 @@ const InsightsModal: React.FC<InsightsModalProps> = ({
             >
               {insightId ? (
                 <ChatInterface
-                  insightId={insightId}
                   messages={chatMessages}
                   onSendMessage={onSendChatMessage}
                   loading={chatLoading}
