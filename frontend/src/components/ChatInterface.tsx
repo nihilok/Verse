@@ -61,7 +61,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                className={`max-w-[80%] rounded-lg px-4 py-2 chat-message ${
                   msg.role === "user"
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted"

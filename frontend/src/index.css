@@ -199,8 +199,14 @@
     line-height: 0.1em;
     margin-right: 0.15em;
     vertical-align: -0.3em;
-    color: oklch(42% 0.15 25);
+    /* use a CSS variable so we can swap the quote marker color in dark mode */
+    color: var(--prose-quote-color, oklch(42% 0.15 25));
     opacity: 0.3;
+  }
+
+  /* drop cap color should be adjustable between themes */
+  .drop-cap::first-letter {
+    color: var(--prose-dropcap-color, oklch(42% 0.15 25));
   }
 
   .prose a {
@@ -256,7 +262,8 @@
   --card-foreground: 40 40% 92%;
   --popover: 25 18% 15%;
   --popover-foreground: 40 40% 92%;
-  --primary: 45 75% 60%; /* Bright gold for dark mode */
+  /* Use a warm gold/burgundy blend for dark mode accents (readable on dark backgrounds) */
+  --primary: 45 70% 55%; /* warm gold-like accent for dark mode */
   --primary-foreground: 25 20% 12%;
   --secondary: 30 25% 25%;
   --secondary-foreground: 40 40% 92%;
@@ -270,6 +277,14 @@
   --input: 28 18% 20%;
   --ring: 45 75% 60%;
 
+  /* Backwards-compatible, compiled-class variables (override compiled hex fallbacks)
+     These are used in the built/dist CSS (e.g. --primary-color, --accent-color). */
+  --primary-color: #dd881b; /* warm gold */
+  --accent-color: #dd881b;
+  --card-background: #1e293b;
+  --text-color: #e2e8f0;
+  --border-color: #334155;
+
   /* Update oklch colors for dark mode */
   --color-background: oklch(22% 0.025 35); /* Deep warm brown-black */
   --color-foreground: oklch(92% 0.02 60); /* Warm off-white */
@@ -277,7 +292,8 @@
   --color-card-foreground: oklch(92% 0.02 60);
   --color-popover: oklch(25% 0.02 35);
   --color-popover-foreground: oklch(92% 0.02 60);
-  --color-primary: oklch(70% 0.15 65); /* Bright warm gold */
+  /* brighter gold for links/accents in prose when in dark mode */
+  --color-primary: oklch(70% 0.15 65);
   --color-primary-foreground: oklch(22% 0.025 35);
   --color-secondary: oklch(35% 0.03 40);
   --color-secondary-foreground: oklch(92% 0.02 60);
@@ -290,10 +306,50 @@
   --color-border: oklch(35% 0.02 38);
   --color-input: oklch(30% 0.02 36);
   --color-ring: oklch(70% 0.15 65);
+
+  /* Theme-specific prose variables */
+  --prose-quote-color: var(--color-accent);
+  --prose-dropcap-color: var(--color-accent);
 }
 
-.dark body {
-  background: oklch(22% 0.025 35);
+/* Targeted dark-mode overrides to avoid leftover red accents */
+.dark .drop-cap::first-letter {
+  color: var(--accent-color) !important;
+}
+
+.dark .prose blockquote::before {
+  color: color-mix(in oklch, var(--accent-color) 65%, transparent) !important;
+}
+
+.dark .prose blockquote {
+  border-left-color: var(--accent-color) !important;
+}
+
+/* Force gold accent fallbacks in dark mode for compiled CSS that inlined burgundy */
+.dark .prose a,
+.dark .prose a:hover,
+.dark .prose blockquote::before,
+.dark .prose blockquote {
+  color: #dd881b !important; /* gold fallback */
+}
+
+.dark .prose blockquote {
+  border-left-color: #dd881b !important;
+}
+
+/* End of targeted dark-mode fallbacks */
+
+/* Chat messages should use a modern sans-serif for clarity and contrast */
+@layer components {
+  .chat-message {
+    /* explicit system sans stack so chat looks modern and not 'sacred' serif */
+    font-family:
+      -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+      Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji",
+      "Segoe UI Symbol", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 }
 
 /* Additional refinements for biblical aesthetic */
@@ -339,4 +395,67 @@
     left: 0.5em;
     margin-right: -50%;
   }
+
+  /* Improve readability of markdown/prose content in dark mode */
+  .dark .prose {
+    /* Use card foreground for better contrast inside cards/modals */
+    color: var(--color-card-foreground) !important;
+  }
+
+  /* Make headings and links in dark mode use high-contrast card foreground and gold accent */
+  .dark .prose h1,
+  .dark .prose h2,
+  .dark .prose h3,
+  .dark .prose h4,
+  .dark .prose h5,
+  .dark .prose h6 {
+    color: var(--color-card-foreground) !important;
+  }
+
+  .dark .prose a {
+    color: var(--color-accent) !important;
+    text-decoration-color: color-mix(
+      in oklch,
+      var(--color-accent) 85%,
+      transparent
+    );
+  }
+
+  .dark .prose p,
+  .dark .prose li,
+  .dark .prose span,
+  .dark .prose dd {
+    color: var(--color-card-foreground) !important;
+  }
+
+  .dark .prose strong {
+    color: var(--color-card-foreground) !important;
+  }
+
+  .dark .prose blockquote {
+    background: oklch(28% 0.02 28); /* subtle darker panel for quotes */
+    color: var(--color-card-foreground) !important;
+    border-left-color: var(--color-primary);
+  }
+
+  .dark .prose blockquote::before {
+    color: color-mix(in oklch, var(--color-primary) 65%, transparent);
+    opacity: 0.25;
+  }
 }
+
+/* Final, high-specificity fallbacks (placed after Tailwind layers) */
+:where(.dark) .prose a,
+:where(.dark) .prose a:hover,
+:where(.dark) .prose blockquote::before,
+:where(.dark) .prose blockquote,
+:where(.dark) .drop-cap::first-letter,
+:where(.dark) .drop-cap:first-letter {
+  color: #dd881b !important; /* final gold override for dark mode */
+}
+
+:where(.dark) .prose blockquote {
+  border-left-color: #dd881b !important;
+}
+
+/* End of final fallbacks */
