@@ -138,8 +138,8 @@ const InsightsModal: React.FC<InsightsModalProps> = ({
           </div>
         </Tabs>
         
-        {/* Continue Chat Button */}
-        {insightId && hasChatMessages && (
+        {/* Chat Button - Start or Continue */}
+        {insightId && (
           <div className="border-t pt-4 mt-4">
             <Button
               onClick={onContinueChat}
@@ -147,7 +147,10 @@ const InsightsModal: React.FC<InsightsModalProps> = ({
               variant="outline"
             >
               <MessageCircle size={18} />
-              Continue Chat ({chatMessages.length} message{chatMessages.length !== 1 ? 's' : ''})
+              {hasChatMessages 
+                ? `Continue Chat (${chatMessages.length} message${chatMessages.length !== 1 ? 's' : ''})`
+                : 'Ask Follow-up Question'
+              }
             </Button>
           </div>
         )}
