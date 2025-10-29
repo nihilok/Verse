@@ -1,5 +1,5 @@
 import axios from "axios";
-import { BiblePassage, Insight, PassageQuery, InsightHistory, ChatMessage } from "../types";
+import { BiblePassage, Insight, PassageQuery, InsightHistory, ChatMessage, StandaloneChat, StandaloneChatMessage } from "../types";
 
 const API_BASE_URL = "/api";
 
@@ -92,5 +92,53 @@ export const bibleService = {
 
   async clearChatMessages(insightId: number): Promise<void> {
     await axios.delete(`${API_BASE_URL}/chat/messages/${insightId}`);
+  },
+
+  async createStandaloneChat(
+    message: string,
+    passageText?: string,
+    passageReference?: string,
+  ): Promise<{ chat_id: number; messages: StandaloneChatMessage[] }> {
+    const response = await axios.post<{ chat_id: number; messages: StandaloneChatMessage[] }>(
+      `${API_BASE_URL}/standalone-chat`,
+      {
+        message,
+        passage_text: passageText,
+        passage_reference: passageReference,
+      },
+    );
+    return response.data;
+  },
+
+  async sendStandaloneChatMessage(
+    chatId: number,
+    message: string,
+  ): Promise<string> {
+    const response = await axios.post<{ response: string }>(
+      `${API_BASE_URL}/standalone-chat/message`,
+      {
+        chat_id: chatId,
+        message,
+      },
+    );
+    return response.data.response;
+  },
+
+  async getStandaloneChats(limit: number = 50): Promise<StandaloneChat[]> {
+    const response = await axios.get<StandaloneChat[]>(
+      `${API_BASE_URL}/standalone-chat?limit=${limit}`,
+    );
+    return response.data;
+  },
+
+  async getStandaloneChatMessages(chatId: number): Promise<StandaloneChatMessage[]> {
+    const response = await axios.get<StandaloneChatMessage[]>(
+      `${API_BASE_URL}/standalone-chat/${chatId}/messages`,
+    );
+    return response.data;
+  },
+
+  async deleteStandaloneChat(chatId: number): Promise<void> {
+    await axios.delete(`${API_BASE_URL}/standalone-chat/${chatId}`);
   },
 };

@@ -41,3 +41,18 @@ export interface ChatMessage {
   content: string;
   timestamp: number;
 }
+
+export interface StandaloneChat {
+  id: number;
+  title: string | null;
+  passage_reference: string | null;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface StandaloneChatMessage {
+  id: number;
+  role: "user" | "assistant";
+  content: string;
+  timestamp: number;
+}
