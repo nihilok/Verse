@@ -9,7 +9,6 @@ import {
   BookOpen,
   AlertCircle,
   X,
-  Loader2,
   History as HistoryIcon,
   Menu,
 } from "lucide-react";
@@ -20,6 +19,7 @@ import ChatModal from "./components/ChatModal";
 import InsightsHistoryComponent from "./components/InsightsHistory";
 import ChatHistory from "./components/ChatHistory";
 import InstallPrompt from "./components/InstallPrompt";
+import LoadingOverlay from "./components/LoadingOverlay";
 import { ModeToggle } from "./components/mode-toggle";
 import { bibleService } from "./services/api";
 import { BiblePassage, Insight, InsightHistory, ChatMessage, StandaloneChat, StandaloneChatMessage } from "./types";
@@ -664,25 +664,9 @@ function App() {
         loading={chatLoading}
       />
 
-      {/* Loading overlay for insights */}
-      {insightLoading && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-card p-6 rounded-lg shadow-lg flex flex-col items-center gap-4">
-            <Loader2 size={48} className="animate-spin text-primary" />
-            <p className="text-lg">Generating insights...</p>
-          </div>
-        </div>
-      )}
-
-      {/* Loading overlay for starting standalone chat */}
-      {standaloneChatLoading && !chatModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-card p-6 rounded-lg shadow-lg flex flex-col items-center gap-4">
-            <Loader2 size={48} className="animate-spin text-primary" />
-            <p className="text-lg">Starting chat...</p>
-          </div>
-        </div>
-      )}
+      {/* Loading overlays */}
+      {insightLoading && <LoadingOverlay message="Generating insights..." />}
+      {standaloneChatLoading && !chatModalOpen && <LoadingOverlay message="Starting chat..." />}
 
       {/* PWA Install Prompt */}
       <InstallPrompt />
