@@ -77,3 +77,127 @@ Verse is an interactive Bible reader with AI-powered insights. Users can highlig
 - Use `bun` for JavaScript/TypeScript package management and scripts in the frontend. Prefer `bun` over `npm` or `yarn` for all relevant commands.
 - Use `uv` for Python environment management where possible.
 
+## Development Workflow
+
+### Initial Setup
+
+1. Clone the repository and navigate to the project directory
+2. Copy `.env.example` to `.env` and configure environment variables (especially `ANTHROPIC_API_KEY`)
+3. Use Docker Compose for full-stack development: `docker compose up --build`
+
+### Frontend Development
+
+- **Install dependencies**: `cd frontend && bun install`
+- **Run development server**: `bun run dev` (starts on port 5173)
+- **Run linter**: `bun run lint`
+- **Fix linting issues**: `bun run lint:fix`
+- **Run tests**: `bun test` or `bun run test:unit`
+- **Build for production**: `bun run build`
+- **Type checking**: `tsc --noEmit`
+
+### Backend Development
+
+- **Install dependencies**: `cd backend && pip install -r requirements.txt`
+- **Install test dependencies**: `pip install -r requirements-test.txt`
+- **Run development server**: `uvicorn app.main:app --reload --host 0.0.0.0 --port 8000`
+- **Run tests**: `pytest`
+- **Test with coverage**: `pytest --cov=app`
+- **CI environment**: Tests run with SQLite database using `DATABASE_URL=sqlite:///./test.db`
+
+### Docker Development
+
+- **Build and start all services**: `docker compose up --build`
+- **Stop services**: `docker compose down`
+- **View logs**: `docker compose logs [service_name]`
+- **Production build**: Uses `docker-compose.prod.yml`
+
+## Project Architecture
+
+The application follows a modular, layered architecture:
+
+### Backend Structure
+
+- **API Layer** (`app/api/`): FastAPI routes and endpoints
+- **Service Layer** (`app/services/`): Business logic for Bible and insights operations
+- **Client Layer** (`app/clients/`): Abstracted interfaces for external APIs (Bible API, AI providers)
+- **Models** (`app/models/`): SQLAlchemy database models
+- **Core** (`app/core/`): Configuration, database setup, and shared utilities
+
+### Frontend Structure
+
+- **Components** (`src/components/`): Reusable React components
+- **Services** (`src/services/`): API client and service layer
+- **Types** (`src/types/`): TypeScript type definitions
+- **Main Application**: `App.tsx` and `main.tsx`
+
+### Key Design Patterns
+
+- **Abstraction**: Bible and AI clients use abstract base classes to prevent vendor lock-in
+- **Service Layer**: Business logic is separated from API endpoints
+- **Type Safety**: TypeScript in frontend, type hints in backend
+- **Dependency Injection**: Services receive client instances
+- **Environment Configuration**: All secrets and configuration via environment variables
+
+## File Organisation
+
+- **Documentation**: See `README.md`, `DEVELOPMENT.md`, `CONTRIBUTING.md`, `ARCHITECTURE.md`, and `API.md`
+- **Configuration**: Environment variables in `.env` (not committed), example in `.env.example`
+- **Tests**: Backend tests in `backend/tests/`, frontend tests co-located with components
+- **Docker**: `Dockerfile` in each service directory, `docker-compose.yml` at root
+
+## Working with Tests
+
+### Backend Testing
+
+- Tests use `pytest` with async support (`pytest-asyncio`)
+- Mock external API calls in tests
+- Use test fixtures for common setup
+- Tests are located in `backend/tests/`
+- Configuration in `backend/pytest.ini`
+
+### Frontend Testing
+
+- Tests use Vitest with jsdom environment
+- Use React Testing Library for component tests
+- Tests should be co-located with components or in `__tests__` directories
+- Run with `bun test` or `bun run test:unit`
+
+## Common Commands Reference
+
+### Frontend
+```bash
+cd frontend
+bun install           # Install dependencies
+bun run dev          # Start dev server
+bun run lint         # Check linting
+bun run lint:fix     # Fix linting issues
+bun test             # Run tests
+bun run build        # Build for production
+```
+
+### Backend
+```bash
+cd backend
+pip install -r requirements.txt          # Install dependencies
+pip install -r requirements-test.txt     # Install test dependencies
+uvicorn app.main:app --reload           # Start dev server
+pytest                                   # Run tests
+pytest --cov=app                        # Run tests with coverage
+```
+
+### Docker
+```bash
+docker compose up --build    # Build and start all services
+docker compose down          # Stop all services
+docker compose logs -f       # Follow logs from all services
+```
+
+## CI/CD
+
+The project uses GitHub Actions for continuous integration (see `.github/workflows/ci.yml`):
+
+- **Backend Tests**: Runs `pytest` with Python 3.11
+- **Frontend Lint**: Runs ESLint using Bun
+- **Docker Build**: Verifies Docker images build successfully
+
+All CI jobs must pass before merging pull requests.
