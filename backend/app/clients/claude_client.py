@@ -149,3 +149,73 @@ Continue the conversation by answering the user's questions thoughtfully and in 
         except Exception as e:
             print(f"Error generating chat response: {e}")
             return None
+    
+    async def generate_standalone_chat_response(
+        self,
+        user_message: str,
+        passage_text: Optional[str] = None,
+        passage_reference: Optional[str] = None,
+        chat_history: List = None
+    ) -> Optional[str]:
+        """
+        Generate a chat response for standalone chats (not linked to insights).
+        
+        Args:
+            user_message: The user's question
+            passage_text: Optional Bible passage text for context
+            passage_reference: Optional Bible passage reference
+            chat_history: List of previous StandaloneChatMessage objects
+            
+        Returns:
+            The AI's response text
+        """
+        if chat_history is None:
+            chat_history = []
+        
+        try:
+            # Build the system message
+            system_prompt = """You are a knowledgeable biblical scholar and theologian having a conversation. 
+Answer questions about the Bible, theology, and faith thoughtfully and in depth. Draw from biblical scholarship, 
+theology, and practical wisdom."""
+            
+            # If there's a passage, add it to the system prompt
+            if passage_text and passage_reference:
+                max_text_length = 2000
+                truncated_passage = passage_text[:max_text_length] + ("..." if len(passage_text) > max_text_length else "")
+                truncated_reference = passage_reference[:200]
+                
+                system_prompt = f"""You are a knowledgeable biblical scholar and theologian having a conversation about a Bible passage. 
+
+Passage Reference: {truncated_reference}
+Passage Text: {truncated_passage}
+
+Answer questions thoughtfully and in depth. Draw from biblical scholarship, theology, and practical wisdom."""
+            
+            # Build conversation messages
+            messages = []
+            
+            # Add chat history
+            for msg in chat_history:
+                messages.append({
+                    "role": msg.role,
+                    "content": msg.content
+                })
+            
+            # Add current user message
+            messages.append({
+                "role": "user",
+                "content": user_message
+            })
+            
+            # Generate response
+            response = self.client.messages.create(
+                model="claude-sonnet-4-5-20250929",
+                max_tokens=2000,
+                system=system_prompt,
+                messages=messages
+            )
+            
+            return response.content[0].text
+        except Exception as e:
+            print(f"Error generating standalone chat response: {e}")
+            return None

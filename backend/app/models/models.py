@@ -56,3 +56,34 @@ class ChatMessage(Base):
     
     # Relationship to insight
     insight = relationship("SavedInsight", back_populates="chat_messages")
+
+
+class StandaloneChat(Base):
+    """Model for standalone chat sessions (not linked to insights)."""
+    
+    __tablename__ = "standalone_chats"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(200), nullable=True)  # Optional title derived from first message
+    passage_reference = Column(String(100), nullable=True)  # Optional reference if started from passage
+    passage_text = Column(Text, nullable=True)  # Optional passage text
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    
+    # Relationship to chat messages
+    messages = relationship("StandaloneChatMessage", back_populates="chat", cascade="all, delete-orphan")
+
+
+class StandaloneChatMessage(Base):
+    """Model for messages in standalone chat sessions."""
+    
+    __tablename__ = "standalone_chat_messages"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    chat_id = Column(Integer, ForeignKey('standalone_chats.id', ondelete='CASCADE'), nullable=False, index=True)
+    role = Column(String(20), nullable=False)  # 'user' or 'assistant'
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationship to chat
+    chat = relationship("StandaloneChat", back_populates="messages")

@@ -36,6 +36,19 @@ class ChatMessageRequest(BaseModel):
     insight_context: dict  # Contains historical_context, theological_significance, practical_application
 
 
+class StandaloneChatCreateRequest(BaseModel):
+    """Request model for creating a standalone chat."""
+    message: str
+    passage_text: Optional[str] = None
+    passage_reference: Optional[str] = None
+
+
+class StandaloneChatMessageRequest(BaseModel):
+    """Request model for sending a message in a standalone chat."""
+    chat_id: int
+    message: str
+
+
 @router.get("/passage")
 async def get_passage(
     book: str = Query(..., description="Book name (e.g., 'John', 'Genesis')"),
@@ -238,3 +251,122 @@ async def clear_chat_messages(
     count = service.clear_chat_messages(db, insight_id)
     
     return {"message": f"Cleared {count} chat messages"}
+
+
+@router.post("/standalone-chat")
+async def create_standalone_chat(
+    request: StandaloneChatCreateRequest,
+    db: Session = Depends(get_db)
+):
+    """Create a new standalone chat session."""
+    service = ChatService()
+    
+    try:
+        chat_id = await service.create_standalone_chat(
+            db=db,
+            user_message=request.message,
+            passage_text=request.passage_text,
+            passage_reference=request.passage_reference
+        )
+        
+        if not chat_id:
+            raise HTTPException(status_code=500, detail="Failed to create chat")
+        
+        # Get the messages for the new chat
+        messages = service.get_standalone_chat_messages(db, chat_id)
+        
+        return {
+            "chat_id": chat_id,
+            "messages": [
+                {
+                    "id": msg.id,
+                    "role": msg.role,
+                    "content": msg.content,
+                    "timestamp": int(msg.created_at.timestamp() * 1000) if msg.created_at else None
+                }
+                for msg in messages
+            ]
+        }
+    except Exception as e:
+        print(f"Error in create standalone chat endpoint: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/standalone-chat/message")
+async def send_standalone_chat_message(
+    request: StandaloneChatMessageRequest,
+    db: Session = Depends(get_db)
+):
+    """Send a message in a standalone chat."""
+    service = ChatService()
+    
+    try:
+        response = await service.send_standalone_message(
+            db=db,
+            chat_id=request.chat_id,
+            user_message=request.message
+        )
+        
+        if not response:
+            raise HTTPException(status_code=500, detail="Failed to send message")
+        
+        return {"response": response}
+    except Exception as e:
+        print(f"Error in standalone chat message endpoint: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/standalone-chat")
+async def get_standalone_chats(
+    limit: int = Query(50, description="Maximum number of chats to return"),
+    db: Session = Depends(get_db)
+):
+    """Get all standalone chat sessions."""
+    service = ChatService()
+    chats = service.get_standalone_chats(db, limit=limit)
+    
+    return [
+        {
+            "id": chat.id,
+            "title": chat.title,
+            "passage_reference": chat.passage_reference,
+            "created_at": int(chat.created_at.timestamp() * 1000) if chat.created_at else None,
+            "updated_at": int(chat.updated_at.timestamp() * 1000) if chat.updated_at else None
+        }
+        for chat in chats
+    ]
+
+
+@router.get("/standalone-chat/{chat_id}/messages")
+async def get_standalone_chat_messages(
+    chat_id: int,
+    db: Session = Depends(get_db)
+):
+    """Get all messages for a standalone chat."""
+    service = ChatService()
+    messages = service.get_standalone_chat_messages(db, chat_id)
+    
+    return [
+        {
+            "id": msg.id,
+            "role": msg.role,
+            "content": msg.content,
+            "timestamp": int(msg.created_at.timestamp() * 1000) if msg.created_at else None
+        }
+        for msg in messages
+    ]
+
+
+@router.delete("/standalone-chat/{chat_id}")
+async def delete_standalone_chat(
+    chat_id: int,
+    db: Session = Depends(get_db)
+):
+    """Delete a standalone chat session."""
+    service = ChatService()
+    success = service.delete_standalone_chat(db, chat_id)
+    
+    if not success:
+        raise HTTPException(status_code=404, detail="Chat not found")
+    
+    return {"message": "Chat deleted successfully"}
