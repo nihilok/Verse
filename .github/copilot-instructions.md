@@ -102,7 +102,7 @@ Verse is an interactive Bible reader with AI-powered insights. Users can highlig
 - **Run development server**: `uvicorn app.main:app --reload --host 0.0.0.0 --port 8000`
 - **Run tests**: `pytest`
 - **Test with coverage**: `pytest --cov=app`
-- **Run tests in CI mode**: Uses SQLite database with `DATABASE_URL=sqlite:///./test.db`
+- **CI environment**: Tests run with SQLite database using `DATABASE_URL=sqlite:///./test.db`
 
 ### Docker Development
 
