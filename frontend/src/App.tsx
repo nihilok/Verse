@@ -16,11 +16,13 @@ import {
 import PassageSearch from "./components/PassageSearch";
 import BibleReader from "./components/BibleReader";
 import InsightsModal from "./components/InsightsModal";
+import ChatModal from "./components/ChatModal";
 import InsightsHistoryComponent from "./components/InsightsHistory";
+import ChatHistory from "./components/ChatHistory";
 import InstallPrompt from "./components/InstallPrompt";
 import { ModeToggle } from "./components/mode-toggle";
 import { bibleService } from "./services/api";
-import { BiblePassage, Insight, InsightHistory, ChatMessage } from "./types";
+import { BiblePassage, Insight, InsightHistory, ChatMessage, StandaloneChat, StandaloneChatMessage } from "./types";
 import {
   Sidebar,
   SidebarHeader,
@@ -53,6 +55,14 @@ function App() {
   const [currentInsightId, setCurrentInsightId] = useState<number | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
+  
+  // Standalone chat state
+  const [chatHistory, setChatHistory] = useState<StandaloneChat[]>([]);
+  const [currentChatId, setCurrentChatId] = useState<number | null>(null);
+  const [standaloneChatMessages, setStandaloneChatMessages] = useState<StandaloneChatMessage[]>([]);
+  const [standaloneChatLoading, setStandaloneChatLoading] = useState(false);
+  const [chatModalOpen, setChatModalOpen] = useState(false);
+  const [insightChatModalOpen, setInsightChatModalOpen] = useState(false);
 
   // Check if we're on desktop (lg breakpoint)
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
@@ -80,15 +90,18 @@ function App() {
     setSidebarFullyHidden(latest <= -320);
   });
 
-  // Load insights history from backend on mount
+  // Load insights history and chat history from backend on mount
   useEffect(() => {
     const loadHistory = async () => {
       try {
         const history =
           await bibleService.getInsightsHistory(MAX_HISTORY_ITEMS);
         setInsightsHistory(history);
+        
+        const chats = await bibleService.getStandaloneChats(MAX_HISTORY_ITEMS);
+        setChatHistory(chats);
       } catch (e) {
-        console.error("Failed to load insights history:", e);
+        console.error("Failed to load history:", e);
       }
     };
     loadHistory();
@@ -322,6 +335,154 @@ function App() {
     }
   };
 
+  const handleAskQuestion = async (text: string, reference: string) => {
+    setStandaloneChatLoading(true);
+    setError(null);
+
+    try {
+      const result = await bibleService.createStandaloneChat(
+        `I have a question about this passage: "${text}"\n\nPlease help me understand it better.`,
+        text,
+        reference
+      );
+      
+      setCurrentChatId(result.chat_id);
+      setStandaloneChatMessages(result.messages);
+      setChatModalOpen(true);
+
+      // Reload chat history
+      try {
+        const chats = await bibleService.getStandaloneChats(MAX_HISTORY_ITEMS);
+        setChatHistory(chats);
+      } catch (historyErr) {
+        console.error("Failed to reload chat history:", historyErr);
+      }
+    } catch (err) {
+      console.error("Failed to start chat:", err);
+      setError("Failed to start chat. Please try again.");
+    } finally {
+      setStandaloneChatLoading(false);
+    }
+  };
+
+  const handleChatHistorySelect = async (chat: StandaloneChat) => {
+    try {
+      const messages = await bibleService.getStandaloneChatMessages(chat.id);
+      setCurrentChatId(chat.id);
+      setStandaloneChatMessages(messages);
+      setChatModalOpen(true);
+    } catch (err) {
+      console.error("Failed to load chat messages:", err);
+      setError("Failed to load chat. Please try again.");
+    }
+    
+    // Close sidebar on mobile after selecting chat
+    if (!isDesktop) {
+      setSidebarOpen(false);
+    }
+  };
+
+  const handleSendStandaloneChatMessage = async (message: string) => {
+    if (!currentChatId) return;
+
+    // Create a temporary optimistic message
+    const tempId = -Date.now();
+    const tempMessage: StandaloneChatMessage = {
+      id: tempId,
+      role: "user",
+      content: message,
+      timestamp: Date.now(),
+    };
+
+    // Optimistically add the user's message
+    setStandaloneChatMessages((prev) => [...prev, tempMessage]);
+    setStandaloneChatLoading(true);
+
+    try {
+      // Send message to server
+      await bibleService.sendStandaloneChatMessage(currentChatId, message);
+
+      // After successful send, reload authoritative messages from server
+      const messages = await bibleService.getStandaloneChatMessages(currentChatId);
+      setStandaloneChatMessages(messages);
+      
+      // Update chat history to reflect new message
+      const chats = await bibleService.getStandaloneChats(MAX_HISTORY_ITEMS);
+      setChatHistory(chats);
+    } catch (err) {
+      console.error("Failed to send chat message:", err);
+      setError("Failed to send message. Please try again.");
+
+      // Remove the optimistic temp message on failure
+      setStandaloneChatMessages((prev) => prev.filter((m) => m.id !== tempId));
+    } finally {
+      setStandaloneChatLoading(false);
+    }
+  };
+
+  const handleDeleteChat = async (chatId: number) => {
+    try {
+      await bibleService.deleteStandaloneChat(chatId);
+      setChatHistory((prev) => prev.filter((c) => c.id !== chatId));
+      
+      // Close modal if the deleted chat is currently open
+      if (currentChatId === chatId) {
+        setChatModalOpen(false);
+        setCurrentChatId(null);
+        setStandaloneChatMessages([]);
+      }
+    } catch (err) {
+      console.error("Failed to delete chat:", err);
+      setError("Failed to delete chat. Please try again.");
+    }
+  };
+
+  const handleContinueChat = () => {
+    // Close insights modal and open insight chat modal
+    setInsightsModalOpen(false);
+    setInsightChatModalOpen(true);
+  };
+
+  const handleSendInsightChatMessage = async (message: string) => {
+    if (!currentInsightId || !insight) return;
+
+    // Create a temporary optimistic message
+    const tempId = -Date.now();
+    const tempMessage: ChatMessage = {
+      id: tempId,
+      role: "user",
+      content: message,
+      timestamp: Date.now(),
+    };
+
+    // Optimistically add the user's message
+    setChatMessages((prev) => [...prev, tempMessage]);
+    setChatLoading(true);
+
+    try {
+      // Send message to server
+      await bibleService.sendChatMessage(
+        currentInsightId,
+        message,
+        selectedText,
+        selectedReference,
+        insight,
+      );
+
+      // After successful send, reload authoritative messages from server
+      const messages = await bibleService.getChatMessages(currentInsightId);
+      setChatMessages(messages);
+    } catch (err) {
+      console.error("Failed to send chat message:", err);
+      setError("Failed to send message. Please try again.");
+
+      // Remove the optimistic temp message on failure
+      setChatMessages((prev) => prev.filter((m) => m.id !== tempId));
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
   return (
     <div className="mobile-viewport-height flex flex-col bg-background">
       {/* Book tab for opening sidebar on mobile, only visible when sidebar is fully hidden */}
@@ -426,14 +587,21 @@ function App() {
                 defaultValue="search"
                 className="w-full h-full flex flex-col"
               >
-                <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
+                <TabsList className="grid w-full grid-cols-3 flex-shrink-0">
                   <TabsTrigger value="search">Search</TabsTrigger>
                   <TabsTrigger
-                    value="history"
+                    value="insights"
                     className="flex items-center gap-1"
                   >
                     <HistoryIcon size={16} />
-                    History
+                    Insights
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="chats"
+                    className="flex items-center gap-1"
+                  >
+                    <HistoryIcon size={16} />
+                    Chats
                   </TabsTrigger>
                 </TabsList>
                 <TabsContent
@@ -443,13 +611,23 @@ function App() {
                   <PassageSearch onSearch={handleSearch} />
                 </TabsContent>
                 <TabsContent
-                  value="history"
+                  value="insights"
                   className="mt-4 flex-1 overflow-y-auto px-4"
                 >
                   <InsightsHistoryComponent
                     history={insightsHistory}
                     onSelect={handleHistorySelect}
                     onClear={handleClearHistory}
+                  />
+                </TabsContent>
+                <TabsContent
+                  value="chats"
+                  className="mt-4 flex-1 overflow-y-auto px-4"
+                >
+                  <ChatHistory
+                    chats={chatHistory}
+                    onSelect={handleChatHistorySelect}
+                    onDelete={handleDeleteChat}
                   />
                 </TabsContent>
               </Tabs>
@@ -481,6 +659,7 @@ function App() {
               <BibleReader
                 passage={passage}
                 onTextSelected={handleTextSelected}
+                onAskQuestion={handleAskQuestion}
                 onNavigate={handleNavigate}
                 loading={loading}
               />
@@ -498,8 +677,28 @@ function App() {
         reference={selectedReference}
         insightId={currentInsightId}
         chatMessages={chatMessages}
-        onSendChatMessage={handleSendChatMessage}
-        chatLoading={chatLoading}
+        onContinueChat={handleContinueChat}
+      />
+
+      {/* Standalone Chat Modal */}
+      <ChatModal
+        open={chatModalOpen}
+        onOpenChange={setChatModalOpen}
+        title="Chat"
+        messages={standaloneChatMessages}
+        onSendMessage={handleSendStandaloneChatMessage}
+        loading={standaloneChatLoading}
+      />
+
+      {/* Insight Chat Modal */}
+      <ChatModal
+        open={insightChatModalOpen}
+        onOpenChange={setInsightChatModalOpen}
+        title="Continue Chat"
+        subtitle={selectedReference}
+        messages={chatMessages}
+        onSendMessage={handleSendInsightChatMessage}
+        loading={chatLoading}
       />
 
       {/* Loading overlay for insights */}
@@ -508,6 +707,16 @@ function App() {
           <div className="bg-card p-6 rounded-lg shadow-lg flex flex-col items-center gap-4">
             <Loader2 size={48} className="animate-spin text-primary" />
             <p className="text-lg">Generating insights...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Loading overlay for starting standalone chat */}
+      {standaloneChatLoading && !chatModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-card p-6 rounded-lg shadow-lg flex flex-col items-center gap-4">
+            <Loader2 size={48} className="animate-spin text-primary" />
+            <p className="text-lg">Starting chat...</p>
           </div>
         </div>
       )}

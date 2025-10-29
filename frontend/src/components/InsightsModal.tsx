@@ -16,7 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import ChatInterface from "./ChatInterface";
+import { Button } from "@/components/ui/button";
 import type { Insight, ChatMessage } from "../types";
 
 interface InsightsModalProps {
@@ -27,8 +27,7 @@ interface InsightsModalProps {
   reference: string;
   insightId: number | null;
   chatMessages: ChatMessage[];
-  onSendChatMessage: (message: string) => Promise<void>;
-  chatLoading: boolean;
+  onContinueChat: () => void;
 }
 
 const InsightsModal: React.FC<InsightsModalProps> = ({
@@ -39,12 +38,14 @@ const InsightsModal: React.FC<InsightsModalProps> = ({
   reference,
   insightId,
   chatMessages,
-  onSendChatMessage,
-  chatLoading,
+  onContinueChat,
 }) => {
   const [tab, setTab] = React.useState<
-    "historical" | "theological" | "practical" | "chat"
+    "historical" | "theological" | "practical"
   >("historical");
+  
+  const hasChatMessages = chatMessages && chatMessages.length > 0;
+  
   if (!insight) return null;
 
   return (
@@ -76,11 +77,11 @@ const InsightsModal: React.FC<InsightsModalProps> = ({
         <Tabs
           value={tab}
           onValueChange={(v) =>
-            setTab(v as "historical" | "theological" | "practical" | "chat")
+            setTab(v as "historical" | "theological" | "practical")
           }
           className="flex-1 overflow-hidden flex flex-col"
         >
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="historical" className="flex items-center gap-2">
               <BookMarked size={16} />
               Historical
@@ -95,10 +96,6 @@ const InsightsModal: React.FC<InsightsModalProps> = ({
             <TabsTrigger value="practical" className="flex items-center gap-2">
               <Lightbulb size={16} />
               Practical
-            </TabsTrigger>
-            <TabsTrigger value="chat" className="flex items-center gap-2">
-              <MessageCircle size={16} />
-              Chat
             </TabsTrigger>
           </TabsList>
 
@@ -138,29 +135,22 @@ const InsightsModal: React.FC<InsightsModalProps> = ({
                 {insight.practical_application}
               </ReactMarkdown>
             </TabsContent>
-
-            <TabsContent
-              value="chat"
-              className="h-full flex flex-col"
-              role="tabpanel"
-              aria-label="Chat with AI"
-            >
-              {insightId ? (
-                <ChatInterface
-                  messages={chatMessages}
-                  onSendMessage={onSendChatMessage}
-                  loading={chatLoading}
-                />
-              ) : (
-                <div className="text-center text-muted-foreground py-8">
-                  <p className="text-sm">
-                    Chat is only available for saved insights.
-                  </p>
-                </div>
-              )}
-            </TabsContent>
           </div>
         </Tabs>
+        
+        {/* Continue Chat Button */}
+        {insightId && hasChatMessages && (
+          <div className="border-t pt-4 mt-4">
+            <Button
+              onClick={onContinueChat}
+              className="w-full flex items-center gap-2"
+              variant="outline"
+            >
+              <MessageCircle size={18} />
+              Continue Chat ({chatMessages.length} message{chatMessages.length !== 1 ? 's' : ''})
+            </Button>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
