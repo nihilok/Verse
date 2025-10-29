@@ -63,6 +63,7 @@ function App() {
   const [standaloneChatLoading, setStandaloneChatLoading] = useState(false);
   const [chatModalOpen, setChatModalOpen] = useState(false);
   const [insightChatModalOpen, setInsightChatModalOpen] = useState(false);
+  const [pendingChatPassage, setPendingChatPassage] = useState<{ text: string; reference: string } | null>(null);
 
   // Check if we're on desktop (lg breakpoint)
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
@@ -295,34 +296,12 @@ function App() {
     }
   };
 
-  const handleAskQuestion = async (text: string, reference: string) => {
-    setStandaloneChatLoading(true);
-    setError(null);
-
-    try {
-      const result = await bibleService.createStandaloneChat(
-        `I have a question about this passage: "${text}"\n\nPlease help me understand it better.`,
-        text,
-        reference
-      );
-      
-      setCurrentChatId(result.chat_id);
-      setStandaloneChatMessages(result.messages);
-      setChatModalOpen(true);
-
-      // Reload chat history
-      try {
-        const chats = await bibleService.getStandaloneChats(MAX_HISTORY_ITEMS);
-        setChatHistory(chats);
-      } catch (historyErr) {
-        console.error("Failed to reload chat history:", historyErr);
-      }
-    } catch (err) {
-      console.error("Failed to start chat:", err);
-      setError("Failed to start chat. Please try again.");
-    } finally {
-      setStandaloneChatLoading(false);
-    }
+  const handleAskQuestion = (text: string, reference: string) => {
+    // Store passage info and open chat modal without creating the chat yet
+    setPendingChatPassage({ text, reference });
+    setCurrentChatId(null);
+    setStandaloneChatMessages([]);
+    setChatModalOpen(true);
   };
 
   const handleChatHistorySelect = async (chat: StandaloneChat) => {
@@ -330,6 +309,7 @@ function App() {
       const messages = await bibleService.getStandaloneChatMessages(chat.id);
       setCurrentChatId(chat.id);
       setStandaloneChatMessages(messages);
+      setPendingChatPassage(null); // Clear any pending passage
       setChatModalOpen(true);
     } catch (err) {
       console.error("Failed to load chat messages:", err);
@@ -343,8 +323,6 @@ function App() {
   };
 
   const handleSendStandaloneChatMessage = async (message: string) => {
-    if (!currentChatId) return;
-
     // Create a temporary optimistic message
     const tempId = -Date.now();
     const tempMessage: StandaloneChatMessage = {
@@ -359,16 +337,33 @@ function App() {
     setStandaloneChatLoading(true);
 
     try {
-      // Send message to server
-      await bibleService.sendStandaloneChatMessage(currentChatId, message);
+      // If no chat exists yet, create it with the first message
+      if (!currentChatId) {
+        const result = await bibleService.createStandaloneChat(
+          message,
+          pendingChatPassage?.text,
+          pendingChatPassage?.reference
+        );
+        
+        setCurrentChatId(result.chat_id);
+        setStandaloneChatMessages(result.messages);
+        setPendingChatPassage(null); // Clear pending passage after creating chat
+        
+        // Reload chat history
+        const chats = await bibleService.getStandaloneChats(MAX_HISTORY_ITEMS);
+        setChatHistory(chats);
+      } else {
+        // Send message to existing chat
+        await bibleService.sendStandaloneChatMessage(currentChatId, message);
 
-      // After successful send, reload authoritative messages from server
-      const messages = await bibleService.getStandaloneChatMessages(currentChatId);
-      setStandaloneChatMessages(messages);
-      
-      // Update chat history to reflect new message
-      const chats = await bibleService.getStandaloneChats(MAX_HISTORY_ITEMS);
-      setChatHistory(chats);
+        // After successful send, reload authoritative messages from server
+        const messages = await bibleService.getStandaloneChatMessages(currentChatId);
+        setStandaloneChatMessages(messages);
+        
+        // Update chat history to reflect new message
+        const chats = await bibleService.getStandaloneChats(MAX_HISTORY_ITEMS);
+        setChatHistory(chats);
+      }
     } catch (err) {
       console.error("Failed to send chat message:", err);
       setError("Failed to send message. Please try again.");
@@ -643,8 +638,16 @@ function App() {
       {/* Standalone Chat Modal */}
       <ChatModal
         open={chatModalOpen}
-        onOpenChange={setChatModalOpen}
+        onOpenChange={(open) => {
+          setChatModalOpen(open);
+          if (!open) {
+            // Clear pending passage when modal closes
+            setPendingChatPassage(null);
+          }
+        }}
         title="Chat"
+        passageText={pendingChatPassage?.text}
+        passageReference={pendingChatPassage?.reference}
         messages={standaloneChatMessages}
         onSendMessage={handleSendStandaloneChatMessage}
         loading={standaloneChatLoading}

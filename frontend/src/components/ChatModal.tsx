@@ -14,6 +14,8 @@ interface ChatModalProps {
   onOpenChange: (open: boolean) => void;
   title?: string;
   subtitle?: string;
+  passageText?: string;
+  passageReference?: string;
   messages: ChatMessage[] | StandaloneChatMessage[];
   onSendMessage: (message: string) => Promise<void>;
   loading: boolean;
@@ -24,6 +26,8 @@ const ChatModal: React.FC<ChatModalProps> = ({
   onOpenChange,
   title = "Chat",
   subtitle,
+  passageText,
+  passageReference,
   messages,
   onSendMessage,
   loading,
@@ -40,6 +44,16 @@ const ChatModal: React.FC<ChatModalProps> = ({
             <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
           )}
         </DialogHeader>
+
+        {/* Passage quote - shown at top if provided */}
+        {passageText && passageReference && (
+          <div className="mb-2 p-4 rounded-lg bg-muted/50 border border-border">
+            <h3 className="font-semibold text-sm mb-2 text-primary">
+              {passageReference}
+            </h3>
+            <p className="italic text-sm leading-relaxed">"{passageText}"</p>
+          </div>
+        )}
 
         <div className="flex-1 overflow-hidden flex flex-col min-h-0">
           <ChatInterface
