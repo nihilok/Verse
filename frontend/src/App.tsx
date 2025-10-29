@@ -283,46 +283,6 @@ function App() {
     setInsightsModalOpen(true);
   };
 
-  const handleSendChatMessage = async (message: string) => {
-    if (!currentInsightId || !insight) return;
-
-    // Create a temporary optimistic message so the user's message appears immediately
-    const tempId = -Date.now(); // negative id to avoid colliding with server ids
-    const tempMessage: ChatMessage = {
-      id: tempId,
-      role: "user",
-      content: message,
-      timestamp: Date.now(),
-    };
-
-    // Optimistically add the user's message
-    setChatMessages((prev) => [...prev, tempMessage]);
-    setChatLoading(true);
-
-    try {
-      // Send message to server
-      await bibleService.sendChatMessage(
-        currentInsightId,
-        message,
-        selectedText,
-        selectedReference,
-        insight,
-      );
-
-      // After successful send, reload authoritative messages from server
-      const messages = await bibleService.getChatMessages(currentInsightId);
-      setChatMessages(messages);
-    } catch (err) {
-      console.error("Failed to send chat message:", err);
-      setError("Failed to send message. Please try again.");
-
-      // Remove the optimistic temp message on failure
-      setChatMessages((prev) => prev.filter((m) => m.id !== tempId));
-    } finally {
-      setChatLoading(false);
-    }
-  };
-
   const handleClearHistory = async () => {
     if (confirm("Are you sure you want to clear all insights history?")) {
       try {
