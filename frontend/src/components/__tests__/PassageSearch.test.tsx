@@ -59,10 +59,10 @@ describe("PassageSearch (tests)", () => {
 
   it("real toast implementation appends a DOM node when called", async () => {
     // Ensure modules are fresh and toast is unmocked
-    await vi.resetModules();
+    vi.resetModules();
     try {
       vi.unmock("@/lib/toast");
-    } catch (e) {
+    } catch {
       // ignore
     }
 
