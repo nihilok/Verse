@@ -104,10 +104,21 @@ The existing `ChatMessage` model remains unchanged and continues to work for ins
 5. Chat modal opens with initial AI response
 6. Chat is saved to history for future access
 
+### Starting a Chat from Insights
+
+1. User gets insights on a passage (via "Get Insights" button)
+2. Insights modal displays the three insight categories
+3. "Ask Follow-up Question" button appears at bottom of insights modal
+4. User clicks "Ask Follow-up Question"
+5. Chat modal opens (empty, ready for first message)
+6. User types a question about the insight or passage
+7. AI responds with full context of the insight
+8. Chat is linked to the insight for future access
+
 ### Continuing an Insight Chat
 
 1. User views an insight that has previous chat messages
-2. "Continue Chat" button appears at bottom of insights modal
+2. "Continue Chat" button appears at bottom of insights modal (showing message count)
 3. User clicks "Continue Chat"
 4. Chat modal opens with conversation history
 5. User can continue the conversation about the insight
@@ -171,21 +182,28 @@ To test the changes:
    - Send messages and verify responses
    - Check chat appears in Chat History tab
 
-2. **Continue Insight Chat**:
+2. **Start Chat from Insights**:
    - Get insights on a passage
-   - In insights modal, start a chat
+   - In insights modal, verify "Ask Follow-up Question" button appears
+   - Click the button
+   - Verify chat modal opens (empty)
+   - Send a message about the insight
+   - Verify AI responds with context of the insight
+   
+3. **Continue Insight Chat**:
+   - After starting a chat (from test #2)
    - Close modal
    - Reopen insights from history
-   - Verify "Continue Chat" button appears
+   - Verify "Continue Chat" button appears with message count
    - Click and verify conversation continues
 
-3. **Chat History Management**:
+4. **Chat History Management**:
    - Create multiple chats
    - Verify all appear in Chat History tab
    - Click different chats and verify correct messages load
    - Delete a chat and verify it's removed
 
-4. **Edge Cases**:
+5. **Edge Cases**:
    - Test with very long messages
    - Test with rapid message sending
    - Test network errors during chat
