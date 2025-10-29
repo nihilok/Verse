@@ -1,5 +1,6 @@
 from typing import Optional, List
 from sqlalchemy.orm import Session
+from sqlalchemy.sql import func
 from app.clients.claude_client import ClaudeAIClient
 from app.models.models import ChatMessage, StandaloneChat, StandaloneChatMessage
 
@@ -218,7 +219,6 @@ class ChatService:
             db.add(ai_msg)
             
             # Update chat's updated_at timestamp
-            from sqlalchemy.sql import func
             chat.updated_at = func.now()
             
             db.commit()
