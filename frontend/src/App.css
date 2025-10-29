@@ -240,12 +240,13 @@
 
 /* Chat message typography adjustments: tighten spacing for markdown rendered inside chat bubbles */
 .chat-message .prose {
-  /* Slightly tighter line height for denser paragraphs */
-  line-height: 1.45;
   /* Reduce letter spacing which felt too airy */
   letter-spacing: -0.01em;
   /* Remove default margins added by the prose utility to avoid extra vertical gap */
   margin: 0;
+}
+.chat-message .prose p {
+  line-height: 1.5;
 }
 
 .chat-message .prose p,
@@ -258,11 +259,16 @@
   margin-top: 0;
 }
 
+.chat-message .prose h2 {
+  font-size: 1rem;
+}
+
 .chat-message .prose ul,
 .chat-message .prose ol {
   margin-top: 0.25rem;
   margin-bottom: 0.25rem;
-  padding-left: 1.2rem;
+  padding-left: 0.25rem;
+  margin-left: 0;
 }
 
 .chat-message .prose code {
@@ -275,40 +281,37 @@
   overflow: visible; /* ensure larger pointers are not clipped */
 }
 
-/* Wider sharp triangle pointer at the bottom-left for assistant messages */
-.chat-message.bg-muted::after {
+/* Shared styles for the triangular pointer pseudo-element */
+.chat-message::after {
   content: "";
   position: absolute;
-  transform: rotate(-12deg);
+  bottom: 2px; /* place near the bottom of the bubble */
+  width: 20px;
+  height: 20px;
+  background: inherit; /* match the bubble's background color */
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.14);
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Left-pointing triangle (assistant) -- only directional differences here */
+.chat-message.bg-muted::after {
   left: -14px;
-  bottom: 2px;
-  width: 28px;
-  height: 28px;
-  background: inherit;
+  transform: rotate(-12deg);
   clip-path: polygon(
     100% 0%,
     0% 50%,
     100% 100%
   ); /* sharp left-pointing triangle */
-  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.14);
-  z-index: 2;
 }
 
-/* Wider sharp triangle pointer at the bottom-right for user messages */
+/* Right-pointing triangle (user) -- only directional differences here */
 .chat-message.bg-primary::after {
-  content: "";
-  position: absolute;
-  right: -14px; /* nudge further outside the bubble for larger triangle */
+  right: -14px;
   transform: rotate(12deg);
-  bottom: 2px;
-  width: 28px;
-  height: 28px;
-  background: inherit;
   clip-path: polygon(
     0% 0%,
     100% 50%,
     0% 100%
   ); /* sharp right-pointing triangle */
-  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.14);
-  z-index: 2;
 }
