@@ -160,6 +160,22 @@
   .prose ul,
   .prose ol {
     @apply mb-5 ml-8;
+    list-style-position: inside;
+    padding-left: 0.25em;
+  }
+
+  .prose ol {
+    list-style-type: decimal;
+  }
+
+  .prose ul {
+    list-style-type: disc;
+  }
+
+  .prose ol > li,
+  .prose ul > li {
+    position: relative;
+    padding-left: 0.1em;
   }
 
   .prose li {
@@ -227,6 +243,11 @@
     vertical-align: super;
     font-weight: 600;
     margin-right: 0.15em;
+  }
+
+  /* Make LLM (assistant) response text smaller in chat modal */
+  .chat-message > .prose.llm-response {
+    font-size: 0.9rem;
   }
 }
 
