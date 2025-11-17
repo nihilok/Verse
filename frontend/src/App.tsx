@@ -11,6 +11,7 @@ import {
   X,
   History as HistoryIcon,
   Menu,
+  Settings as SettingsIcon,
 } from "lucide-react";
 import PassageSearch from "./components/PassageSearch";
 import BibleReader from "./components/BibleReader";
@@ -18,6 +19,7 @@ import InsightsModal from "./components/InsightsModal";
 import ChatModal from "./components/ChatModal";
 import InsightsHistoryComponent from "./components/InsightsHistory";
 import ChatHistory from "./components/ChatHistory";
+import UserSettings from "./components/UserSettings";
 import InstallPrompt from "./components/InstallPrompt";
 import LoadingOverlay from "./components/LoadingOverlay";
 import { ModeToggle } from "./components/mode-toggle";
@@ -64,6 +66,7 @@ function App() {
   const [chatModalOpen, setChatModalOpen] = useState(false);
   const [insightChatModalOpen, setInsightChatModalOpen] = useState(false);
   const [pendingChatPassage, setPendingChatPassage] = useState<{ text: string; reference: string } | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Check if we're on desktop (lg breakpoint)
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
@@ -542,21 +545,28 @@ function App() {
                 defaultValue="search"
                 className="w-full h-full flex flex-col"
               >
-                <TabsList className="grid w-full grid-cols-3 flex-shrink-0">
+                <TabsList className="grid w-full grid-cols-4 flex-shrink-0">
                   <TabsTrigger value="search">Search</TabsTrigger>
                   <TabsTrigger
                     value="insights"
                     className="flex items-center gap-1"
                   >
                     <HistoryIcon size={16} />
-                    Insights
+                    <span className="hidden sm:inline">Insights</span>
                   </TabsTrigger>
                   <TabsTrigger
                     value="chats"
                     className="flex items-center gap-1"
                   >
                     <HistoryIcon size={16} />
-                    Chats
+                    <span className="hidden sm:inline">Chats</span>
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="settings"
+                    className="flex items-center gap-1"
+                  >
+                    <SettingsIcon size={16} />
+                    <span className="hidden sm:inline">Settings</span>
                   </TabsTrigger>
                 </TabsList>
                 <TabsContent
@@ -585,6 +595,15 @@ function App() {
                     onDelete={handleDeleteChat}
                   />
                 </TabsContent>
+                <TabsContent
+                  value="settings"
+                  className="mt-4 flex-1 overflow-y-auto px-4"
+                >
+                  <UserSettings
+                    onError={(msg) => setError(msg)}
+                    onSuccess={(msg) => setSuccessMessage(msg)}
+                  />
+                </TabsContent>
               </Tabs>
             </SidebarContent>
             {/* ModeToggle at the bottom of the sidebar */}
@@ -602,6 +621,18 @@ function App() {
               <span className="flex-1">{error}</span>
               <button
                 onClick={() => setError(null)}
+                className="hover:opacity-70 transition-opacity"
+              >
+                <X size={20} />
+              </button>
+            </div>
+          )}
+          {successMessage && (
+            <div className="mb-0 lg:mb-4 mx-0 lg:mx-auto flex items-center gap-2 rounded-none lg:rounded-lg border-x-0 lg:border border-green-500/50 bg-green-500/10 p-3 text-sm text-green-700 dark:text-green-400 max-w-4xl flex-shrink-0">
+              <AlertCircle size={20} />
+              <span className="flex-1">{successMessage}</span>
+              <button
+                onClick={() => setSuccessMessage(null)}
                 className="hover:opacity-70 transition-opacity"
               >
                 <X size={20} />

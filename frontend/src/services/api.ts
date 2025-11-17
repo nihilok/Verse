@@ -1,7 +1,10 @@
 import axios from "axios";
-import { BiblePassage, Insight, PassageQuery, InsightHistory, ChatMessage, StandaloneChat, StandaloneChatMessage } from "../types";
+import { BiblePassage, Insight, PassageQuery, InsightHistory, ChatMessage, StandaloneChat, StandaloneChatMessage, UserSession, UserDataExport, DataOperationResult } from "../types";
 
 const API_BASE_URL = "/api";
+
+// Configure axios to send credentials (cookies) with every request
+axios.defaults.withCredentials = true;
 
 export const bibleService = {
   async getPassage(query: PassageQuery): Promise<BiblePassage> {
@@ -140,5 +143,25 @@ export const bibleService = {
 
   async deleteStandaloneChat(chatId: number): Promise<void> {
     await axios.delete(`${API_BASE_URL}/standalone-chat/${chatId}`);
+  },
+
+  async getUserSession(): Promise<UserSession> {
+    const response = await axios.get<UserSession>(`${API_BASE_URL}/user/session`);
+    return response.data;
+  },
+
+  async clearUserData(): Promise<DataOperationResult> {
+    const response = await axios.delete<DataOperationResult>(`${API_BASE_URL}/user/data`);
+    return response.data;
+  },
+
+  async exportUserData(): Promise<UserDataExport> {
+    const response = await axios.get<UserDataExport>(`${API_BASE_URL}/user/export`);
+    return response.data;
+  },
+
+  async importUserData(data: UserDataExport): Promise<DataOperationResult> {
+    const response = await axios.post<DataOperationResult>(`${API_BASE_URL}/user/import`, { data });
+    return response.data;
   },
 };

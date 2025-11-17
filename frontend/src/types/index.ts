@@ -56,3 +56,56 @@ export interface StandaloneChatMessage {
   content: string;
   timestamp: number;
 }
+
+export interface UserSession {
+  anonymous_id: string;
+  created_at: number | null;
+}
+
+export interface UserDataExport {
+  user: {
+    anonymous_id: string;
+    created_at: string | null;
+  };
+  insights: Array<{
+    id: number;
+    passage_reference: string;
+    passage_text: string;
+    historical_context: string;
+    theological_significance: string;
+    practical_application: string;
+    created_at: string | null;
+  }>;
+  chat_messages: Array<{
+    insight_id: number;
+    role: string;
+    content: string;
+    created_at: string | null;
+  }>;
+  standalone_chats: Array<{
+    title: string | null;
+    passage_reference: string | null;
+    passage_text: string | null;
+    created_at: string | null;
+    updated_at: string | null;
+    messages: Array<{
+      role: string;
+      content: string;
+      created_at: string | null;
+    }>;
+  }>;
+}
+
+export interface DataOperationResult {
+  message: string;
+  deleted?: {
+    insights: number;
+    chat_messages: number;
+    standalone_chats: number;
+  };
+  imported?: {
+    insights: number;
+    chat_messages: number;
+    standalone_chats: number;
+  };
+}
