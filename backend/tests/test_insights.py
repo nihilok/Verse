@@ -1,7 +1,5 @@
 """Tests for insights functionality."""
-import pytest
 from app.services.insight_service import InsightService
-from app.services.user_service import UserService
 
 
 def test_save_and_get_insight_with_same_text(db, test_user):

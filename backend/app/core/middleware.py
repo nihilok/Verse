@@ -1,7 +1,11 @@
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
-from app.services.user_service import UserService
+from app.core.config import get_settings
+
+# Cookie configuration constants
+COOKIE_NAME = "verse_user_id"
+COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365 * 10  # 10 years
 
 
 class AnonymousUserMiddleware(BaseHTTPMiddleware):
@@ -9,11 +13,12 @@ class AnonymousUserMiddleware(BaseHTTPMiddleware):
     
     def __init__(self, app: ASGIApp):
         super().__init__(app)
+        self.settings = get_settings()
     
     async def dispatch(self, request: Request, call_next):
         """Process request and ensure user has anonymous ID cookie."""
         # Get anonymous_id from cookie
-        anonymous_id = request.cookies.get("verse_user_id")
+        anonymous_id = request.cookies.get(COOKIE_NAME)
         
         # Use the database session that will be provided by the dependency
         # We'll get or create the user lazily when needed in routes
@@ -29,12 +34,12 @@ class AnonymousUserMiddleware(BaseHTTPMiddleware):
             user = request.state.user
             if not anonymous_id or anonymous_id != user.anonymous_id:
                 response.set_cookie(
-                    key="verse_user_id",
+                    key=COOKIE_NAME,
                     value=user.anonymous_id,
-                    max_age=60 * 60 * 24 * 365 * 10,  # 10 years
+                    max_age=COOKIE_MAX_AGE_SECONDS,
                     httponly=True,
                     samesite="lax",
-                    secure=False  # Set to True in production with HTTPS
+                    secure=self.settings.cookie_secure
                 )
         
         return response

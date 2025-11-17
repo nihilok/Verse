@@ -8,6 +8,7 @@ import {
 import {
   BookOpen,
   AlertCircle,
+  CheckCircle,
   X,
   History as HistoryIcon,
   Menu,
@@ -629,7 +630,7 @@ function App() {
           )}
           {successMessage && (
             <div className="mb-0 lg:mb-4 mx-0 lg:mx-auto flex items-center gap-2 rounded-none lg:rounded-lg border-x-0 lg:border border-green-500/50 bg-green-500/10 p-3 text-sm text-green-700 dark:text-green-400 max-w-4xl flex-shrink-0">
-              <AlertCircle size={20} />
+              <CheckCircle size={20} />
               <span className="flex-1">{successMessage}</span>
               <button
                 onClick={() => setSuccessMessage(null)}

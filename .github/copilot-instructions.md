@@ -72,6 +72,40 @@ Verse is an interactive Bible reader with AI-powered insights. Users can highlig
 - Handle errors gracefully with helpful error messages
 - Consider internationalisation and localisation needs
 
+### Code Quality Best Practices
+
+#### Backend Python
+- **Remove unused imports**: Always clean up unused imports to keep code maintainable
+- **Use constants for magic numbers**: Extract repeated values (e.g., cookie max age, timeouts) to named constants at module level
+- **Make configuration flexible**: Use environment variables for deployment-specific settings (e.g., `cookie_secure` flag for HTTPS)
+- **Optimize database queries**: Use `delete().rowcount` directly instead of separate count queries before deletion
+- **Extract helper methods**: Reduce code duplication by extracting common patterns into reusable helper methods
+- **Validate input data**: Add comprehensive validation for external data (imports, API requests) with clear error messages
+- **Handle exceptions gracefully**: Wrap risky operations in try-catch blocks with specific error messages for better debugging
+- **Use atomic operations**: Ensure database operations are atomic with proper rollback on errors
+
+#### Frontend TypeScript
+- **Better JSON parsing**: Wrap `JSON.parse` in try-catch with specific error messages for invalid JSON
+- **Use appropriate icons**: Match icons to context (CheckCircle for success, AlertCircle for errors)
+- **Handle async operations properly**: Give users adequate time to read messages before auto-reloading (2500ms minimum)
+- **Unused variables**: Remove or properly handle catch block variables (use `catch { }` if not needed)
+
+#### Database Design
+- **Many-to-many relationships**: Use proper linking tables with appropriate columns
+- **Foreign key constraints**: Always specify `ondelete='CASCADE'` for proper cleanup
+- **Index frequently queried fields**: Add indexes to foreign keys and commonly filtered columns
+- **Avoid N+1 queries**: Consider batch operations for imports/exports with multiple items
+
+#### Error Handling
+- **Specific error messages**: Provide context-specific error messages rather than generic ones
+- **Validate early**: Check data structure and required fields before processing
+- **User-friendly messages**: Distinguish between different types of errors (invalid JSON vs. invalid data structure)
+
+#### Testing
+- **Update tests when changing export/import structure**: Ensure test data matches actual export format
+- **Test data validation**: Add tests for invalid data scenarios
+- **Clean up test fixtures**: Remove unused variables and imports in tests
+
 ## Tooling
 
 - Use `bun` for JavaScript/TypeScript package management and scripts in the frontend. Prefer `bun` over `npm` or `yarn` for all relevant commands.

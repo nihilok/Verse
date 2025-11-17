@@ -465,9 +465,11 @@ async def import_user_data(
 ):
     """Import user data from JSON."""
     service = UserService()
-    counts = service.import_user_data(db, current_user.id, request.data)
-    
-    return {
-        "message": "User data imported successfully",
-        "imported": counts
-    }
+    try:
+        counts = service.import_user_data(db, current_user.id, request.data)
+        return {
+            "message": "User data imported successfully",
+            "imported": counts
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
