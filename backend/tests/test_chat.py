@@ -1,32 +1,10 @@
 """Tests for chat functionality."""
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from app.models.models import Base, SavedInsight, ChatMessage
+from app.models.models import SavedInsight, ChatMessage
 from app.services.chat_service import ChatService
 
 
-# Create in-memory SQLite database for testing
-SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-)
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-
-@pytest.fixture
-def db():
-    """Create a test database session."""
-    Base.metadata.create_all(bind=engine)
-    session = TestingSessionLocal()
-    try:
-        yield session
-    finally:
-        session.close()
-        Base.metadata.drop_all(bind=engine)
-
-
-def test_chat_message_creation(db):
+def test_chat_message_creation(db, test_user):
     """Test that chat messages can be created and linked to insights."""
     # Create an insight first
     insight = SavedInsight(
@@ -43,6 +21,7 @@ def test_chat_message_creation(db):
     # Create a chat message
     chat_msg = ChatMessage(
         insight_id=insight.id,
+        user_id=test_user.id,
         role="user",
         content="What does this mean?"
     )
@@ -51,7 +30,8 @@ def test_chat_message_creation(db):
     
     # Verify the chat message was created
     messages = db.query(ChatMessage).filter(
-        ChatMessage.insight_id == insight.id
+        ChatMessage.insight_id == insight.id,
+        ChatMessage.user_id == test_user.id
     ).all()
     
     assert len(messages) == 1
@@ -59,7 +39,7 @@ def test_chat_message_creation(db):
     assert messages[0].content == "What does this mean?"
 
 
-def test_get_chat_messages(db):
+def test_get_chat_messages(db, test_user):
     """Test retrieving chat messages for an insight."""
     # Create an insight
     insight = SavedInsight(
@@ -78,6 +58,7 @@ def test_get_chat_messages(db):
         role = "user" if i % 2 == 0 else "assistant"
         msg = ChatMessage(
             insight_id=insight.id,
+            user_id=test_user.id,
             role=role,
             content=f"Message {i}"
         )
@@ -86,7 +67,7 @@ def test_get_chat_messages(db):
     
     # Get messages using service
     service = ChatService()
-    messages = service.get_chat_messages(db, insight.id)
+    messages = service.get_chat_messages(db, insight.id, test_user.id)
     
     assert len(messages) == 3
     assert messages[0].content == "Message 0"
@@ -94,7 +75,7 @@ def test_get_chat_messages(db):
     assert messages[2].content == "Message 2"
 
 
-def test_clear_chat_messages(db):
+def test_clear_chat_messages(db, test_user):
     """Test clearing chat messages for an insight."""
     # Create an insight
     insight = SavedInsight(
@@ -112,6 +93,7 @@ def test_clear_chat_messages(db):
     for i in range(5):
         msg = ChatMessage(
             insight_id=insight.id,
+            user_id=test_user.id,
             role="user",
             content=f"Message {i}"
         )
@@ -120,16 +102,16 @@ def test_clear_chat_messages(db):
     
     # Clear messages
     service = ChatService()
-    count = service.clear_chat_messages(db, insight.id)
+    count = service.clear_chat_messages(db, insight.id, test_user.id)
     
     assert count == 5
     
     # Verify messages are cleared
-    messages = service.get_chat_messages(db, insight.id)
+    messages = service.get_chat_messages(db, insight.id, test_user.id)
     assert len(messages) == 0
 
 
-def test_cascade_delete_chat_messages(db):
+def test_cascade_delete_chat_messages(db, test_user):
     """Test that chat messages are deleted when insight is deleted."""
     # Create an insight
     insight = SavedInsight(
@@ -147,6 +129,7 @@ def test_cascade_delete_chat_messages(db):
     for i in range(3):
         msg = ChatMessage(
             insight_id=insight.id,
+            user_id=test_user.id,
             role="user",
             content=f"Message {i}"
         )

@@ -15,6 +15,7 @@ class ChatService:
         self,
         db: Session,
         insight_id: int,
+        user_id: int,
         user_message: str,
         passage_text: str,
         passage_reference: str,
@@ -26,6 +27,7 @@ class ChatService:
         Args:
             db: Database session
             insight_id: ID of the insight this chat belongs to
+            user_id: ID of the user sending the message
             user_message: The user's message
             passage_text: The Bible passage text
             passage_reference: The Bible passage reference
@@ -34,8 +36,8 @@ class ChatService:
         Returns:
             The AI's response message
         """
-        # Get previous chat history
-        chat_history = self.get_chat_messages(db, insight_id)
+        # Get previous chat history for this user
+        chat_history = self.get_chat_messages(db, insight_id, user_id)
         
         # Generate AI response with context
         ai_response = await self.client.generate_chat_response(
@@ -54,6 +56,7 @@ class ChatService:
             # Save user message
             user_msg = ChatMessage(
                 insight_id=insight_id,
+                user_id=user_id,
                 role="user",
                 content=user_message
             )
@@ -62,6 +65,7 @@ class ChatService:
             # Save AI response
             ai_msg = ChatMessage(
                 insight_id=insight_id,
+                user_id=user_id,
                 role="assistant",
                 content=ai_response
             )
@@ -79,21 +83,25 @@ class ChatService:
     def get_chat_messages(
         self,
         db: Session,
-        insight_id: int
+        insight_id: int,
+        user_id: int
     ) -> List[ChatMessage]:
-        """Get all chat messages for an insight."""
+        """Get all chat messages for an insight for a specific user."""
         return db.query(ChatMessage).filter(
-            ChatMessage.insight_id == insight_id
+            ChatMessage.insight_id == insight_id,
+            ChatMessage.user_id == user_id
         ).order_by(ChatMessage.created_at).all()
     
     def clear_chat_messages(
         self,
         db: Session,
-        insight_id: int
+        insight_id: int,
+        user_id: int
     ) -> int:
-        """Clear all chat messages for an insight."""
+        """Clear all chat messages for an insight for a specific user."""
         count = db.query(ChatMessage).filter(
-            ChatMessage.insight_id == insight_id
+            ChatMessage.insight_id == insight_id,
+            ChatMessage.user_id == user_id
         ).delete()
         db.commit()
         return count
@@ -101,6 +109,7 @@ class ChatService:
     async def create_standalone_chat(
         self,
         db: Session,
+        user_id: int,
         user_message: str,
         passage_text: Optional[str] = None,
         passage_reference: Optional[str] = None
@@ -110,6 +119,7 @@ class ChatService:
         
         Args:
             db: Database session
+            user_id: ID of the user creating the chat
             user_message: The user's first message
             passage_text: Optional Bible passage text for context
             passage_reference: Optional Bible passage reference
@@ -119,6 +129,7 @@ class ChatService:
         """
         # Create the chat session
         chat = StandaloneChat(
+            user_id=user_id,
             passage_text=passage_text,
             passage_reference=passage_reference
         )
@@ -169,6 +180,7 @@ class ChatService:
         self,
         db: Session,
         chat_id: int,
+        user_id: int,
         user_message: str
     ) -> Optional[str]:
         """
@@ -177,18 +189,22 @@ class ChatService:
         Args:
             db: Database session
             chat_id: ID of the chat session
+            user_id: ID of the user sending the message
             user_message: The user's message
         
         Returns:
             The AI's response message
         """
-        # Get the chat session
-        chat = db.query(StandaloneChat).filter(StandaloneChat.id == chat_id).first()
+        # Get the chat session and verify it belongs to the user
+        chat = db.query(StandaloneChat).filter(
+            StandaloneChat.id == chat_id,
+            StandaloneChat.user_id == user_id
+        ).first()
         if not chat:
             return None
         
         # Get previous chat history
-        chat_history = self.get_standalone_chat_messages(db, chat_id)
+        chat_history = self.get_standalone_chat_messages(db, chat_id, user_id)
         
         # Generate AI response
         ai_response = await self.client.generate_standalone_chat_response(
@@ -232,9 +248,19 @@ class ChatService:
     def get_standalone_chat_messages(
         self,
         db: Session,
-        chat_id: int
+        chat_id: int,
+        user_id: int
     ) -> List[StandaloneChatMessage]:
-        """Get all messages for a standalone chat."""
+        """Get all messages for a standalone chat for a specific user."""
+        # Verify the chat belongs to the user
+        chat = db.query(StandaloneChat).filter(
+            StandaloneChat.id == chat_id,
+            StandaloneChat.user_id == user_id
+        ).first()
+        
+        if not chat:
+            return []
+        
         return db.query(StandaloneChatMessage).filter(
             StandaloneChatMessage.chat_id == chat_id
         ).order_by(StandaloneChatMessage.created_at).all()
@@ -242,20 +268,27 @@ class ChatService:
     def get_standalone_chats(
         self,
         db: Session,
+        user_id: int,
         limit: int = 50
     ) -> List[StandaloneChat]:
-        """Get all standalone chat sessions."""
-        return db.query(StandaloneChat).order_by(
+        """Get all standalone chat sessions for a specific user."""
+        return db.query(StandaloneChat).filter(
+            StandaloneChat.user_id == user_id
+        ).order_by(
             StandaloneChat.updated_at.desc()
         ).limit(limit).all()
     
     def delete_standalone_chat(
         self,
         db: Session,
-        chat_id: int
+        chat_id: int,
+        user_id: int
     ) -> bool:
-        """Delete a standalone chat session."""
-        chat = db.query(StandaloneChat).filter(StandaloneChat.id == chat_id).first()
+        """Delete a standalone chat session for a specific user."""
+        chat = db.query(StandaloneChat).filter(
+            StandaloneChat.id == chat_id,
+            StandaloneChat.user_id == user_id
+        ).first()
         if chat:
             db.delete(chat)
             db.commit()

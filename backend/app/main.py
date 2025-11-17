@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import get_settings
 from app.core.database import engine, Base
+from app.core.middleware import AnonymousUserMiddleware
 from app.api.routes import router
 
 
@@ -33,6 +34,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add anonymous user middleware
+app.add_middleware(AnonymousUserMiddleware)
 
 # Include routers
 app.include_router(router, prefix="/api", tags=["bible"])

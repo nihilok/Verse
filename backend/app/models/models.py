@@ -1,7 +1,33 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, UniqueConstraint, Index, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, UniqueConstraint, Index, ForeignKey, Table
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
+import uuid
+
+
+class User(Base):
+    """Model for anonymous users identified by device."""
+    
+    __tablename__ = "users"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    anonymous_id = Column(String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()), index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    insights = relationship("SavedInsight", secondary="user_insights", back_populates="users")
+    chat_messages = relationship("ChatMessage", back_populates="user", cascade="all, delete-orphan")
+    standalone_chats = relationship("StandaloneChat", back_populates="user", cascade="all, delete-orphan")
+
+
+# Linking table for many-to-many relationship between users and insights
+user_insights = Table(
+    'user_insights',
+    Base.metadata,
+    Column('user_id', Integer, ForeignKey('users.id', ondelete='CASCADE'), primary_key=True),
+    Column('insight_id', Integer, ForeignKey('saved_insights.id', ondelete='CASCADE'), primary_key=True),
+    Column('created_at', DateTime(timezone=True), server_default=func.now())
+)
 
 
 class SavedPassage(Base):
@@ -34,7 +60,8 @@ class SavedInsight(Base):
     practical_application = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
-    # Relationship to chat messages
+    # Relationships
+    users = relationship("User", secondary="user_insights", back_populates="insights")
     chat_messages = relationship("ChatMessage", back_populates="insight", cascade="all, delete-orphan")
     
     __table_args__ = (
@@ -50,12 +77,14 @@ class ChatMessage(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     insight_id = Column(Integer, ForeignKey('saved_insights.id', ondelete='CASCADE'), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
     role = Column(String(20), nullable=False)  # 'user' or 'assistant'
     content = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
-    # Relationship to insight
+    # Relationships
     insight = relationship("SavedInsight", back_populates="chat_messages")
+    user = relationship("User", back_populates="chat_messages")
 
 
 class StandaloneChat(Base):
@@ -64,13 +93,15 @@ class StandaloneChat(Base):
     __tablename__ = "standalone_chats"
     
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
     title = Column(String(200), nullable=True)  # Optional title derived from first message
     passage_reference = Column(String(100), nullable=True)  # Optional reference if started from passage
     passage_text = Column(Text, nullable=True)  # Optional passage text
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
-    # Relationship to chat messages
+    # Relationships
+    user = relationship("User", back_populates="standalone_chats")
     messages = relationship("StandaloneChatMessage", back_populates="chat", cascade="all, delete-orphan")
 
 
