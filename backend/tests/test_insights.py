@@ -1,32 +1,10 @@
 """Tests for insights functionality."""
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from app.models.models import Base, SavedInsight
 from app.services.insight_service import InsightService
+from app.services.user_service import UserService
 
 
-# Create in-memory SQLite database for testing
-SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-)
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-
-@pytest.fixture
-def db():
-    """Create a test database session."""
-    Base.metadata.create_all(bind=engine)
-    session = TestingSessionLocal()
-    try:
-        yield session
-    finally:
-        session.close()
-        Base.metadata.drop_all(bind=engine)
-
-
-def test_save_and_get_insight_with_same_text(db):
+def test_save_and_get_insight_with_same_text(db, test_user):
     """Test that insights are cached based on both reference and text."""
     service = InsightService()
     
@@ -41,7 +19,8 @@ def test_save_and_get_insight_with_same_text(db):
         db,
         passage_reference="John 3",
         passage_text="For God so loved the world",
-        insights=MockInsight()
+        insights=MockInsight(),
+        user_id=test_user.id
     )
     
     # Retrieve the same insight
@@ -57,7 +36,7 @@ def test_save_and_get_insight_with_same_text(db):
     assert saved.historical_context == "Historical context"
 
 
-def test_different_text_same_reference_not_cached(db):
+def test_different_text_same_reference_not_cached(db, test_user):
     """Test that different texts with same reference are not cached together."""
     service = InsightService()
     
@@ -72,7 +51,8 @@ def test_different_text_same_reference_not_cached(db):
         db,
         passage_reference="John 3",
         passage_text="For God so loved the world",
-        insights=MockInsight()
+        insights=MockInsight(),
+        user_id=test_user.id
     )
     
     # Try to retrieve with different text but same reference
@@ -86,8 +66,8 @@ def test_different_text_same_reference_not_cached(db):
     assert saved is None
 
 
-def test_get_all_insights(db):
-    """Test getting all insights."""
+def test_get_all_insights(db, test_user):
+    """Test getting all insights for a user."""
     service = InsightService()
     
     class MockInsight:
@@ -100,24 +80,26 @@ def test_get_all_insights(db):
         db,
         passage_reference="John 3:16",
         passage_text="For God so loved the world",
-        insights=MockInsight()
+        insights=MockInsight(),
+        user_id=test_user.id
     )
     
     service.save_insight(
         db,
         passage_reference="John 3:17",
         passage_text="For God did not send his Son into the world",
-        insights=MockInsight()
+        insights=MockInsight(),
+        user_id=test_user.id
     )
     
-    # Get all insights
-    insights = service.get_all_insights(db, limit=50)
+    # Get all insights for the user
+    insights = service.get_user_insights(db, test_user.id, limit=50)
     
     assert len(insights) == 2
 
 
-def test_clear_all_insights(db):
-    """Test clearing all insights."""
+def test_clear_all_insights(db, test_user):
+    """Test clearing all insights for a user."""
     service = InsightService()
     
     class MockInsight:
@@ -130,21 +112,23 @@ def test_clear_all_insights(db):
         db,
         passage_reference="John 3:16",
         passage_text="For God so loved the world",
-        insights=MockInsight()
+        insights=MockInsight(),
+        user_id=test_user.id
     )
     
     service.save_insight(
         db,
         passage_reference="John 3:17",
         passage_text="For God did not send his Son into the world",
-        insights=MockInsight()
+        insights=MockInsight(),
+        user_id=test_user.id
     )
     
-    # Clear all insights
-    count = service.clear_all_insights(db)
+    # Clear all insights for the user
+    count = service.clear_user_insights(db, test_user.id)
     
     assert count == 2
     
-    # Verify all insights are cleared
-    insights = service.get_all_insights(db, limit=50)
+    # Verify all insights are cleared for the user
+    insights = service.get_user_insights(db, test_user.id, limit=50)
     assert len(insights) == 0

@@ -1,14 +1,35 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
-from typing import Optional
+from typing import Optional, Dict, Any
 from pydantic import BaseModel
 
 from app.core.database import get_db
 from app.services.bible_service import BibleService
 from app.services.insight_service import InsightService
 from app.services.chat_service import ChatService
+from app.services.user_service import UserService
+from app.models.models import User
 
 router = APIRouter()
+
+
+def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
+    """Dependency to get or create the current user."""
+    # Check if user is already in request state
+    if hasattr(request.state, 'user') and request.state.user:
+        return request.state.user
+    
+    # Get anonymous_id from request state (set by middleware)
+    anonymous_id = getattr(request.state, 'anonymous_id', None)
+    
+    # Get or create user
+    user_service = UserService()
+    user = user_service.get_or_create_user(db, anonymous_id)
+    
+    # Store user in request state
+    request.state.user = user
+    
+    return user
 
 
 class PassageRequest(BaseModel):
@@ -112,7 +133,8 @@ async def get_chapter(
 @router.post("/insights")
 async def generate_insights(
     request: InsightRequestModel,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Generate AI insights for a passage."""
     service = InsightService()
@@ -125,7 +147,10 @@ async def generate_insights(
             request.passage_text
         )
         if existing:
+            # Link the insight to the user if not already linked
+            service.link_insight_to_user(db, existing.id, current_user.id)
             return {
+                "id": existing.id,
                 "historical_context": existing.historical_context,
                 "theological_significance": existing.theological_significance,
                 "practical_application": existing.practical_application,
@@ -142,15 +167,19 @@ async def generate_insights(
         raise HTTPException(status_code=500, detail="Failed to generate insights")
     
     # Save if requested
+    insight_id = None
     if request.save:
-        service.save_insight(
+        saved_insight = service.save_insight(
             db,
             request.passage_reference,
             request.passage_text,
-            insights
+            insights,
+            current_user.id
         )
+        insight_id = saved_insight.id
     
     return {
+        "id": insight_id,
         "historical_context": insights.historical_context,
         "theological_significance": insights.theological_significance,
         "practical_application": insights.practical_application,
@@ -161,11 +190,12 @@ async def generate_insights(
 @router.get("/insights/history")
 async def get_insights_history(
     limit: int = Query(50, description="Maximum number of insights to return"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
-    """Get insights history from the database."""
+    """Get insights history from the database for the current user."""
     service = InsightService()
-    insights = service.get_all_insights(db, limit=limit)
+    insights = service.get_user_insights(db, current_user.id, limit=limit)
     
     return [
         {
@@ -185,11 +215,12 @@ async def get_insights_history(
 
 @router.delete("/insights/history")
 async def clear_insights_history(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
-    """Clear all insights history from the database."""
+    """Clear all insights history from the database for the current user."""
     service = InsightService()
-    count = service.clear_all_insights(db)
+    count = service.clear_user_insights(db, current_user.id)
     
     return {"message": f"Cleared {count} insights from history"}
 
@@ -197,7 +228,8 @@ async def clear_insights_history(
 @router.post("/chat/message")
 async def send_chat_message(
     request: ChatMessageRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Send a chat message and get AI response."""
     service = ChatService()
@@ -206,6 +238,7 @@ async def send_chat_message(
         response = await service.send_message(
             db=db,
             insight_id=request.insight_id,
+            user_id=current_user.id,
             user_message=request.message,
             passage_text=request.passage_text,
             passage_reference=request.passage_reference,
@@ -224,11 +257,12 @@ async def send_chat_message(
 @router.get("/chat/messages/{insight_id}")
 async def get_chat_messages(
     insight_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
-    """Get all chat messages for an insight."""
+    """Get all chat messages for an insight for the current user."""
     service = ChatService()
-    messages = service.get_chat_messages(db, insight_id)
+    messages = service.get_chat_messages(db, insight_id, current_user.id)
     
     return [
         {
@@ -244,11 +278,12 @@ async def get_chat_messages(
 @router.delete("/chat/messages/{insight_id}")
 async def clear_chat_messages(
     insight_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
-    """Clear all chat messages for an insight."""
+    """Clear all chat messages for an insight for the current user."""
     service = ChatService()
-    count = service.clear_chat_messages(db, insight_id)
+    count = service.clear_chat_messages(db, insight_id, current_user.id)
     
     return {"message": f"Cleared {count} chat messages"}
 
@@ -256,7 +291,8 @@ async def clear_chat_messages(
 @router.post("/standalone-chat")
 async def create_standalone_chat(
     request: StandaloneChatCreateRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Create a new standalone chat session."""
     service = ChatService()
@@ -264,6 +300,7 @@ async def create_standalone_chat(
     try:
         chat_id = await service.create_standalone_chat(
             db=db,
+            user_id=current_user.id,
             user_message=request.message,
             passage_text=request.passage_text,
             passage_reference=request.passage_reference
@@ -273,7 +310,7 @@ async def create_standalone_chat(
             raise HTTPException(status_code=500, detail="Failed to create chat")
         
         # Get the messages for the new chat
-        messages = service.get_standalone_chat_messages(db, chat_id)
+        messages = service.get_standalone_chat_messages(db, chat_id, current_user.id)
         
         return {
             "chat_id": chat_id,
@@ -295,7 +332,8 @@ async def create_standalone_chat(
 @router.post("/standalone-chat/message")
 async def send_standalone_chat_message(
     request: StandaloneChatMessageRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Send a message in a standalone chat."""
     service = ChatService()
@@ -304,6 +342,7 @@ async def send_standalone_chat_message(
         response = await service.send_standalone_message(
             db=db,
             chat_id=request.chat_id,
+            user_id=current_user.id,
             user_message=request.message
         )
         
@@ -319,11 +358,12 @@ async def send_standalone_chat_message(
 @router.get("/standalone-chat")
 async def get_standalone_chats(
     limit: int = Query(50, description="Maximum number of chats to return"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
-    """Get all standalone chat sessions."""
+    """Get all standalone chat sessions for the current user."""
     service = ChatService()
-    chats = service.get_standalone_chats(db, limit=limit)
+    chats = service.get_standalone_chats(db, current_user.id, limit=limit)
     
     return [
         {
@@ -340,11 +380,12 @@ async def get_standalone_chats(
 @router.get("/standalone-chat/{chat_id}/messages")
 async def get_standalone_chat_messages(
     chat_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
-    """Get all messages for a standalone chat."""
+    """Get all messages for a standalone chat for the current user."""
     service = ChatService()
-    messages = service.get_standalone_chat_messages(db, chat_id)
+    messages = service.get_standalone_chat_messages(db, chat_id, current_user.id)
     
     return [
         {
@@ -360,13 +401,73 @@ async def get_standalone_chat_messages(
 @router.delete("/standalone-chat/{chat_id}")
 async def delete_standalone_chat(
     chat_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Delete a standalone chat session."""
     service = ChatService()
-    success = service.delete_standalone_chat(db, chat_id)
+    success = service.delete_standalone_chat(db, chat_id, current_user.id)
     
     if not success:
         raise HTTPException(status_code=404, detail="Chat not found")
     
     return {"message": "Chat deleted successfully"}
+
+
+class ImportDataRequest(BaseModel):
+    """Request model for importing user data."""
+    data: Dict[str, Any]
+
+
+@router.get("/user/session")
+async def get_user_session(
+    current_user: User = Depends(get_current_user)
+):
+    """Get the current user session information."""
+    return {
+        "anonymous_id": current_user.anonymous_id,
+        "created_at": int(current_user.created_at.timestamp() * 1000) if current_user.created_at else None
+    }
+
+
+@router.delete("/user/data")
+async def clear_user_data(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Clear all data for the current user."""
+    service = UserService()
+    counts = service.clear_user_data(db, current_user.id)
+    
+    return {
+        "message": "User data cleared successfully",
+        "deleted": counts
+    }
+
+
+@router.get("/user/export")
+async def export_user_data(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Export all data for the current user as JSON."""
+    service = UserService()
+    data = service.export_user_data(db, current_user.id)
+    
+    return data
+
+
+@router.post("/user/import")
+async def import_user_data(
+    request: ImportDataRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Import user data from JSON."""
+    service = UserService()
+    counts = service.import_user_data(db, current_user.id, request.data)
+    
+    return {
+        "message": "User data imported successfully",
+        "imported": counts
+    }
