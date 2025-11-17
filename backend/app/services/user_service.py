@@ -35,6 +35,35 @@ class UserService:
         """Get a user by their anonymous ID."""
         return db.query(User).filter(User.anonymous_id == anonymous_id).first()
     
+    def _link_insight_to_user(self, db: Session, user_id: int, insight_id: int) -> bool:
+        """
+        Helper method to link an insight to a user if not already linked.
+        
+        Args:
+            db: Database session
+            user_id: User ID
+            insight_id: Insight ID
+        
+        Returns:
+            True if link was created, False if already existed
+        """
+        # Check if already linked
+        stmt = select(user_insights).where(
+            user_insights.c.user_id == user_id,
+            user_insights.c.insight_id == insight_id
+        )
+        result = db.execute(stmt).first()
+        
+        if not result:
+            db.execute(
+                user_insights.insert().values(
+                    user_id=user_id,
+                    insight_id=insight_id
+                )
+            )
+            return True
+        return False
+    
     def clear_user_data(self, db: Session, user_id: int) -> Dict[str, int]:
         """
         Clear all data for a user.
@@ -52,14 +81,10 @@ class UserService:
         ).rowcount
         
         # Delete chat messages (cascades from user relationship)
-        chat_message_count = db.query(ChatMessage).filter(ChatMessage.user_id == user_id).count()
+        chat_message_count = db.query(ChatMessage).filter(ChatMessage.user_id == user_id).delete()
         
         # Delete standalone chats (cascades will delete messages)
-        standalone_chat_count = db.query(StandaloneChat).filter(StandaloneChat.user_id == user_id).count()
-        
-        # Delete the associations and records
-        db.query(ChatMessage).filter(ChatMessage.user_id == user_id).delete()
-        db.query(StandaloneChat).filter(StandaloneChat.user_id == user_id).delete()
+        standalone_chat_count = db.query(StandaloneChat).filter(StandaloneChat.user_id == user_id).delete()
         
         db.commit()
         
@@ -84,27 +109,27 @@ class UserService:
         if not user:
             return {}
         
-        # Get user's insights through the linking table
+        # Get user's insights through the linking table with their chat messages
         insights_data = []
         for insight in user.insights:
+            # Get chat messages for this insight
+            insight_chat_messages = [
+                {
+                    "role": msg.role,
+                    "content": msg.content,
+                    "created_at": msg.created_at.isoformat() if msg.created_at else None
+                }
+                for msg in user.chat_messages if msg.insight_id == insight.id
+            ]
+            
             insights_data.append({
-                "id": insight.id,
                 "passage_reference": insight.passage_reference,
                 "passage_text": insight.passage_text,
                 "historical_context": insight.historical_context,
                 "theological_significance": insight.theological_significance,
                 "practical_application": insight.practical_application,
-                "created_at": insight.created_at.isoformat() if insight.created_at else None
-            })
-        
-        # Get user's chat messages
-        chat_messages_data = []
-        for msg in user.chat_messages:
-            chat_messages_data.append({
-                "insight_id": msg.insight_id,
-                "role": msg.role,
-                "content": msg.content,
-                "created_at": msg.created_at.isoformat() if msg.created_at else None
+                "created_at": insight.created_at.isoformat() if insight.created_at else None,
+                "chat_messages": insight_chat_messages
             })
         
         # Get user's standalone chats with messages
@@ -133,7 +158,6 @@ class UserService:
                 "created_at": user.created_at.isoformat() if user.created_at else None
             },
             "insights": insights_data,
-            "chat_messages": chat_messages_data,
             "standalone_chats": standalone_chats_data
         }
     
@@ -148,79 +172,107 @@ class UserService:
         
         Returns:
             Dictionary with counts of imported items
+        
+        Raises:
+            ValueError: If data structure is invalid
         """
+        # Validate data structure
+        if not isinstance(data, dict):
+            raise ValueError("Import data must be a dictionary")
+        
+        if "insights" in data and not isinstance(data["insights"], list):
+            raise ValueError("Insights must be a list")
+        
+        if "standalone_chats" in data and not isinstance(data["standalone_chats"], list):
+            raise ValueError("Standalone chats must be a list")
+        
         counts = {
             "insights": 0,
             "chat_messages": 0,
             "standalone_chats": 0
         }
         
-        # Import insights
-        for insight_data in data.get("insights", []):
-            # Check if insight already exists (by reference and text)
-            existing_insight = db.query(SavedInsight).filter(
-                SavedInsight.passage_reference == insight_data["passage_reference"],
-                SavedInsight.passage_text == insight_data["passage_text"]
-            ).first()
-            
-            if existing_insight:
-                # Link existing insight to user if not already linked
-                stmt = select(user_insights).where(
-                    user_insights.c.user_id == user_id,
-                    user_insights.c.insight_id == existing_insight.id
-                )
-                result = db.execute(stmt).first()
-                if not result:
-                    db.execute(
-                        user_insights.insert().values(
-                            user_id=user_id,
-                            insight_id=existing_insight.id
-                        )
+        try:
+            # Import insights
+            for insight_data in data.get("insights", []):
+                # Validate required fields
+                required_fields = ["passage_reference", "passage_text", "historical_context", 
+                                   "theological_significance", "practical_application"]
+                for field in required_fields:
+                    if field not in insight_data:
+                        raise ValueError(f"Missing required field '{field}' in insight data")
+                
+                # Check if insight already exists (by reference and text)
+                existing_insight = db.query(SavedInsight).filter(
+                    SavedInsight.passage_reference == insight_data["passage_reference"],
+                    SavedInsight.passage_text == insight_data["passage_text"]
+                ).first()
+                
+                if existing_insight:
+                    # Link existing insight to user if not already linked
+                    if self._link_insight_to_user(db, user_id, existing_insight.id):
+                        counts["insights"] += 1
+                    insight_id = existing_insight.id
+                else:
+                    # Create new insight
+                    new_insight = SavedInsight(
+                        passage_reference=insight_data["passage_reference"],
+                        passage_text=insight_data["passage_text"],
+                        historical_context=insight_data["historical_context"],
+                        theological_significance=insight_data["theological_significance"],
+                        practical_application=insight_data["practical_application"]
                     )
+                    db.add(new_insight)
+                    db.flush()
+                    
+                    # Link to user
+                    self._link_insight_to_user(db, user_id, new_insight.id)
                     counts["insights"] += 1
-            else:
-                # Create new insight
-                new_insight = SavedInsight(
-                    passage_reference=insight_data["passage_reference"],
-                    passage_text=insight_data["passage_text"],
-                    historical_context=insight_data["historical_context"],
-                    theological_significance=insight_data["theological_significance"],
-                    practical_application=insight_data["practical_application"]
+                    insight_id = new_insight.id
+                
+                # Import chat messages for this insight
+                for msg_data in insight_data.get("chat_messages", []):
+                    if "role" not in msg_data or "content" not in msg_data:
+                        continue  # Skip invalid messages
+                    
+                    new_msg = ChatMessage(
+                        insight_id=insight_id,
+                        user_id=user_id,
+                        role=msg_data["role"],
+                        content=msg_data["content"]
+                    )
+                    db.add(new_msg)
+                    counts["chat_messages"] += 1
+            
+            # Import standalone chats
+            for chat_data in data.get("standalone_chats", []):
+                new_chat = StandaloneChat(
+                    user_id=user_id,
+                    title=chat_data.get("title"),
+                    passage_reference=chat_data.get("passage_reference"),
+                    passage_text=chat_data.get("passage_text")
                 )
-                db.add(new_insight)
+                db.add(new_chat)
                 db.flush()
                 
-                # Link to user
-                db.execute(
-                    user_insights.insert().values(
-                        user_id=user_id,
-                        insight_id=new_insight.id
+                # Import messages for this chat
+                for msg_data in chat_data.get("messages", []):
+                    if "role" not in msg_data or "content" not in msg_data:
+                        continue  # Skip invalid messages
+                    
+                    new_msg = StandaloneChatMessage(
+                        chat_id=new_chat.id,
+                        role=msg_data["role"],
+                        content=msg_data["content"]
                     )
-                )
-                counts["insights"] += 1
-        
-        # Import standalone chats
-        for chat_data in data.get("standalone_chats", []):
-            new_chat = StandaloneChat(
-                user_id=user_id,
-                title=chat_data.get("title"),
-                passage_reference=chat_data.get("passage_reference"),
-                passage_text=chat_data.get("passage_text")
-            )
-            db.add(new_chat)
-            db.flush()
+                    db.add(new_msg)
+                
+                counts["standalone_chats"] += 1
             
-            # Import messages for this chat
-            for msg_data in chat_data.get("messages", []):
-                new_msg = StandaloneChatMessage(
-                    chat_id=new_chat.id,
-                    role=msg_data["role"],
-                    content=msg_data["content"]
-                )
-                db.add(new_msg)
+            db.commit()
             
-            counts["standalone_chats"] += 1
-        
-        db.commit()
+        except Exception as e:
+            db.rollback()
+            raise ValueError(f"Failed to import data: {str(e)}")
         
         return counts

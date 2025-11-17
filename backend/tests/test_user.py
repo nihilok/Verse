@@ -1,9 +1,8 @@
 """Tests for user functionality."""
-import pytest
 from app.services.user_service import UserService
 from app.services.insight_service import InsightService
 from app.services.chat_service import ChatService
-from app.models.models import SavedInsight, StandaloneChat
+from app.models.models import StandaloneChat
 
 
 def test_create_anonymous_user(db):
@@ -34,7 +33,6 @@ def test_get_existing_user(db):
 def test_clear_user_data(db, test_user):
     """Test clearing all data for a user."""
     insight_service = InsightService()
-    chat_service = ChatService()
     user_service = UserService()
     
     # Create a mock insight response
@@ -44,7 +42,7 @@ def test_clear_user_data(db, test_user):
         practical_application = "Practical application"
     
     # Add some insights for the user
-    insight1 = insight_service.save_insight(
+    insight_service.save_insight(
         db,
         passage_reference="John 3:16",
         passage_text="For God so loved the world",
@@ -52,7 +50,7 @@ def test_clear_user_data(db, test_user):
         user_id=test_user.id
     )
     
-    insight2 = insight_service.save_insight(
+    insight_service.save_insight(
         db,
         passage_reference="John 3:17",
         passage_text="For God did not send his Son",
@@ -95,12 +93,12 @@ def test_export_user_data(db, test_user):
     
     assert "user" in data
     assert "insights" in data
-    assert "chat_messages" in data
     assert "standalone_chats" in data
     
     assert data["user"]["anonymous_id"] == test_user.anonymous_id
     assert len(data["insights"]) == 1
     assert data["insights"][0]["passage_reference"] == "John 3:16"
+    assert "chat_messages" in data["insights"][0]
 
 
 def test_import_user_data(db, test_user):
@@ -119,10 +117,10 @@ def test_import_user_data(db, test_user):
                 "passage_text": "And we know that in all things God works",
                 "historical_context": "Historical context",
                 "theological_significance": "Theological significance",
-                "practical_application": "Practical application"
+                "practical_application": "Practical application",
+                "chat_messages": []
             }
         ],
-        "chat_messages": [],
         "standalone_chats": []
     }
     

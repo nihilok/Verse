@@ -10,7 +10,6 @@ os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 
 from app.main import app
 from app.core.database import Base, get_db
-from app.models.models import User
 from app.services.user_service import UserService
 
 # Create test database

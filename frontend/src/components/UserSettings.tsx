@@ -68,17 +68,24 @@ export default function UserSettings({ onError, onSuccess }: UserSettingsProps) 
       setLoading(true);
       try {
         const text = await file.text();
-        const data = JSON.parse(text);
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch {
+          onError("Invalid JSON file. Please select a valid Verse export file.");
+          setLoading(false);
+          return;
+        }
         
         const result = await bibleService.importUserData(data);
         if (result.imported) {
-          onSuccess(`Imported ${result.imported.insights} insights and ${result.imported.standalone_chats} chats.`);
+          onSuccess(`Imported ${result.imported.insights} insights, ${result.imported.chat_messages} chat messages, and ${result.imported.standalone_chats} chats.`);
         } else {
           onSuccess("Data imported successfully!");
         }
         
-        // Reload the page to show imported data
-        setTimeout(() => window.location.reload(), 1500);
+        // Reload the page to show imported data after user has time to read message
+        setTimeout(() => window.location.reload(), 2500);
       } catch (err) {
         console.error("Failed to import data:", err);
         onError("Failed to import data. Please check the file format and try again.");
