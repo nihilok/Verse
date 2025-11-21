@@ -1,5 +1,5 @@
 from typing import Optional, Dict, Any
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import select
 from app.models.models import User, SavedInsight, ChatMessage, StandaloneChat, StandaloneChatMessage, user_insights
 import uuid
@@ -105,7 +105,13 @@ class UserService:
         Returns:
             Dictionary containing all user data
         """
-        user = db.query(User).filter(User.id == user_id).first()
+        # Use eager loading to load all relationships at once
+        user = db.query(User).options(
+            joinedload(User.insights),
+            joinedload(User.chat_messages),
+            joinedload(User.standalone_chats).joinedload(StandaloneChat.messages)
+        ).filter(User.id == user_id).first()
+
         if not user:
             return {}
         
