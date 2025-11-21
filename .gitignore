@@ -53,3 +53,4 @@ logs/
 tmp/
 temp/
 *.tmp
+/frontend/.vite/
