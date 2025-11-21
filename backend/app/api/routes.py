@@ -26,9 +26,11 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
     user_service = UserService()
     user = user_service.get_or_create_user(db, anonymous_id)
     
-    # Store user in request state
+    # Store user and anonymous_id in request state
+    # Store anonymous_id separately so middleware can access it after session closes
     request.state.user = user
-    
+    request.state.user_anonymous_id = user.anonymous_id
+
     return user
 
 

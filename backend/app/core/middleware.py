@@ -25,17 +25,19 @@ class AnonymousUserMiddleware(BaseHTTPMiddleware):
         # For now, just mark that we need to handle the user
         request.state.anonymous_id = anonymous_id
         request.state.user = None  # Will be set by get_current_user dependency
-        
+        request.state.user_anonymous_id = None  # Will store the ID for cookie setting
+
         # Process the request
         response: Response = await call_next(request)
         
         # If a user was created during the request, set the cookie
-        if hasattr(request.state, 'user') and request.state.user:
-            user = request.state.user
-            if not anonymous_id or anonymous_id != user.anonymous_id:
+        # Use the stored anonymous_id instead of accessing the detached user object
+        if hasattr(request.state, 'user_anonymous_id') and request.state.user_anonymous_id:
+            user_anonymous_id = request.state.user_anonymous_id
+            if not anonymous_id or anonymous_id != user_anonymous_id:
                 response.set_cookie(
                     key=COOKIE_NAME,
-                    value=user.anonymous_id,
+                    value=user_anonymous_id,
                     max_age=COOKIE_MAX_AGE_SECONDS,
                     httponly=True,
                     samesite="lax",
