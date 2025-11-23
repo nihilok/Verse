@@ -1,7 +1,7 @@
 
 services:
   db:
-    image: postgres:15-alpine
+    image: postgres:18-alpine
     container_name: verse-db
     environment:
       POSTGRES_USER: verse_user
