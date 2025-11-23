@@ -880,7 +880,7 @@ wheels = [
 [[package]]
 name = "verse-backend"
 version = "0.1.0"
-source = { editable = "." }
+source = { virtual = "." }
 dependencies = [
     { name = "alembic" },
     { name = "anthropic" },
@@ -892,13 +892,6 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "sqlalchemy" },
     { name = "uvicorn", extra = ["standard"] },
-]
-
-[package.optional-dependencies]
-test = [
-    { name = "httpx" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
 ]
 
 [package.dev-dependencies]
@@ -913,17 +906,13 @@ requires-dist = [
     { name = "anthropic", specifier = "==0.34.0" },
     { name = "fastapi", specifier = "==0.104.1" },
     { name = "httpx", specifier = "==0.25.1" },
-    { name = "httpx", marker = "extra == 'test'", specifier = "==0.25.1" },
     { name = "psycopg2-binary", specifier = "==2.9.9" },
     { name = "pydantic", specifier = "==2.5.0" },
     { name = "pydantic-settings", specifier = "==2.1.0" },
-    { name = "pytest", marker = "extra == 'test'", specifier = "==7.4.3" },
-    { name = "pytest-asyncio", marker = "extra == 'test'", specifier = "==0.21.1" },
     { name = "python-dotenv", specifier = "==1.0.0" },
     { name = "sqlalchemy", specifier = "==2.0.23" },
     { name = "uvicorn", extras = ["standard"], specifier = "==0.24.0" },
 ]
-provides-extras = ["test"]
 
 [package.metadata.requires-dev]
 dev = [
