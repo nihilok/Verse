@@ -14,6 +14,7 @@ import {
   MessageSquare,
   Menu,
   Settings as SettingsIcon,
+  Search as SearchIcon,
 } from "lucide-react";
 import PassageSearch from "./components/PassageSearch";
 import BibleReader from "./components/BibleReader";
@@ -558,26 +559,29 @@ function App() {
                 className="w-full h-full flex flex-col"
               >
                 <TabsList className="grid w-full grid-cols-4 flex-shrink-0">
-                  <TabsTrigger value="search">Search</TabsTrigger>
+                  <TabsTrigger value="search" className="flex items-center gap-1">
+                    <SearchIcon size={16} className="sm:hidden" />
+                    <span className="hidden sm:inline">Search</span>
+                  </TabsTrigger>
                   <TabsTrigger
                     value="insights"
                     className="flex items-center gap-1"
                   >
-                    <HistoryIcon size={16} />
+                    <HistoryIcon size={16} className="sm:hidden" />
                     <span className="hidden sm:inline">Insights</span>
                   </TabsTrigger>
                   <TabsTrigger
                     value="chats"
                     className="flex items-center gap-1"
                   >
-                    <MessageSquare size={16} />
+                    <MessageSquare size={16} className="sm:hidden" />
                     <span className="hidden sm:inline">Chats</span>
                   </TabsTrigger>
                   <TabsTrigger
                     value="settings"
                     className="flex items-center gap-1"
                   >
-                    <SettingsIcon size={16} />
+                    <SettingsIcon size={16} className="sm:hidden" />
                     <span className="hidden sm:inline">Settings</span>
                   </TabsTrigger>
                 </TabsList>
