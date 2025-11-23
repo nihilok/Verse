@@ -46,6 +46,7 @@ export interface StandaloneChat {
   id: number;
   title: string | null;
   passage_reference: string | null;
+  passage_text: string | null;
   created_at: number;
   updated_at: number;
 }
