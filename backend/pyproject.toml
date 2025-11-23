@@ -1,0 +1,29 @@
+[project]
+name = "verse-backend"
+version = "0.1.0"
+description = "Backend API for Verse - Interactive Bible reader with AI-powered insights"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi==0.104.1",
+    "uvicorn[standard]==0.24.0",
+    "sqlalchemy==2.0.23",
+    "psycopg2-binary==2.9.9",
+    "pydantic==2.5.0",
+    "pydantic-settings==2.1.0",
+    "anthropic==0.34.0",
+    "httpx==0.25.1",
+    "python-dotenv==1.0.0",
+    "alembic==1.12.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==7.4.3",
+    "pytest-asyncio==0.21.1",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+

@@ -31,8 +31,10 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the architecture overview.
 
 ```bash
 cd backend
-pip install -r requirements-test.txt
-pytest
+uv sync --group dev  # Install dev dependencies including pytest
+uv run pytest
+# or with coverage
+uv run pytest --cov=app
 ```
 
 ### Frontend Tests

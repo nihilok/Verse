@@ -4,27 +4,41 @@
 
 ### Backend Development
 
-1. Create a virtual environment:
+1. Install dependencies with uv:
 ```bash
 cd backend
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+uv sync  # Creates a virtual environment and installs dependencies
 ```
 
-2. Install dependencies:
+2. Set up environment variables:
 ```bash
-pip install -r requirements.txt
-```
-
-3. Set up environment variables:
-```bash
-cp .env.example .env
+cp ../.env.example ../.env
 # Edit .env with your API keys
 ```
 
-4. Run the development server:
+3. Run the development server:
 ```bash
+uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Alternatively, you can activate the virtual environment:
+```bash
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+#### Installing Test Dependencies
+
+```bash
+uv sync --group dev  # Installs development dependencies including pytest
+```
+
+#### Running Tests
+
+```bash
+uv run pytest
+# or with coverage
+uv run pytest --cov=app
 ```
 
 ### Frontend Development

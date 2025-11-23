@@ -1,20 +1,24 @@
 # syntax=docker/dockerfile:1.4
 
 # Base stage: Install dependencies using uv
-FROM ghcr.io/astral-sh/uv:latest AS deps
+FROM python:3.11-slim AS deps
 
 WORKDIR /app
 
-# Copy requirements file
-COPY requirements.txt .
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# Install dependencies using uv into /app/.venv
+# Copy pyproject.toml and uv.lock if it exists
+COPY pyproject.toml .
+COPY uv.lock* .
+
+# Install dependencies using uv sync
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv venv /app/.venv && \
-    uv pip sync requirements.txt
+    uv sync --no-dev --no-install-project || \
+    uv sync --no-dev --no-install-project
 
-# Runner stage: Use Python 3.14 slim image
-FROM python:3.14-slim AS runner
+# Runner stage: Use Python 3.11 slim image
+FROM python:3.11-slim AS runner
 
 WORKDIR /app
 
@@ -37,3 +41,4 @@ EXPOSE 8000
 
 # Run the application
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
