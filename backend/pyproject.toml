@@ -2,7 +2,7 @@
 name = "verse-backend"
 version = "0.1.0"
 description = "Backend API for Verse - Interactive Bible reader with AI-powered insights"
-requires-python = ">=3.11"
+requires-python = ">=3.14"
 dependencies = [
     "fastapi==0.104.1",
     "uvicorn[standard]==0.24.0",
@@ -26,4 +26,3 @@ dev = [
 pythonpath = ["."]
 testpaths = ["tests"]
 asyncio_mode = "auto"
-
