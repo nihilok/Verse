@@ -63,6 +63,7 @@ function App() {
   // Standalone chat state
   const [chatHistory, setChatHistory] = useState<StandaloneChat[]>([]);
   const [currentChatId, setCurrentChatId] = useState<number | null>(null);
+  const [currentChatPassage, setCurrentChatPassage] = useState<{ text: string; reference: string } | null>(null);
   const [standaloneChatMessages, setStandaloneChatMessages] = useState<StandaloneChatMessage[]>([]);
   const [standaloneChatLoading, setStandaloneChatLoading] = useState(false);
   const [chatModalOpen, setChatModalOpen] = useState(false);
@@ -303,7 +304,9 @@ function App() {
 
   const handleAskQuestion = (text: string, reference: string) => {
     // Store passage info and open chat modal without creating the chat yet
-    setPendingChatPassage({ text, reference });
+    const passageInfo = { text, reference };
+    setPendingChatPassage(passageInfo);
+    setCurrentChatPassage(passageInfo);
     setCurrentChatId(null);
     setStandaloneChatMessages([]);
     setChatModalOpen(true);
@@ -315,6 +318,12 @@ function App() {
       setCurrentChatId(chat.id);
       setStandaloneChatMessages(messages);
       setPendingChatPassage(null); // Clear any pending passage
+      // Set passage from the chat object
+      if (chat.passage_text && chat.passage_reference) {
+        setCurrentChatPassage({ text: chat.passage_text, reference: chat.passage_reference });
+      } else {
+        setCurrentChatPassage(null);
+      }
       setChatModalOpen(true);
     } catch (err) {
       console.error("Failed to load chat messages:", err);
@@ -352,8 +361,9 @@ function App() {
         
         setCurrentChatId(result.chat_id);
         setStandaloneChatMessages(result.messages);
-        setPendingChatPassage(null); // Clear pending passage after creating chat
-        
+        setPendingChatPassage(null); // Clear pending passage flag after creating chat
+        // Note: currentChatPassage is kept so the passage stays visible
+
         // Reload chat history
         const chats = await bibleService.getStandaloneChats(MAX_HISTORY_ITEMS);
         setChatHistory(chats);
@@ -674,13 +684,14 @@ function App() {
         onOpenChange={(open) => {
           setChatModalOpen(open);
           if (!open) {
-            // Clear pending passage when modal closes
+            // Clear both pending and current passage when modal closes
             setPendingChatPassage(null);
+            setCurrentChatPassage(null);
           }
         }}
         title="Chat"
-        passageText={pendingChatPassage?.text}
-        passageReference={pendingChatPassage?.reference}
+        passageText={currentChatPassage?.text}
+        passageReference={currentChatPassage?.reference}
         messages={standaloneChatMessages}
         onSendMessage={handleSendStandaloneChatMessage}
         loading={standaloneChatLoading}

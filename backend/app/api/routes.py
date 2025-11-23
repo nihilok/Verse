@@ -372,6 +372,7 @@ async def get_standalone_chats(
             "id": chat.id,
             "title": chat.title,
             "passage_reference": chat.passage_reference,
+            "passage_text": chat.passage_text,
             "created_at": int(chat.created_at.timestamp() * 1000) if chat.created_at else None,
             "updated_at": int(chat.updated_at.timestamp() * 1000) if chat.updated_at else None
         }
