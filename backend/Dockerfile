@@ -11,7 +11,7 @@ COPY requirements.txt .
 # Install dependencies using uv into /app/.venv
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv venv /app/.venv && \
-    uv pip install --no-cache -r requirements.txt
+    uv pip sync requirements.txt
 
 # Runner stage: Use Python 3.14 slim image
 FROM python:3.14-slim AS runner
