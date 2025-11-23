@@ -11,6 +11,7 @@ import {
   CheckCircle,
   X,
   History as HistoryIcon,
+  MessageSquare,
   Menu,
   Settings as SettingsIcon,
 } from "lucide-react";
@@ -559,7 +560,7 @@ function App() {
                     value="chats"
                     className="flex items-center gap-1"
                   >
-                    <HistoryIcon size={16} />
+                    <MessageSquare size={16} />
                     <span className="hidden sm:inline">Chats</span>
                   </TabsTrigger>
                   <TabsTrigger
