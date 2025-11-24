@@ -75,6 +75,17 @@
     color: oklch(35% 0.08 25);
   }
 
+  /* Text selection colors matching theme */
+  ::selection {
+    background: oklch(42% 0.15 25 / 0.25); /* Burgundy with transparency */
+    color: oklch(25% 0.02 30); /* Deep warm brown for contrast */
+  }
+
+  ::-moz-selection {
+    background: oklch(42% 0.15 25 / 0.25);
+    color: oklch(25% 0.02 30);
+  }
+
   /* Refined scrollbar */
   ::-webkit-scrollbar {
     width: 10px;
@@ -331,6 +342,17 @@
   /* Theme-specific prose variables */
   --prose-quote-color: var(--color-accent);
   --prose-dropcap-color: var(--color-accent);
+
+  /* Dark mode text selection */
+  ::selection {
+    background: oklch(68% 0.12 60 / 0.3); /* Gold accent with transparency */
+    color: oklch(98% 0.01 60); /* Light warm text for contrast */
+  }
+
+  ::-moz-selection {
+    background: oklch(68% 0.12 60 / 0.3);
+    color: oklch(98% 0.01 60);
+  }
 }
 
 /* Targeted dark-mode overrides to avoid leftover red accents */
