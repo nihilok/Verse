@@ -1,52 +1,39 @@
-# syntax=docker/dockerfile:1.4
-
-# Base stage: Install dependencies using uv
-FROM python:3.14-slim AS deps
+# Stage 1: Dependencies with UV
+FROM ghcr.io/astral-sh/uv:python3.14-bookworm-slim AS deps
 
 WORKDIR /app
 
-# Install system build dependencies required to compile some Python packages
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    libpq-dev \
-    postgresql-client \
-    gcc \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+# Set environment variables for UV
+ENV UV_LINK_MODE=copy \
+    UV_COMPILE_BYTECODE=1 \
+    UV_PYTHON_DOWNLOADS=never
 
-# Install uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+# Copy dependency files
+COPY pyproject.toml uv.lock ./
 
-# Copy pyproject.toml and uv.lock if it exists
-COPY pyproject.toml .
-COPY uv.lock* .
+# Export dependencies to requirements.txt format and install to system Python
+RUN uv export --frozen --no-dev --no-hashes -o requirements.txt && \
+    uv pip install --system --no-cache -r requirements.txt
 
-# Install dependencies using uv sync
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --no-dev --no-install-project || \
-    uv sync --no-dev --no-install-project
-
-# Runner stage: Use Python 3.11 slim image
-FROM python:3.14-slim AS runner
+# Stage 2: Runner
+FROM python:3.14-slim
 
 WORKDIR /app
 
-# Install runtime system dependencies
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy virtual environment from deps stage
-COPY --from=deps /app/.venv /app/.venv
+# Copy installed packages from deps stage
+COPY --from=deps /usr/local/lib/python3.14/site-packages /usr/local/lib/python3.14/site-packages
+COPY --from=deps /usr/local/bin /usr/local/bin
 
 # Copy application code
 COPY . .
 
-# Set PATH to use the virtual environment
-ENV PATH="/app/.venv/bin:$PATH"
-
 # Expose port
 EXPOSE 8000
 
-# Run the application using the venv's Python to ensure uvicorn is available
-CMD ["/app/.venv/bin/python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Run the application
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
