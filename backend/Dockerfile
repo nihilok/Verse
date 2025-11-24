@@ -1,9 +1,18 @@
 # syntax=docker/dockerfile:1.4
 
 # Base stage: Install dependencies using uv
-FROM python:3.11-slim AS deps
+FROM python:3.14-slim AS deps
 
 WORKDIR /app
+
+# Install system build dependencies required to compile some Python packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    postgresql-client \
+    gcc \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
@@ -18,7 +27,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --no-dev --no-install-project
 
 # Runner stage: Use Python 3.11 slim image
-FROM python:3.11-slim AS runner
+FROM python:3.14-slim AS runner
 
 WORKDIR /app
 
@@ -39,6 +48,5 @@ ENV PATH="/app/.venv/bin:$PATH"
 # Expose port
 EXPOSE 8000
 
-# Run the application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
-
+# Run the application using the venv's Python to ensure uvicorn is available
+CMD ["/app/.venv/bin/python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
