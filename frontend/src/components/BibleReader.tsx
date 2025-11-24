@@ -35,6 +35,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({
   } | null>(null);
   const readerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const innerDivRef = useRef<HTMLDivElement>(null);
 
   // Swipe state
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(
@@ -64,25 +65,19 @@ const BibleReader: React.FC<BibleReaderProps> = ({
         const range = selection.getRangeAt(0);
         const rect = range.getBoundingClientRect();
 
-        // Find the scrolling container (CardContent)
-        const scrollingContainer = contentRef.current;
-        if (!scrollingContainer) return;
+        // The SelectionButtons component is absolutely positioned relative to innerDivRef
+        // We need to calculate position relative to that inner div
+        const innerDiv = innerDivRef.current;
+        if (!innerDiv) return;
 
-        const containerRect = scrollingContainer.getBoundingClientRect();
+        const innerDivRect = innerDiv.getBoundingClientRect();
 
-        // Calculate position relative to the container, accounting for scroll
-        // Use the scrolling container's scroll position to ensure correct positioning
-        // even when content is scrolled
-        const scrollTop = scrollingContainer.scrollTop || 0;
-        const scrollLeft = scrollingContainer.scrollLeft || 0;
-
+        // Calculate position relative to the inner div
+        // Both rect and innerDivRect are in viewport coordinates
+        // Subtracting them gives us position relative to the inner div
         setSelectionPosition({
-          x: rect.left - containerRect.left + scrollLeft + rect.width / 2,
-          y:
-            rect.bottom -
-            containerRect.top +
-            scrollTop +
-            SELECTION_TOOLTIP_OFFSET,
+          x: rect.left - innerDivRect.left + rect.width / 2,
+          y: rect.bottom - innerDivRect.top + SELECTION_TOOLTIP_OFFSET,
         });
       } else if (!text) {
         // Clear selection if no text is selected
@@ -255,7 +250,10 @@ const BibleReader: React.FC<BibleReaderProps> = ({
         onTouchMove={isTouchDevice ? handleTouchMove : undefined}
         onTouchEnd={isTouchDevice ? handleTouchEnd : undefined}
       >
-        <div className="relative max-w-2xl min-h-full mx-auto">
+        <div
+          ref={innerDivRef}
+          className="relative max-w-2xl min-h-full mx-auto"
+        >
           {loading ? (
             <div className="flex flex-col items-center justify-center min-h-[400px] text-muted-foreground fade-in-loading">
               <Loader2 size={48} className="animate-spin mb-4 text-primary" />
