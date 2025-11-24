@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Loader2, Sparkles, X, MessageCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import type { BiblePassage } from "../types";
 import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import SelectionButtons from "./SelectionButtons";
 
 // Selection timing constants
 const SELECTION_CHANGE_DELAY = 100; // ms to wait after selection change before capturing
@@ -276,38 +277,12 @@ const BibleReader: React.FC<BibleReaderProps> = ({
 
           {/* Selection Tooltip */}
           {selectionPosition && selectedText && !loading && (
-            <div
-              className="absolute bg-popover border-2 border-primary/20 rounded-lg shadow-xl p-1.5 flex flex-col gap-1.5 z-50"
-              style={{
-                left: `${selectionPosition.x}px`,
-                top: `${selectionPosition.y}px`,
-                transform: "translate(-50%, 0)",
-              }}
-            >
-              <div className="flex gap-1.5">
-                <button
-                  onClick={handleGetInsights}
-                  className="flex items-center gap-2 px-3.5 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-all text-sm font-semibold whitespace-nowrap shadow-sm"
-                >
-                  <Sparkles size={16} />
-                  Get Insights
-                </button>
-                <button
-                  onClick={clearSelection}
-                  className="flex items-center justify-center p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
-                  aria-label="Close"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-              <button
-                onClick={handleAskQuestion}
-                className="flex items-center gap-2 px-3.5 py-2 rounded-md bg-accent text-accent-foreground hover:bg-accent/80 transition-all text-sm font-semibold whitespace-nowrap shadow-sm"
-              >
-                <MessageCircle size={16} />
-                Ask a Question
-              </button>
-            </div>
+            <SelectionButtons
+              position={selectionPosition}
+              onGetInsights={handleGetInsights}
+              onAskQuestion={handleAskQuestion}
+              onClear={clearSelection}
+            />
           )}
         </div>
       </CardContent>
