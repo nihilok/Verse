@@ -76,6 +76,17 @@
     color: oklch(20% 0 0);
   }
 
+  /* Text selection colors matching theme */
+  ::selection {
+    background: oklch(42% 0.15 25 / 0.25); /* Burgundy with transparency */
+    color: oklch(25% 0.02 30); /* Deep warm brown for contrast */
+  }
+
+  ::-moz-selection {
+    background: oklch(42% 0.15 25 / 0.25);
+    color: oklch(25% 0.02 30);
+  }
+
   /* Refined scrollbar */
   ::-webkit-scrollbar {
     width: 10px;
@@ -307,6 +318,17 @@
   --color-border: oklch(30% 0 0);
   --color-input: oklch(25% 0 0);
   --color-ring: oklch(65% 0.19 35);
+
+  /* Dark mode text selection */
+  ::selection {
+    background: oklch(65% 0.19 35 / 0.3); /* Orange accent with transparency */
+    color: oklch(98% 0 0); /* Light text for contrast */
+  }
+
+  ::-moz-selection {
+    background: oklch(65% 0.19 35 / 0.3);
+    color: oklch(98% 0 0);
+  }
 }
 
 
