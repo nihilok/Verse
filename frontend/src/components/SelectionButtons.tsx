@@ -58,6 +58,7 @@ const SelectionButtons: React.FC<SelectionButtonsProps> = ({
   return (
     <div
       ref={tooltipRef}
+      data-testid="selection-tooltip"
       className="absolute bg-popover border-2 border-primary/20 rounded-lg shadow-xl p-1.5 flex flex-col gap-1.5 z-50"
       style={{
         left: `${adjustedPosition.x}px`,

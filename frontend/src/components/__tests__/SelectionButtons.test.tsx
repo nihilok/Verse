@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, cleanup, act } from "@testing-library/react";
+import { render, screen, fireEvent, act, cleanup } from "@testing-library/react";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import SelectionButtons from "../SelectionButtons";
 
@@ -12,7 +12,6 @@ describe("SelectionButtons", () => {
     Element.prototype.getBoundingClientRect;
 
   beforeEach(() => {
-    cleanup();
     vi.clearAllMocks();
     // Reset viewport width to default
     Object.defineProperty(window, "innerWidth", {
@@ -25,6 +24,7 @@ describe("SelectionButtons", () => {
   });
 
   afterEach(() => {
+    cleanup();
     vi.restoreAllMocks();
     // Ensure getBoundingClientRect is restored
     Element.prototype.getBoundingClientRect = originalGetBoundingClientRect;
@@ -68,13 +68,12 @@ describe("SelectionButtons", () => {
       const position = { x: 512, y: 100 };
       renderComponent(position);
 
-      const tooltip = screen.getByRole("button", { name: /Get Insights/i })
-        .parentElement?.parentElement;
+      const tooltip = screen.getByTestId("selection-tooltip");
       expect(tooltip).toBeTruthy();
 
       // The tooltip should be positioned at the original x position
-      expect(tooltip?.style.left).toBe("512px");
-      expect(tooltip?.style.top).toBe("100px");
+      expect(tooltip.style.left).toBe("512px");
+      expect(tooltip.style.top).toBe("100px");
     });
 
     it("adjusts position when tooltip would overflow right edge", () => {
@@ -95,12 +94,11 @@ describe("SelectionButtons", () => {
       const position = { x: 970, y: 100 };
       renderComponent(position);
 
-      const tooltip = screen.getByRole("button", { name: /Get Insights/i })
-        .parentElement?.parentElement;
+      const tooltip = screen.getByTestId("selection-tooltip");
       expect(tooltip).toBeTruthy();
 
       // After adjustment, the tooltip's left position should be adjusted
-      const leftValue = parseFloat(tooltip?.style.left || "0");
+      const leftValue = parseFloat(tooltip.style.left || "0");
       // The adjusted position should be 916 (viewportWidth - halfWidth - padding)
       expect(leftValue).toBe(916);
     });
@@ -116,12 +114,11 @@ describe("SelectionButtons", () => {
       const position = { x: 50, y: 100 };
       renderComponent(position);
 
-      const tooltip = screen.getByRole("button", { name: /Get Insights/i })
-        .parentElement?.parentElement;
+      const tooltip = screen.getByTestId("selection-tooltip");
       expect(tooltip).toBeTruthy();
 
       // After adjustment, the tooltip's left position should be adjusted
-      const leftValue = parseFloat(tooltip?.style.left || "0");
+      const leftValue = parseFloat(tooltip.style.left || "0");
       // The adjusted position should be 108 (halfWidth + padding)
       expect(leftValue).toBe(108);
     });
@@ -141,12 +138,11 @@ describe("SelectionButtons", () => {
       const position = { x: 500, y: 100 };
       renderComponent(position);
 
-      const tooltip = screen.getByRole("button", { name: /Get Insights/i })
-        .parentElement?.parentElement;
+      const tooltip = screen.getByTestId("selection-tooltip");
       expect(tooltip).toBeTruthy();
 
       // Initial position should be maintained
-      expect(tooltip?.style.left).toBe("500px");
+      expect(tooltip.style.left).toBe("500px");
 
       // Simulate viewport resize to a smaller width that would cause overflow
       Object.defineProperty(window, "innerWidth", {
@@ -164,7 +160,7 @@ describe("SelectionButtons", () => {
       // After resize to 400px viewport, position 500 would overflow right
       // position.x (500) + halfWidth (100) = 600 > 400
       // Expected new position: viewportWidth (400) - halfWidth (100) - padding (8) = 292
-      const leftValue = parseFloat(tooltip?.style.left || "0");
+      const leftValue = parseFloat(tooltip.style.left || "0");
       expect(leftValue).toBe(292);
     });
 
