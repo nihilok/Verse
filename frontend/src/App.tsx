@@ -236,6 +236,10 @@ function App() {
     // Strip whitespace from text for consistent caching
     const normalizedText = text.trim();
     
+    if (isSingleWord && !verseText) {
+      setError("Unable to find the verse containing this word. Please try selecting the full verse.");
+      return;
+    }
     if (isSingleWord && verseText) {
       // Handle single word definition
       setDefinitionLoading(true);
