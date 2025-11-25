@@ -16,6 +16,7 @@ class User(Base):
     
     # Relationships
     insights = relationship("SavedInsight", secondary="user_insights", back_populates="users")
+    definitions = relationship("SavedDefinition", secondary="user_definitions", back_populates="users")
     chat_messages = relationship("ChatMessage", back_populates="user", cascade="all, delete-orphan")
     standalone_chats = relationship("StandaloneChat", back_populates="user", cascade="all, delete-orphan")
 
@@ -26,6 +27,16 @@ user_insights = Table(
     Base.metadata,
     Column('user_id', Integer, ForeignKey('users.id', ondelete='CASCADE'), primary_key=True),
     Column('insight_id', Integer, ForeignKey('saved_insights.id', ondelete='CASCADE'), primary_key=True),
+    Column('created_at', DateTime(timezone=True), server_default=func.now())
+)
+
+
+# Linking table for many-to-many relationship between users and definitions
+user_definitions = Table(
+    'user_definitions',
+    Base.metadata,
+    Column('user_id', Integer, ForeignKey('users.id', ondelete='CASCADE'), primary_key=True),
+    Column('definition_id', Integer, ForeignKey('saved_definitions.id', ondelete='CASCADE'), primary_key=True),
     Column('created_at', DateTime(timezone=True), server_default=func.now())
 )
 
@@ -67,6 +78,29 @@ class SavedInsight(Base):
     __table_args__ = (
         UniqueConstraint('passage_reference', 'passage_text', name='uix_passage_reference_text'),
         Index('idx_passage_text', 'passage_text'),
+    )
+
+
+class SavedDefinition(Base):
+    """Model for saved AI-generated word definitions."""
+    
+    __tablename__ = "saved_definitions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    word = Column(String(100), nullable=False, index=True)
+    passage_reference = Column(String(100), nullable=False, index=True)
+    verse_text = Column(Text, nullable=False)
+    definition = Column(Text, nullable=False)
+    biblical_usage = Column(Text, nullable=False)
+    original_language = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    users = relationship("User", secondary="user_definitions", back_populates="definitions")
+    
+    __table_args__ = (
+        UniqueConstraint('word', 'passage_reference', 'verse_text', name='uix_word_reference_verse'),
+        Index('idx_word', 'word'),
     )
 
 

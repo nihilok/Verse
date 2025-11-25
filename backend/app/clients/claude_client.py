@@ -1,6 +1,6 @@
 import anthropic
 from typing import Optional, List
-from app.clients.ai_client import AIClient, InsightRequest, InsightResponse
+from app.clients.ai_client import AIClient, InsightRequest, InsightResponse, DefinitionRequest, DefinitionResponse
 from app.core.config import get_settings
 
 
@@ -79,6 +79,76 @@ PRACTICAL_APPLICATION: [your analysis]
                     insights["theological_significance"] = remaining.strip()
         
         return insights
+    
+    async def generate_definition(
+        self,
+        request: DefinitionRequest
+    ) -> Optional[DefinitionResponse]:
+        """Generate a definition for a word in context using Claude."""
+        try:
+            prompt = f"""You are a biblical scholar and linguist. Define the following word in its biblical context.
+
+Word: {request.word}
+Verse Reference: {request.passage_reference}
+Full Verse: {request.verse_text}
+
+Please provide:
+1. Definition: A clear definition of this word as used in this specific biblical context
+2. Biblical Usage: How this word is used throughout the Bible and its significance in Scripture
+3. Original Language: Information about the original Hebrew/Greek word, its transliteration, and any nuances in meaning
+
+Format your response as follows:
+DEFINITION: [your definition]
+BIBLICAL_USAGE: [your analysis of biblical usage]
+ORIGINAL_LANGUAGE: [original language information]
+"""
+            
+            message = self.client.messages.create(
+                model="claude-sonnet-4-5-20250929",
+                max_tokens=1000,
+                messages=[
+                    {"role": "user", "content": prompt}
+                ]
+            )
+            
+            # Parse the response
+            content = message.content[0].text
+            definition_parts = self._parse_definition(content)
+            
+            return DefinitionResponse(
+                definition=definition_parts.get("definition", ""),
+                biblical_usage=definition_parts.get("biblical_usage", ""),
+                original_language=definition_parts.get("original_language", "")
+            )
+        except Exception as e:
+            print(f"Error generating definition: {e}")
+            return None
+    
+    def _parse_definition(self, content: str) -> dict:
+        """Parse the structured definition response from Claude."""
+        definition_parts = {
+            "definition": "",
+            "biblical_usage": "",
+            "original_language": ""
+        }
+        
+        # Split by the markers
+        parts = content.split("DEFINITION:")
+        if len(parts) > 1:
+            remaining = parts[1]
+            usage_parts = remaining.split("BIBLICAL_USAGE:")
+            if len(usage_parts) > 1:
+                definition_parts["definition"] = usage_parts[0].strip()
+                remaining = usage_parts[1]
+                
+                lang_parts = remaining.split("ORIGINAL_LANGUAGE:")
+                if len(lang_parts) > 1:
+                    definition_parts["biblical_usage"] = lang_parts[0].strip()
+                    definition_parts["original_language"] = lang_parts[1].strip()
+                else:
+                    definition_parts["biblical_usage"] = remaining.strip()
+        
+        return definition_parts
     
     async def generate_chat_response(
         self,

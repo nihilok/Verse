@@ -19,6 +19,7 @@ import {
 import PassageSearch from "./components/PassageSearch";
 import BibleReader from "./components/BibleReader";
 import InsightsModal from "./components/InsightsModal";
+import DefinitionModal from "./components/DefinitionModal";
 import ChatModal from "./components/ChatModal";
 import InsightsHistoryComponent from "./components/InsightsHistory";
 import ChatHistory from "./components/ChatHistory";
@@ -27,7 +28,7 @@ import InstallPrompt from "./components/InstallPrompt";
 import LoadingOverlay from "./components/LoadingOverlay";
 import { ModeToggle } from "./components/mode-toggle";
 import { bibleService } from "./services/api";
-import { BiblePassage, Insight, InsightHistory, ChatMessage, StandaloneChat, StandaloneChatMessage } from "./types";
+import { BiblePassage, Insight, Definition, InsightHistory, ChatMessage, StandaloneChat, StandaloneChatMessage } from "./types";
 import {
   Sidebar,
   SidebarHeader,
@@ -45,10 +46,13 @@ const MAX_HISTORY_ITEMS = 50;
 function App() {
   const [passage, setPassage] = useState<BiblePassage | null>(null);
   const [insight, setInsight] = useState<Insight | null>(null);
+  const [definition, setDefinition] = useState<Definition | null>(null);
   const [loading, setLoading] = useState(false);
   const [insightLoading, setInsightLoading] = useState(false);
+  const [definitionLoading, setDefinitionLoading] = useState(false);
   const [selectedText, setSelectedText] = useState("");
   const [selectedReference, setSelectedReference] = useState("");
+  const [selectedWord, setSelectedWord] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [currentBook, setCurrentBook] = useState("John");
   const [currentChapter, setCurrentChapter] = useState(3);
@@ -56,6 +60,7 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarFullyHidden, setSidebarFullyHidden] = useState(false);
   const [insightsModalOpen, setInsightsModalOpen] = useState(false);
+  const [definitionModalOpen, setDefinitionModalOpen] = useState(false);
   const [insightsHistory, setInsightsHistory] = useState<InsightHistory[]>([]);
   const [currentInsightId, setCurrentInsightId] = useState<number | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -227,48 +232,71 @@ function App() {
     return text.replace(/\s+/g, " ").trim();
   };
 
-  const handleTextSelected = async (text: string, reference: string) => {
-    setInsightLoading(true);
-    setSelectedText(text);
-    setSelectedReference(reference);
-    setError(null);
+  const handleTextSelected = async (text: string, reference: string, isSingleWord: boolean, verseText?: string) => {
+    // Strip whitespace from text for consistent caching
+    const normalizedText = text.trim();
+    
+    if (isSingleWord && verseText) {
+      // Handle single word definition
+      setDefinitionLoading(true);
+      setSelectedWord(normalizedText);
+      setSelectedReference(reference);
+      setError(null);
 
-    try {
-      const result = await bibleService.getInsights(text, reference);
-      setInsight(result);
-      setInsightsModalOpen(true);
-
-      // Reload history from backend to get the latest insights
       try {
-        const history =
-          await bibleService.getInsightsHistory(MAX_HISTORY_ITEMS);
-        setInsightsHistory(history);
-
-        // Get the insight ID from the history (it should be the most recent one)
-        const matchingInsight = history.find(
-          (item) =>
-            normaliseWhitespace(item.text) === normaliseWhitespace(text) &&
-            item.reference === reference,
-        );
-        if (matchingInsight) {
-          const insightId = parseInt(matchingInsight.id);
-          setCurrentInsightId(insightId);
-
-          // Load chat messages for this insight
-          const messages = await bibleService.getChatMessages(insightId);
-          setChatMessages(messages);
-        } else {
-          setCurrentInsightId(null);
-          setChatMessages([]);
-        }
-      } catch (historyErr) {
-        console.error("Failed to reload insights history:", historyErr);
+        const result = await bibleService.getDefinition(normalizedText, verseText, reference);
+        setDefinition(result);
+        setDefinitionModalOpen(true);
+      } catch (err) {
+        setError("Failed to generate definition. Please try again.");
+        console.error("Error generating definition:", err);
+      } finally {
+        setDefinitionLoading(false);
       }
-    } catch (err) {
-      setError("Failed to generate insights. Please try again.");
-      console.error("Error generating insights:", err);
-    } finally {
-      setInsightLoading(false);
+    } else {
+      // Handle multi-word insight
+      setInsightLoading(true);
+      setSelectedText(normalizedText);
+      setSelectedReference(reference);
+      setError(null);
+
+      try {
+        const result = await bibleService.getInsights(normalizedText, reference);
+        setInsight(result);
+        setInsightsModalOpen(true);
+
+        // Reload history from backend to get the latest insights
+        try {
+          const history =
+            await bibleService.getInsightsHistory(MAX_HISTORY_ITEMS);
+          setInsightsHistory(history);
+
+          // Get the insight ID from the history (it should be the most recent one)
+          const matchingInsight = history.find(
+            (item) =>
+              normaliseWhitespace(item.text) === normaliseWhitespace(normalizedText) &&
+              item.reference === reference,
+          );
+          if (matchingInsight) {
+            const insightId = parseInt(matchingInsight.id);
+            setCurrentInsightId(insightId);
+
+            // Load chat messages for this insight
+            const messages = await bibleService.getChatMessages(insightId);
+            setChatMessages(messages);
+          } else {
+            setCurrentInsightId(null);
+            setChatMessages([]);
+          }
+        } catch (historyErr) {
+          console.error("Failed to reload insights history:", historyErr);
+        }
+      } catch (err) {
+        setError("Failed to generate insights. Please try again.");
+        console.error("Error generating insights:", err);
+      } finally {
+        setInsightLoading(false);
+      }
     }
   };
 
@@ -682,6 +710,15 @@ function App() {
         onContinueChat={handleContinueChat}
       />
 
+      {/* Definition Modal */}
+      <DefinitionModal
+        open={definitionModalOpen}
+        onOpenChange={setDefinitionModalOpen}
+        definition={definition}
+        word={selectedWord}
+        reference={selectedReference}
+      />
+
       {/* Standalone Chat Modal */}
       <ChatModal
         open={chatModalOpen}
@@ -714,6 +751,7 @@ function App() {
 
       {/* Loading overlays */}
       {insightLoading && <LoadingOverlay message="Generating insights..." />}
+      {definitionLoading && <LoadingOverlay message="Generating definition..." />}
       {standaloneChatLoading && !chatModalOpen && <LoadingOverlay message="Starting chat..." />}
 
       {/* PWA Install Prompt */}

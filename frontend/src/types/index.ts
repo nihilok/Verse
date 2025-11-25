@@ -27,6 +27,22 @@ export interface InsightHistory {
   timestamp: number;
 }
 
+export interface Definition {
+  definition: string;
+  biblical_usage: string;
+  original_language: string;
+  cached?: boolean;
+}
+
+export interface DefinitionHistory {
+  id: string;
+  word: string;
+  passage_reference: string;
+  verse_text: string;
+  definition: Definition;
+  timestamp: number;
+}
+
 export interface PassageQuery {
   book: string;
   chapter: number;
