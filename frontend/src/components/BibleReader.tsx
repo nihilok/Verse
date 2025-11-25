@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Loader2, Sparkles, X, MessageCircle } from "lucide-react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
+import { ChevronLeft, ChevronRight, Loader2, Sparkles, X, MessageCircle, BookOpen } from "lucide-react";
 import type { BiblePassage } from "../types";
 import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
@@ -14,7 +14,7 @@ const SWIPE_MAX_VERTICAL = 100; // maximum vertical movement allowed for horizon
 
 interface BibleReaderProps {
   passage: BiblePassage | null;
-  onTextSelected: (text: string, reference: string) => void;
+  onTextSelected: (text: string, reference: string, isSingleWord: boolean, verseText?: string) => void;
   onAskQuestion: (text: string, reference: string) => void;
   onNavigate?: (direction: "prev" | "next") => void;
   loading?: boolean;
@@ -126,6 +126,32 @@ const BibleReader: React.FC<BibleReaderProps> = ({
     };
   }, []);
 
+  // Helper function to check if text is a single word
+  const isSingleWord = (text: string): boolean => {
+    const trimmed = text.trim();
+    // A single word contains no whitespace
+    return trimmed.length > 0 && !/\s/.test(trimmed);
+  };
+
+  // Helper function to find the verse containing the selected text
+  const findContainingVerse = (text: string): { verseText: string; verseReference: string } | null => {
+    if (!passage) return null;
+    
+    for (const verse of passage.verses) {
+      if (verse.text.includes(text)) {
+        // Create the specific verse reference (e.g., "John 3:16")
+        const verseReference = `${verse.book} ${verse.chapter}:${verse.verse}`;
+        return { verseText: verse.text, verseReference };
+      }
+    }
+    return null;
+  };
+
+  // Memoize whether the current selection is a single word
+  const isSelectedSingleWord = useMemo(() => {
+    return isSingleWord(selectedText);
+  }, [selectedText]);
+
   const handleGetInsights = (e: React.MouseEvent | React.TouchEvent) => {
     // Prevent the event from bubbling up and triggering document handlers
     e.preventDefault();
@@ -133,15 +159,20 @@ const BibleReader: React.FC<BibleReaderProps> = ({
 
     if (selectedText && passage) {
       // Store the text before clearing
-      const textToSend = selectedText;
-      const referenceToSend = passage.reference;
+      const textToSend = selectedText.trim();
+      const isSingleWordSelection = isSingleWord(textToSend);
+      
+      // For single word selections, find the verse containing the word
+      const verseInfo = isSingleWordSelection ? findContainingVerse(textToSend) : null;
+      const referenceToSend = verseInfo?.verseReference || passage.reference;
+      const verseTextToSend = verseInfo?.verseText;
 
       // Clear the UI immediately
       setSelectedText("");
       setSelectionPosition(null);
 
       // Send the text after clearing the selection
-      onTextSelected(textToSend, referenceToSend);
+      onTextSelected(textToSend, referenceToSend, isSingleWordSelection, verseTextToSend);
 
       // Clear the browser selection after a brief delay to ensure click is processed
       setTimeout(() => {
@@ -289,8 +320,17 @@ const BibleReader: React.FC<BibleReaderProps> = ({
                   onClick={handleGetInsights}
                   className="flex items-center gap-2 px-3.5 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-all text-sm font-semibold whitespace-nowrap shadow-sm"
                 >
-                  <Sparkles size={16} />
-                  Get Insights
+                  {isSelectedSingleWord ? (
+                    <>
+                      <BookOpen size={16} />
+                      Define
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={16} />
+                      Get Insights
+                    </>
+                  )}
                 </button>
                 <button
                   onClick={clearSelection}

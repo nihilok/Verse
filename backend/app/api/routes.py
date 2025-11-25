@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 from typing import Optional, Dict, Any
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from app.core.database import get_db
 from app.services.bible_service import BibleService
 from app.services.insight_service import InsightService
+from app.services.definition_service import DefinitionService
 from app.services.chat_service import ChatService
 from app.services.user_service import UserService
 from app.models.models import User
@@ -48,6 +49,12 @@ class InsightRequestModel(BaseModel):
     passage_text: str
     passage_reference: str
     save: bool = False
+    
+    @field_validator('passage_text')
+    @classmethod
+    def strip_passage_text(cls, v: str) -> str:
+        """Strip whitespace from passage text for consistent caching."""
+        return v.strip() if v else v
 
 
 class ChatMessageRequest(BaseModel):
@@ -70,6 +77,26 @@ class StandaloneChatMessageRequest(BaseModel):
     """Request model for sending a message in a standalone chat."""
     chat_id: int
     message: str
+
+
+class DefinitionRequestModel(BaseModel):
+    """Request model for generating a word definition."""
+    word: str
+    verse_text: str
+    passage_reference: str
+    save: bool = False
+    
+    @field_validator('word')
+    @classmethod
+    def strip_word(cls, v: str) -> str:
+        """Strip whitespace from word for consistent caching."""
+        return v.strip() if v else v
+    
+    @field_validator('verse_text')
+    @classmethod
+    def strip_verse_text(cls, v: str) -> str:
+        """Strip whitespace from verse text for consistent caching."""
+        return v.strip() if v else v
 
 
 @router.get("/passage")
@@ -225,6 +252,107 @@ async def clear_insights_history(
     count = service.clear_user_insights(db, current_user.id)
     
     return {"message": f"Cleared {count} insights from history"}
+
+
+@router.post("/definitions")
+async def generate_definition(
+    request: DefinitionRequestModel,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Generate AI definition for a word in context."""
+    service = DefinitionService()
+    
+    # Check if we already have a definition for this word in this context
+    if request.save:
+        existing = service.get_saved_definition(
+            db, 
+            request.word,
+            request.passage_reference,
+            request.verse_text
+        )
+        if existing:
+            # Link the definition to the user if not already linked
+            service.link_definition_to_user(db, existing.id, current_user.id)
+            return {
+                "id": existing.id,
+                "word": existing.word,
+                "definition": existing.definition,
+                "biblical_usage": existing.biblical_usage,
+                "original_language": existing.original_language,
+                "cached": True
+            }
+    
+    # Generate new definition
+    definition = await service.generate_definition(
+        word=request.word,
+        verse_text=request.verse_text,
+        passage_reference=request.passage_reference
+    )
+    
+    if not definition:
+        raise HTTPException(status_code=500, detail="Failed to generate definition")
+    
+    # Save if requested
+    definition_id = None
+    if request.save:
+        saved_definition = service.save_definition(
+            db,
+            request.word,
+            request.passage_reference,
+            request.verse_text,
+            definition,
+            current_user.id
+        )
+        definition_id = saved_definition.id
+    
+    return {
+        "id": definition_id,
+        "word": request.word,
+        "definition": definition.definition,
+        "biblical_usage": definition.biblical_usage,
+        "original_language": definition.original_language,
+        "cached": False
+    }
+
+
+@router.get("/definitions/history")
+async def get_definitions_history(
+    limit: int = Query(50, description="Maximum number of definitions to return"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get definitions history from the database for the current user."""
+    service = DefinitionService()
+    definitions = service.get_user_definitions(db, current_user.id, limit=limit)
+    
+    return [
+        {
+            "id": str(definition.id),
+            "word": definition.word,
+            "passage_reference": definition.passage_reference,
+            "verse_text": definition.verse_text,
+            "definition": {
+                "definition": definition.definition,
+                "biblical_usage": definition.biblical_usage,
+                "original_language": definition.original_language,
+            },
+            "timestamp": int(definition.created_at.timestamp() * 1000)
+        }
+        for definition in definitions
+    ]
+
+
+@router.delete("/definitions/history")
+async def clear_definitions_history(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Clear all definitions history from the database for the current user."""
+    service = DefinitionService()
+    count = service.clear_user_definitions(db, current_user.id)
+    
+    return {"message": f"Cleared {count} definitions from history"}
 
 
 @router.post("/chat/message")

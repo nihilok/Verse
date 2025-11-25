@@ -1,5 +1,5 @@
 import axios from "axios";
-import { BiblePassage, Insight, PassageQuery, InsightHistory, ChatMessage, StandaloneChat, StandaloneChatMessage, UserSession, UserDataExport, DataOperationResult } from "../types";
+import { BiblePassage, Insight, PassageQuery, InsightHistory, Definition, DefinitionHistory, ChatMessage, StandaloneChat, StandaloneChatMessage, UserSession, UserDataExport, DataOperationResult } from "../types";
 
 const API_BASE_URL = "/api";
 
@@ -60,6 +60,31 @@ export const bibleService = {
 
   async clearInsightsHistory(): Promise<void> {
     await axios.delete(`${API_BASE_URL}/insights/history`);
+  },
+
+  async getDefinition(
+    word: string,
+    verseText: string,
+    passageReference: string,
+  ): Promise<Definition> {
+    const response = await axios.post<Definition>(`${API_BASE_URL}/definitions`, {
+      word: word,
+      verse_text: verseText,
+      passage_reference: passageReference,
+      save: true,
+    });
+    return response.data;
+  },
+
+  async getDefinitionsHistory(limit: number = 50): Promise<DefinitionHistory[]> {
+    const response = await axios.get<DefinitionHistory[]>(
+      `${API_BASE_URL}/definitions/history?limit=${limit}`,
+    );
+    return response.data;
+  },
+
+  async clearDefinitionsHistory(): Promise<void> {
+    await axios.delete(`${API_BASE_URL}/definitions/history`);
   },
 
   async sendChatMessage(

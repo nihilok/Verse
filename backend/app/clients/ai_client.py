@@ -16,6 +16,20 @@ class InsightResponse(BaseModel):
     practical_application: str
 
 
+class DefinitionRequest(BaseModel):
+    """Model for definition request."""
+    word: str
+    verse_text: str  # The full verse text with the word marked
+    passage_reference: str  # e.g., "John 3:16"
+
+
+class DefinitionResponse(BaseModel):
+    """Model for AI-generated word definition."""
+    definition: str
+    biblical_usage: str
+    original_language: str
+
+
 class AIClient(ABC):
     """Abstract base class for AI insight providers."""
     
@@ -25,4 +39,12 @@ class AIClient(ABC):
         request: InsightRequest
     ) -> Optional[InsightResponse]:
         """Generate insights for a Bible passage."""
+        pass
+    
+    @abstractmethod
+    async def generate_definition(
+        self,
+        request: DefinitionRequest
+    ) -> Optional[DefinitionResponse]:
+        """Generate a definition for a word in context."""
         pass
