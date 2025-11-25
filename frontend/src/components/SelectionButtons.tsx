@@ -22,25 +22,31 @@ const SelectionButtons: React.FC<SelectionButtonsProps> = ({
       if (!tooltipRef.current) return;
 
       const tooltip = tooltipRef.current;
-      const rect = tooltip.getBoundingClientRect();
-      const viewportWidth = window.innerWidth;
+      const tooltipRect = tooltip.getBoundingClientRect();
+
+      // Get the parent container's width for boundary detection
+      // The position.x is relative to the parent container, not the viewport
+      const parentElement = tooltip.parentElement;
+      const containerWidth = parentElement
+        ? parentElement.getBoundingClientRect().width
+        : window.innerWidth;
 
       // Calculate the tooltip's width
-      const tooltipWidth = rect.width;
+      const tooltipWidth = tooltipRect.width;
       const halfWidth = tooltipWidth / 2;
 
       let newX = position.x;
       const newY = position.y;
 
       // Check if tooltip would go off the right edge (considering the -50% transform)
-      if (position.x + halfWidth > viewportWidth) {
-        // Move it left to fit within viewport with padding
-        newX = viewportWidth - halfWidth - 8;
+      if (position.x + halfWidth > containerWidth) {
+        // Move it left to fit within container with padding
+        newX = containerWidth - halfWidth - 8;
       }
 
       // Check if tooltip would go off the left edge (considering the -50% transform)
       if (position.x - halfWidth < 0) {
-        // Move it right to fit within viewport with padding
+        // Move it right to fit within container with padding
         newX = halfWidth + 8;
       }
 
