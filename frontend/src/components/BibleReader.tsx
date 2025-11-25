@@ -137,8 +137,11 @@ const BibleReader: React.FC<BibleReaderProps> = ({
   const findContainingVerse = (text: string): { verseText: string; verseReference: string } | null => {
     if (!passage) return null;
     
+    // Create a regex with word boundaries for exact word matching, case-insensitive
+    const escapedText = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const wordRegex = new RegExp(`\\b${escapedText}\\b`, 'i');
     for (const verse of passage.verses) {
-      if (verse.text.includes(text)) {
+      if (wordRegex.test(verse.text)) {
         // Create the specific verse reference (e.g., "John 3:16")
         const verseReference = `${verse.book} ${verse.chapter}:${verse.verse}`;
         return { verseText: verse.text, verseReference };
