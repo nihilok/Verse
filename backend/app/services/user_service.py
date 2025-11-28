@@ -170,27 +170,42 @@ class UserService:
     def import_user_data(self, db: Session, user_id: int, data: Dict[str, Any]) -> Dict[str, int]:
         """
         Import user data from JSON.
-        
+
         Args:
             db: Database session
             user_id: User ID
             data: Dictionary containing user data
-        
+
         Returns:
             Dictionary with counts of imported items
-        
+
         Raises:
-            ValueError: If data structure is invalid
+            ValueError: If data structure is invalid or exceeds size limits
         """
+        # Size limits to prevent DoS attacks
+        MAX_INSIGHTS = 1000
+        MAX_STANDALONE_CHATS = 500
+        MAX_TEXT_LENGTH = 50000
+        MAX_FIELD_LENGTH = 10000
+
         # Validate data structure
         if not isinstance(data, dict):
             raise ValueError("Import data must be a dictionary")
-        
+
         if "insights" in data and not isinstance(data["insights"], list):
             raise ValueError("Insights must be a list")
-        
+
         if "standalone_chats" in data and not isinstance(data["standalone_chats"], list):
             raise ValueError("Standalone chats must be a list")
+
+        # Validate size limits
+        insights_count = len(data.get("insights", []))
+        if insights_count > MAX_INSIGHTS:
+            raise ValueError(f"Too many insights: {insights_count} (max {MAX_INSIGHTS})")
+
+        chats_count = len(data.get("standalone_chats", []))
+        if chats_count > MAX_STANDALONE_CHATS:
+            raise ValueError(f"Too many standalone chats: {chats_count} (max {MAX_STANDALONE_CHATS})")
         
         counts = {
             "insights": 0,
@@ -202,11 +217,23 @@ class UserService:
             # Import insights
             for insight_data in data.get("insights", []):
                 # Validate required fields
-                required_fields = ["passage_reference", "passage_text", "historical_context", 
+                required_fields = ["passage_reference", "passage_text", "historical_context",
                                    "theological_significance", "practical_application"]
                 for field in required_fields:
                     if field not in insight_data:
                         raise ValueError(f"Missing required field '{field}' in insight data")
+
+                # Validate field lengths
+                if len(insight_data.get("passage_text", "")) > MAX_TEXT_LENGTH:
+                    raise ValueError(f"Passage text too long (max {MAX_TEXT_LENGTH} characters)")
+                if len(insight_data.get("passage_reference", "")) > 200:
+                    raise ValueError(f"Passage reference too long (max 200 characters)")
+                if len(insight_data.get("historical_context", "")) > MAX_FIELD_LENGTH:
+                    raise ValueError(f"Historical context too long (max {MAX_FIELD_LENGTH} characters)")
+                if len(insight_data.get("theological_significance", "")) > MAX_FIELD_LENGTH:
+                    raise ValueError(f"Theological significance too long (max {MAX_FIELD_LENGTH} characters)")
+                if len(insight_data.get("practical_application", "")) > MAX_FIELD_LENGTH:
+                    raise ValueError(f"Practical application too long (max {MAX_FIELD_LENGTH} characters)")
                 
                 # Check if insight already exists (by reference and text)
                 existing_insight = db.query(SavedInsight).filter(
@@ -240,7 +267,11 @@ class UserService:
                 for msg_data in insight_data.get("chat_messages", []):
                     if "role" not in msg_data or "content" not in msg_data:
                         continue  # Skip invalid messages
-                    
+
+                    # Validate message content length
+                    if len(msg_data.get("content", "")) > MAX_FIELD_LENGTH:
+                        raise ValueError(f"Message content too long (max {MAX_FIELD_LENGTH} characters)")
+
                     new_msg = ChatMessage(
                         insight_id=insight_id,
                         user_id=user_id,
@@ -252,20 +283,36 @@ class UserService:
             
             # Import standalone chats
             for chat_data in data.get("standalone_chats", []):
+                # Validate chat field lengths
+                title = chat_data.get("title", "")
+                passage_text = chat_data.get("passage_text", "")
+                passage_reference = chat_data.get("passage_reference", "")
+
+                if title and len(title) > 200:
+                    raise ValueError(f"Chat title too long (max 200 characters)")
+                if passage_text and len(passage_text) > MAX_TEXT_LENGTH:
+                    raise ValueError(f"Chat passage text too long (max {MAX_TEXT_LENGTH} characters)")
+                if passage_reference and len(passage_reference) > 200:
+                    raise ValueError(f"Chat passage reference too long (max 200 characters)")
+
                 new_chat = StandaloneChat(
                     user_id=user_id,
-                    title=chat_data.get("title"),
-                    passage_reference=chat_data.get("passage_reference"),
-                    passage_text=chat_data.get("passage_text")
+                    title=title,
+                    passage_reference=passage_reference,
+                    passage_text=passage_text
                 )
                 db.add(new_chat)
                 db.flush()
-                
+
                 # Import messages for this chat
                 for msg_data in chat_data.get("messages", []):
                     if "role" not in msg_data or "content" not in msg_data:
                         continue  # Skip invalid messages
-                    
+
+                    # Validate message content length
+                    if len(msg_data.get("content", "")) > MAX_FIELD_LENGTH:
+                        raise ValueError(f"Message content too long (max {MAX_FIELD_LENGTH} characters)")
+
                     new_msg = StandaloneChatMessage(
                         chat_id=new_chat.id,
                         role=msg_data["role"],
