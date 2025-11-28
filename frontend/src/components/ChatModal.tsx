@@ -34,7 +34,7 @@ const ChatModal: React.FC<ChatModalProps> = ({
 }) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col gap-2">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-2xl">
             <MessageCircle size={28} className="text-primary" />
@@ -47,7 +47,7 @@ const ChatModal: React.FC<ChatModalProps> = ({
 
         {/* Passage quote - shown at top if provided */}
         {passageText && passageReference && (
-          <div className="mb-2 p-4 rounded-lg bg-muted/50 border border-border">
+          <div className="p-4 rounded-lg bg-muted/50 border border-border">
             <h3 className="font-semibold text-sm mb-2 text-primary">
               {passageReference}
             </h3>
