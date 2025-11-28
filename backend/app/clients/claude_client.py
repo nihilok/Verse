@@ -12,7 +12,10 @@ class ClaudeAIClient(AIClient):
     
     def __init__(self):
         settings = get_settings()
-        self.client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+        self.client = anthropic.Anthropic(
+            api_key=settings.anthropic_api_key,
+            timeout=30.0  # 30 second timeout for API calls
+        )
     
     async def generate_insights(
         self, 

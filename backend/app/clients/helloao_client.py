@@ -1,6 +1,9 @@
 import httpx
+import logging
 from typing import Optional, List
 from app.clients.bible_client import BibleClient, BibleVerse, BiblePassage
+
+logger = logging.getLogger(__name__)
 
 
 class HelloAOBibleClient(BibleClient):
@@ -53,12 +56,12 @@ class HelloAOBibleClient(BibleClient):
             # Map translation name to HelloAO API ID
             api_translation = self.TRANSLATION_IDS.get(translation, translation)
             url = f"{self.BASE_URL}/{api_translation}/{book_id}/{chapter}.json"
-            print(f"Fetching from URL: {url}")  # Debug log
+            logger.debug(f"Fetching from URL: {url}")
             response = await self.client.get(url)
             response.raise_for_status()
             return response.json()
         except Exception as e:
-            print(f"Error fetching chapter data: {e}")
+            logger.error(f"Error fetching chapter data for {book} {chapter} ({translation}): {e}", exc_info=True)
             return None
 
     def _extract_verse_text(self, content: List) -> str:
