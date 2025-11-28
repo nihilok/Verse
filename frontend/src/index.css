@@ -257,6 +257,9 @@
 
   /* Chat gradient colors */
   --chat-gradient: rgb(252, 252, 252);
+
+  /* Chat container padding - used for gradient positioning */
+  --chat-padding: 1rem;
 }
 
 .dark {
@@ -372,9 +375,9 @@
     display: block;
     top: 0;
     height: 1.5rem;
-    width: calc(100% + 2rem);
-    margin-left: -1rem;
-    margin-right: -1rem;
+    width: calc(100% + var(--chat-padding) * 2);
+    margin-left: calc(var(--chat-padding) * -1);
+    margin-right: calc(var(--chat-padding) * -1);
     background: linear-gradient(
       to bottom,
       var(--chat-gradient) 0%,
