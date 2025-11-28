@@ -1,7 +1,10 @@
 import anthropic
+import logging
 from typing import Optional, List
 from app.clients.ai_client import AIClient, InsightRequest, InsightResponse, DefinitionRequest, DefinitionResponse
 from app.core.config import get_settings
+
+logger = logging.getLogger(__name__)
 
 
 class ClaudeAIClient(AIClient):
@@ -51,7 +54,7 @@ PRACTICAL_APPLICATION: [your analysis]
                 practical_application=insights.get("practical_application", "")
             )
         except Exception as e:
-            print(f"Error generating insights: {e}")
+            logger.error(f"Error generating insights: {e}", exc_info=True)
             return None
     
     def _parse_insights(self, content: str) -> dict:
@@ -121,7 +124,7 @@ ORIGINAL_LANGUAGE: [original language information]
                 original_language=definition_parts.get("original_language", "")
             )
         except Exception as e:
-            print(f"Error generating definition: {e}")
+            logger.error(f"Error generating definition: {e}", exc_info=True)
             return None
     
     def _parse_definition(self, content: str) -> dict:
@@ -217,7 +220,7 @@ Continue the conversation by answering the user's questions thoughtfully and in 
             
             return response.content[0].text
         except Exception as e:
-            print(f"Error generating chat response: {e}")
+            logger.error(f"Error generating chat response: {e}", exc_info=True)
             return None
     
     async def generate_standalone_chat_response(
@@ -287,5 +290,5 @@ Answer questions thoughtfully and in depth. Draw from biblical scholarship, theo
             
             return response.content[0].text
         except Exception as e:
-            print(f"Error generating standalone chat response: {e}")
+            logger.error(f"Error generating standalone chat response: {e}", exc_info=True)
             return None

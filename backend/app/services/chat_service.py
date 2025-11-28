@@ -1,8 +1,11 @@
+import logging
 from typing import Optional, List
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
 from app.clients.claude_client import ClaudeAIClient
 from app.models.models import ChatMessage, StandaloneChat, StandaloneChatMessage
+
+logger = logging.getLogger(__name__)
 
 
 class ChatService:
@@ -74,7 +77,7 @@ class ChatService:
             db.commit()
         except Exception as e:
             db.rollback()
-            print(f"Error saving chat messages: {e}")
+            logger.error(f"Error saving chat messages for insight {insight_id}, user {user_id}: {e}", exc_info=True)
             # Return None to indicate failure even though we got an AI response
             return None
         
@@ -173,7 +176,7 @@ class ChatService:
             return chat.id
         except Exception as e:
             db.rollback()
-            print(f"Error creating standalone chat: {e}")
+            logger.error(f"Error creating standalone chat for user {user_id}: {e}", exc_info=True)
             return None
     
     async def send_standalone_message(
@@ -240,7 +243,7 @@ class ChatService:
             db.commit()
         except Exception as e:
             db.rollback()
-            print(f"Error sending standalone chat message: {e}")
+            logger.error(f"Error sending standalone chat message for chat {chat_id}, user {user_id}: {e}", exc_info=True)
             return None
         
         return ai_response
