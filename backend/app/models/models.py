@@ -27,7 +27,8 @@ user_insights = Table(
     Base.metadata,
     Column('user_id', Integer, ForeignKey('users.id', ondelete='CASCADE'), primary_key=True),
     Column('insight_id', Integer, ForeignKey('saved_insights.id', ondelete='CASCADE'), primary_key=True),
-    Column('created_at', DateTime(timezone=True), server_default=func.now())
+    Column('created_at', DateTime(timezone=True), server_default=func.now()),
+    Index('idx_user_insights_user_created', 'user_id', 'created_at')
 )
 
 
@@ -37,7 +38,8 @@ user_definitions = Table(
     Base.metadata,
     Column('user_id', Integer, ForeignKey('users.id', ondelete='CASCADE'), primary_key=True),
     Column('definition_id', Integer, ForeignKey('saved_definitions.id', ondelete='CASCADE'), primary_key=True),
-    Column('created_at', DateTime(timezone=True), server_default=func.now())
+    Column('created_at', DateTime(timezone=True), server_default=func.now()),
+    Index('idx_user_definitions_user_created', 'user_id', 'created_at')
 )
 
 
@@ -106,26 +108,31 @@ class SavedDefinition(Base):
 
 class ChatMessage(Base):
     """Model for chat messages related to insights."""
-    
+
     __tablename__ = "chat_messages"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     insight_id = Column(Integer, ForeignKey('saved_insights.id', ondelete='CASCADE'), nullable=False, index=True)
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
     role = Column(String(20), nullable=False)  # 'user' or 'assistant'
     content = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    
+
     # Relationships
     insight = relationship("SavedInsight", back_populates="chat_messages")
     user = relationship("User", back_populates="chat_messages")
 
+    __table_args__ = (
+        Index('idx_chat_messages_user_created', 'user_id', 'created_at'),
+        Index('idx_chat_messages_insight_user_created', 'insight_id', 'user_id', 'created_at'),
+    )
+
 
 class StandaloneChat(Base):
     """Model for standalone chat sessions (not linked to insights)."""
-    
+
     __tablename__ = "standalone_chats"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
     title = Column(String(200), nullable=True)  # Optional title derived from first message
@@ -133,10 +140,14 @@ class StandaloneChat(Base):
     passage_text = Column(Text, nullable=True)  # Optional passage text
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    
+
     # Relationships
     user = relationship("User", back_populates="standalone_chats")
     messages = relationship("StandaloneChatMessage", back_populates="chat", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        Index('idx_standalone_chats_user_updated', 'user_id', 'updated_at'),
+    )
 
 
 class StandaloneChatMessage(Base):
