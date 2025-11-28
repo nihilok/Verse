@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 from typing import Optional, Dict, Any
@@ -10,6 +11,8 @@ from app.services.definition_service import DefinitionService
 from app.services.chat_service import ChatService
 from app.services.user_service import UserService
 from app.models.models import User
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -380,7 +383,7 @@ async def send_chat_message(
         
         return {"response": response}
     except Exception as e:
-        print(f"Error in chat endpoint: {e}")
+        logger.error(f"Error in chat endpoint: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -455,7 +458,7 @@ async def create_standalone_chat(
             ]
         }
     except Exception as e:
-        print(f"Error in create standalone chat endpoint: {e}")
+        logger.error(f"Error in create standalone chat endpoint: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -481,7 +484,7 @@ async def send_standalone_chat_message(
         
         return {"response": response}
     except Exception as e:
-        print(f"Error in standalone chat message endpoint: {e}")
+        logger.error(f"Error in standalone chat message endpoint: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
