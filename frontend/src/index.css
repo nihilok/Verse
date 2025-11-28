@@ -369,6 +369,11 @@
   }
 
   /* Gradient fade at top of chat messages */
+  .chat-messages-container {
+    padding-left: var(--chat-padding);
+    padding-right: var(--chat-padding);
+  }
+
   .chat-messages-container::before {
     content: "";
     position: sticky;

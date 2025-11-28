@@ -47,10 +47,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   return (
     <div className="flex flex-col h-full min-h-0">
       {/* Chat messages */}
-      <div 
-        className="flex-1 overflow-y-auto pb-2 space-y-4 scrollbar-thin min-h-0 relative chat-messages-container"
-        style={{ paddingLeft: 'var(--chat-padding)', paddingRight: 'var(--chat-padding)' }}
-      >
+      <div className="flex-1 overflow-y-auto pb-2 space-y-4 scrollbar-thin min-h-0 relative chat-messages-container">
         {messages.length === 0 ? (
           <div className="text-center text-muted-foreground py-8">
             <p className="text-sm">Ask a question about this passage.</p>
