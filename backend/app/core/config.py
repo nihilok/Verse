@@ -15,9 +15,11 @@ class Settings(BaseSettings):
     environment: str = "development"
     debug: bool = True
     cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
-    
-    # Cookie Settings
-    cookie_secure: bool = False  # Set to True in production with HTTPS
+
+    @property
+    def cookie_secure(self) -> bool:
+        """Cookies are secure in production, insecure in development."""
+        return self.environment == "production"
     
     class Config:
         env_file = ".env"
