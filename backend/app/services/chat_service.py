@@ -10,7 +10,10 @@ logger = logging.getLogger(__name__)
 
 class ChatService:
     """Service for chat operations with AI."""
-    
+
+    # Configuration Constants
+    MAX_CHAT_TITLE_LENGTH = 50  # Maximum length for auto-generated chat titles
+
     def __init__(self):
         self.client = ClaudeAIClient()
     
@@ -151,8 +154,10 @@ class ChatService:
             db.rollback()
             return None
         
-        # Generate title from the first message (first 50 chars)
-        title = user_message[:50] + ("..." if len(user_message) > 50 else "")
+        # Generate title from the first message
+        title = user_message[:self.MAX_CHAT_TITLE_LENGTH] + (
+            "..." if len(user_message) > self.MAX_CHAT_TITLE_LENGTH else ""
+        )
         chat.title = title
         
         try:

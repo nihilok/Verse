@@ -9,12 +9,26 @@ logger = logging.getLogger(__name__)
 
 class ClaudeAIClient(AIClient):
     """Implementation of AIClient using Anthropic's Claude."""
-    
+
+    # API Configuration Constants
+    API_TIMEOUT_SECONDS = 30.0
+    MODEL_NAME = "claude-sonnet-4-5-20250929"
+
+    # Token Limits for Different Operations
+    MAX_TOKENS_INSIGHTS = 1500  # For generating biblical insights
+    MAX_TOKENS_DEFINITION = 1000  # For word definitions
+    MAX_TOKENS_CHAT = 2000  # For chat responses
+
+    # Text Truncation Limits (to avoid token limits)
+    MAX_PASSAGE_TEXT_LENGTH = 2000  # Maximum passage text length in characters
+    MAX_REFERENCE_LENGTH = 200  # Maximum reference string length
+    MAX_CONTEXT_LENGTH = 1000  # Maximum length for each insight context field
+
     def __init__(self):
         settings = get_settings()
         self.client = anthropic.Anthropic(
             api_key=settings.anthropic_api_key,
-            timeout=30.0  # 30 second timeout for API calls
+            timeout=self.API_TIMEOUT_SECONDS
         )
     
     async def generate_insights(
@@ -40,8 +54,8 @@ PRACTICAL_APPLICATION: [your analysis]
 """
             
             message = self.client.messages.create(
-                model="claude-sonnet-4-5-20250929",
-                max_tokens=1500,
+                model=self.MODEL_NAME,
+                max_tokens=self.MAX_TOKENS_INSIGHTS,
                 messages=[
                     {"role": "user", "content": prompt}
                 ]
@@ -110,8 +124,8 @@ ORIGINAL_LANGUAGE: [original language information]
 """
             
             message = self.client.messages.create(
-                model="claude-sonnet-4-5-20250929",
-                max_tokens=1000,
+                model=self.MODEL_NAME,
+                max_tokens=self.MAX_TOKENS_DEFINITION,
                 messages=[
                     {"role": "user", "content": prompt}
                 ]
@@ -180,20 +194,21 @@ ORIGINAL_LANGUAGE: [original language information]
         try:
             # Truncate passage text if too long to avoid token limits
             # Claude has a context window, so we limit each field to reasonable size
-            max_text_length = 2000
-            truncated_passage = passage_text[:max_text_length] + ("..." if len(passage_text) > max_text_length else "")
-            truncated_reference = passage_reference[:200]  # References should be short
-            
+            truncated_passage = passage_text[:self.MAX_PASSAGE_TEXT_LENGTH] + (
+                "..." if len(passage_text) > self.MAX_PASSAGE_TEXT_LENGTH else ""
+            )
+            truncated_reference = passage_reference[:self.MAX_REFERENCE_LENGTH]
+
             # Build the system message with context
-            system_prompt = f"""You are a knowledgeable biblical scholar and theologian having a conversation about a Bible passage. 
+            system_prompt = f"""You are a knowledgeable biblical scholar and theologian having a conversation about a Bible passage.
 
 Passage Reference: {truncated_reference}
 Passage Text: {truncated_passage}
 
 You previously provided these insights:
-- Historical Context: {insight_context.get('historical_context', '')[:1000]}
-- Theological Significance: {insight_context.get('theological_significance', '')[:1000]}
-- Practical Application: {insight_context.get('practical_application', '')[:1000]}
+- Historical Context: {insight_context.get('historical_context', '')[:self.MAX_CONTEXT_LENGTH]}
+- Theological Significance: {insight_context.get('theological_significance', '')[:self.MAX_CONTEXT_LENGTH]}
+- Practical Application: {insight_context.get('practical_application', '')[:self.MAX_CONTEXT_LENGTH]}
 
 Continue the conversation by answering the user's questions thoughtfully and in depth. Draw from biblical scholarship, theology, and practical wisdom. Keep your responses focused and relevant to the passage and previous insights."""
 
@@ -215,8 +230,8 @@ Continue the conversation by answering the user's questions thoughtfully and in 
             
             # Generate response
             response = self.client.messages.create(
-                model="claude-sonnet-4-5-20250929",
-                max_tokens=2000,
+                model=self.MODEL_NAME,
+                max_tokens=self.MAX_TOKENS_CHAT,
                 system=system_prompt,
                 messages=messages
             )
@@ -256,11 +271,12 @@ theology, and practical wisdom."""
             
             # If there's a passage, add it to the system prompt
             if passage_text and passage_reference:
-                max_text_length = 2000
-                truncated_passage = passage_text[:max_text_length] + ("..." if len(passage_text) > max_text_length else "")
-                truncated_reference = passage_reference[:200]
-                
-                system_prompt = f"""You are a knowledgeable biblical scholar and theologian having a conversation about a Bible passage. 
+                truncated_passage = passage_text[:self.MAX_PASSAGE_TEXT_LENGTH] + (
+                    "..." if len(passage_text) > self.MAX_PASSAGE_TEXT_LENGTH else ""
+                )
+                truncated_reference = passage_reference[:self.MAX_REFERENCE_LENGTH]
+
+                system_prompt = f"""You are a knowledgeable biblical scholar and theologian having a conversation about a Bible passage.
 
 Passage Reference: {truncated_reference}
 Passage Text: {truncated_passage}
@@ -285,8 +301,8 @@ Answer questions thoughtfully and in depth. Draw from biblical scholarship, theo
             
             # Generate response
             response = self.client.messages.create(
-                model="claude-sonnet-4-5-20250929",
-                max_tokens=2000,
+                model=self.MODEL_NAME,
+                max_tokens=self.MAX_TOKENS_CHAT,
                 system=system_prompt,
                 messages=messages
             )

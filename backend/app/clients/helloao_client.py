@@ -8,9 +8,10 @@ logger = logging.getLogger(__name__)
 
 class HelloAOBibleClient(BibleClient):
     """Implementation of BibleClient using bible.helloao.org API."""
-    
+
     BASE_URL = "https://bible.helloao.org/api"
-    
+    API_TIMEOUT_SECONDS = 30.0
+
     # Map user-friendly translation names to HelloAO API IDs
     TRANSLATION_IDS = {
         "WEB": "ENGWEBP",  # World English Bible
@@ -40,7 +41,7 @@ class HelloAOBibleClient(BibleClient):
 }
 
     def __init__(self):
-        self.client = httpx.AsyncClient(timeout=30.0)
+        self.client = httpx.AsyncClient(timeout=self.API_TIMEOUT_SECONDS)
     
     async def close(self):
         """Close the HTTP client."""
