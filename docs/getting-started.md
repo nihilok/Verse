@@ -122,7 +122,7 @@ docker compose logs -f db
 
 ## Next Steps
 
-- **[User Guide](guides/user-guide.md)** - Learn all features in detail
+- **[FAQ](faq.md)** - Frequently asked questions
 - **[Development Setup](guides/development.md)** - Set up for contributing
 - **[API Reference](reference/api.md)** - Explore the API endpoints
 - **[Troubleshooting](guides/troubleshooting.md)** - Fix common issues

@@ -378,8 +378,6 @@ See [Backend Development Guide](guides/backend-development.md) for details.
 4. Update frontend with auth UI
 5. Link anonymous users to authenticated accounts
 
-## Deployment Architecture
-
 ### Development
 
 ```

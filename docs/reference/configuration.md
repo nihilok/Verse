@@ -511,5 +511,5 @@ ERROR:    Could not connect to database: connection refused
 
 - [Getting Started](../getting-started.md) - Initial setup
 - [Development Guide](../guides/development.md) - Development environment
-- [Production Deployment](../guides/production.md) - Production configuration
+
 - [Security](../architecture/security.md) - Security features

@@ -336,5 +336,5 @@ Independent of insights:
 ## Related Documentation
 
 - [API Reference](api.md) - API endpoints
-- [Backend Architecture](../architecture/backend.md) - Code structure
-- [User Guide](../guides/user-guide.md) - Features using this data
+- [Architecture Overview](../architecture/) - System design
+- [Configuration Reference](configuration.md) - Environment variables
