@@ -1,5 +1,7 @@
 import logging
+import json
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import Optional, Dict, Any
 from pydantic import BaseModel, field_validator
@@ -371,27 +373,38 @@ async def send_chat_message(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Send a chat message and get AI response."""
+    """Stream chat message response via SSE."""
     service = ChatService()
 
-    try:
-        response = await service.send_message(
-            db=db,
-            insight_id=chat_request.insight_id,
-            user_id=current_user.id,
-            user_message=chat_request.message,
-            passage_text=chat_request.passage_text,
-            passage_reference=chat_request.passage_reference,
-            insight_context=chat_request.insight_context
-        )
+    async def event_stream():
+        try:
+            async for token in service.send_message_stream(
+                db=db,
+                insight_id=chat_request.insight_id,
+                user_id=current_user.id,
+                user_message=chat_request.message,
+                passage_text=chat_request.passage_text,
+                passage_reference=chat_request.passage_reference,
+                insight_context=chat_request.insight_context
+            ):
+                # Send token as SSE event
+                yield f"event: token\ndata: {json.dumps({'token': token})}\n\n"
 
-        if not response:
-            raise HTTPException(status_code=500, detail="Failed to generate chat response")
+            # Send completion event
+            yield f"event: done\ndata: {json.dumps({'status': 'complete'})}\n\n"
+        except Exception as e:
+            logger.error(f"Error streaming chat: {e}", exc_info=True)
+            yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
 
-        return {"response": response}
-    except Exception as e:
-        logger.error(f"Error in chat endpoint: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
 
 
 @router.get("/chat/messages/{insight_id}")
@@ -436,39 +449,43 @@ async def create_standalone_chat(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Create a new standalone chat session."""
+    """Create a new standalone chat session and stream the first response via SSE."""
     service = ChatService()
 
-    try:
-        chat_id = await service.create_standalone_chat(
-            db=db,
-            user_id=current_user.id,
-            user_message=chat_create_request.message,
-            passage_text=chat_create_request.passage_text,
-            passage_reference=chat_create_request.passage_reference
-        )
+    async def event_stream():
+        chat_id = None
+        try:
+            async for token in service.create_standalone_chat_stream(
+                db=db,
+                user_id=current_user.id,
+                user_message=chat_create_request.message,
+                passage_text=chat_create_request.passage_text,
+                passage_reference=chat_create_request.passage_reference
+            ):
+                # Check if this is the chat_id marker
+                if token.startswith("__CHAT_ID__:"):
+                    chat_id = int(token.split(":", 1)[1])
+                    # Send chat_id event
+                    yield f"event: chat_id\ndata: {json.dumps({'chat_id': chat_id})}\n\n"
+                else:
+                    # Send token as SSE event
+                    yield f"event: token\ndata: {json.dumps({'token': token})}\n\n"
 
-        if not chat_id:
-            raise HTTPException(status_code=500, detail="Failed to create chat")
+            # Send completion event
+            yield f"event: done\ndata: {json.dumps({'status': 'complete'})}\n\n"
+        except Exception as e:
+            logger.error(f"Error streaming standalone chat creation: {e}", exc_info=True)
+            yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
 
-        # Get the messages for the new chat
-        messages = service.get_standalone_chat_messages(db, chat_id, current_user.id)
-
-        return {
-            "chat_id": chat_id,
-            "messages": [
-                {
-                    "id": msg.id,
-                    "role": msg.role,
-                    "content": msg.content,
-                    "timestamp": int(msg.created_at.timestamp() * 1000) if msg.created_at else None
-                }
-                for msg in messages
-            ]
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
         }
-    except Exception as e:
-        logger.error(f"Error in create standalone chat endpoint: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+    )
 
 
 @router.post("/standalone-chat/message")
@@ -479,24 +496,35 @@ async def send_standalone_chat_message(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Send a message in a standalone chat."""
+    """Stream standalone chat message response via SSE."""
     service = ChatService()
 
-    try:
-        response = await service.send_standalone_message(
-            db=db,
-            chat_id=chat_message_request.chat_id,
-            user_id=current_user.id,
-            user_message=chat_message_request.message
-        )
+    async def event_stream():
+        try:
+            async for token in service.send_standalone_message_stream(
+                db=db,
+                chat_id=chat_message_request.chat_id,
+                user_id=current_user.id,
+                user_message=chat_message_request.message
+            ):
+                # Send token as SSE event
+                yield f"event: token\ndata: {json.dumps({'token': token})}\n\n"
 
-        if not response:
-            raise HTTPException(status_code=500, detail="Failed to send message")
+            # Send completion event
+            yield f"event: done\ndata: {json.dumps({'status': 'complete'})}\n\n"
+        except Exception as e:
+            logger.error(f"Error streaming standalone chat: {e}", exc_info=True)
+            yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
 
-        return {"response": response}
-    except Exception as e:
-        logger.error(f"Error in standalone chat message endpoint: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
 
 
 @router.get("/standalone-chat")
