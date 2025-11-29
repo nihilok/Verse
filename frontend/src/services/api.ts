@@ -93,22 +93,92 @@ export const bibleService = {
     passageText: string,
     passageReference: string,
     insightContext: Insight,
-  ): Promise<string> {
-    const response = await axios.post<{ response: string }>(
-      `${API_BASE_URL}/chat/message`,
-      {
-        insight_id: insightId,
-        message,
-        passage_text: passageText,
-        passage_reference: passageReference,
-        insight_context: {
-          historical_context: insightContext.historical_context,
-          theological_significance: insightContext.theological_significance,
-          practical_application: insightContext.practical_application,
+    onToken: (token: string) => void,
+  ): Promise<void> {
+    return new Promise((resolve, reject) => {
+      fetch(`${API_BASE_URL}/chat/message`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-      },
-    );
-    return response.data.response;
+        credentials: 'include',
+        body: JSON.stringify({
+          insight_id: insightId,
+          message,
+          passage_text: passageText,
+          passage_reference: passageReference,
+          insight_context: {
+            historical_context: insightContext.historical_context,
+            theological_significance: insightContext.theological_significance,
+            practical_application: insightContext.practical_application,
+          },
+        }),
+      }).then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const reader = response.body?.getReader();
+        if (!reader) {
+          throw new Error('ReadableStream not supported');
+        }
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        const readStream = async () => {
+          try {
+            // eslint-disable-next-line no-constant-condition
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+
+              buffer += decoder.decode(value, { stream: true });
+              const lines = buffer.split('\n');
+              buffer = lines.pop() || '';
+
+              for (const line of lines) {
+                if (line.startsWith('event: token')) {
+                  continue;
+                }
+                if (line.startsWith('data: ')) {
+                  try {
+                    const data = JSON.parse(line.slice(6));
+                    if (data.token) {
+                      onToken(data.token);
+                    }
+                  } catch {
+                    console.error('Error parsing SSE data');
+                  }
+                }
+                if (line.startsWith('event: done')) {
+                  resolve();
+                  return;
+                }
+                if (line.startsWith('event: error')) {
+                  const errorLine = lines.find(l => l.startsWith('data: '));
+                  if (errorLine) {
+                    try {
+                      const errorData = JSON.parse(errorLine.slice(6));
+                      reject(new Error(errorData.error || 'Unknown error'));
+                    } catch {
+                      reject(new Error('Unknown error'));
+                    }
+                  } else {
+                    reject(new Error('Unknown error'));
+                  }
+                  return;
+                }
+              }
+            }
+          } catch (error) {
+            reject(error);
+          }
+        };
+
+        readStream().catch(reject);
+      }).catch(reject);
+    });
   },
 
   async getChatMessages(insightId: number): Promise<ChatMessage[]> {
@@ -124,32 +194,183 @@ export const bibleService = {
 
   async createStandaloneChat(
     message: string,
+    onToken: (token: string) => void,
     passageText?: string,
     passageReference?: string,
-  ): Promise<{ chat_id: number; messages: StandaloneChatMessage[] }> {
-    const response = await axios.post<{ chat_id: number; messages: StandaloneChatMessage[] }>(
-      `${API_BASE_URL}/standalone-chat`,
-      {
-        message,
-        passage_text: passageText,
-        passage_reference: passageReference,
-      },
-    );
-    return response.data;
+  ): Promise<number> {
+    return new Promise((resolve, reject) => {
+      let chatId: number | null = null;
+
+      fetch(`${API_BASE_URL}/standalone-chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          message,
+          passage_text: passageText,
+          passage_reference: passageReference,
+        }),
+      }).then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const reader = response.body?.getReader();
+        if (!reader) {
+          throw new Error('ReadableStream not supported');
+        }
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        const readStream = async () => {
+          try {
+            // eslint-disable-next-line no-constant-condition
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+
+              buffer += decoder.decode(value, { stream: true });
+              const lines = buffer.split('\n');
+              buffer = lines.pop() || '';
+
+              for (const line of lines) {
+                if (line.startsWith('event: chat_id')) {
+                  continue;
+                }
+                if (line.startsWith('event: token')) {
+                  continue;
+                }
+                if (line.startsWith('data: ')) {
+                  try {
+                    const data = JSON.parse(line.slice(6));
+                    if (data.chat_id) {
+                      chatId = data.chat_id;
+                    } else if (data.token) {
+                      onToken(data.token);
+                    }
+                  } catch {
+                    console.error('Error parsing SSE data');
+                  }
+                }
+                if (line.startsWith('event: done')) {
+                  if (chatId !== null) {
+                    resolve(chatId);
+                  } else {
+                    reject(new Error('No chat ID received'));
+                  }
+                  return;
+                }
+                if (line.startsWith('event: error')) {
+                  const errorLine = lines.find(l => l.startsWith('data: '));
+                  if (errorLine) {
+                    try {
+                      const errorData = JSON.parse(errorLine.slice(6));
+                      reject(new Error(errorData.error || 'Unknown error'));
+                    } catch {
+                      reject(new Error('Unknown error'));
+                    }
+                  } else {
+                    reject(new Error('Unknown error'));
+                  }
+                  return;
+                }
+              }
+            }
+          } catch (error) {
+            reject(error);
+          }
+        };
+
+        readStream().catch(reject);
+      }).catch(reject);
+    });
   },
 
   async sendStandaloneChatMessage(
     chatId: number,
     message: string,
-  ): Promise<string> {
-    const response = await axios.post<{ response: string }>(
-      `${API_BASE_URL}/standalone-chat/message`,
-      {
-        chat_id: chatId,
-        message,
-      },
-    );
-    return response.data.response;
+    onToken: (token: string) => void,
+  ): Promise<void> {
+    return new Promise((resolve, reject) => {
+      fetch(`${API_BASE_URL}/standalone-chat/message`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          chat_id: chatId,
+          message,
+        }),
+      }).then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const reader = response.body?.getReader();
+        if (!reader) {
+          throw new Error('ReadableStream not supported');
+        }
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        const readStream = async () => {
+          try {
+            // eslint-disable-next-line no-constant-condition
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+
+              buffer += decoder.decode(value, { stream: true });
+              const lines = buffer.split('\n');
+              buffer = lines.pop() || '';
+
+              for (const line of lines) {
+                if (line.startsWith('event: token')) {
+                  continue;
+                }
+                if (line.startsWith('data: ')) {
+                  try {
+                    const data = JSON.parse(line.slice(6));
+                    if (data.token) {
+                      onToken(data.token);
+                    }
+                  } catch {
+                    console.error('Error parsing SSE data');
+                  }
+                }
+                if (line.startsWith('event: done')) {
+                  resolve();
+                  return;
+                }
+                if (line.startsWith('event: error')) {
+                  const errorLine = lines.find(l => l.startsWith('data: '));
+                  if (errorLine) {
+                    try {
+                      const errorData = JSON.parse(errorLine.slice(6));
+                      reject(new Error(errorData.error || 'Unknown error'));
+                    } catch {
+                      reject(new Error('Unknown error'));
+                    }
+                  } else {
+                    reject(new Error('Unknown error'));
+                  }
+                  return;
+                }
+              }
+            }
+          } catch (error) {
+            reject(error);
+          }
+        };
+
+        readStream().catch(reject);
+      }).catch(reject);
+    });
   },
 
   async getStandaloneChats(limit: number = 50): Promise<StandaloneChat[]> {
