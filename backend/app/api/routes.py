@@ -5,6 +5,7 @@ from typing import Optional, Dict, Any
 from pydantic import BaseModel, field_validator
 
 from app.core.database import get_db
+from app.core.rate_limiter import limiter, AI_ENDPOINT_LIMIT, CHAT_ENDPOINT_LIMIT
 from app.services.bible_service import BibleService
 from app.services.insight_service import InsightService
 from app.services.definition_service import DefinitionService
@@ -163,20 +164,22 @@ async def get_chapter(
 
 
 @router.post("/insights")
+@limiter.limit(AI_ENDPOINT_LIMIT)
 async def generate_insights(
-    request: InsightRequestModel,
+    request: Request,
+    insight_request: InsightRequestModel,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Generate AI insights for a passage."""
     service = InsightService()
-    
+
     # Check if we already have insights for this passage
-    if request.save:
+    if insight_request.save:
         existing = service.get_saved_insight(
-            db, 
-            request.passage_reference,
-            request.passage_text
+            db,
+            insight_request.passage_reference,
+            insight_request.passage_text
         )
         if existing:
             # Link the insight to the user if not already linked
@@ -188,28 +191,28 @@ async def generate_insights(
                 "practical_application": existing.practical_application,
                 "cached": True
             }
-    
+
     # Generate new insights
     insights = await service.generate_insights(
-        passage_text=request.passage_text,
-        passage_reference=request.passage_reference
+        passage_text=insight_request.passage_text,
+        passage_reference=insight_request.passage_reference
     )
-    
+
     if not insights:
         raise HTTPException(status_code=500, detail="Failed to generate insights")
-    
+
     # Save if requested
     insight_id = None
-    if request.save:
+    if insight_request.save:
         saved_insight = service.save_insight(
             db,
-            request.passage_reference,
-            request.passage_text,
+            insight_request.passage_reference,
+            insight_request.passage_text,
             insights,
             current_user.id
         )
         insight_id = saved_insight.id
-    
+
     return {
         "id": insight_id,
         "historical_context": insights.historical_context,
@@ -258,21 +261,23 @@ async def clear_insights_history(
 
 
 @router.post("/definitions")
+@limiter.limit(AI_ENDPOINT_LIMIT)
 async def generate_definition(
-    request: DefinitionRequestModel,
+    request: Request,
+    definition_request: DefinitionRequestModel,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Generate AI definition for a word in context."""
     service = DefinitionService()
-    
+
     # Check if we already have a definition for this word in this context
-    if request.save:
+    if definition_request.save:
         existing = service.get_saved_definition(
-            db, 
-            request.word,
-            request.passage_reference,
-            request.verse_text
+            db,
+            definition_request.word,
+            definition_request.passage_reference,
+            definition_request.verse_text
         )
         if existing:
             # Link the definition to the user if not already linked
@@ -285,33 +290,33 @@ async def generate_definition(
                 "original_language": existing.original_language,
                 "cached": True
             }
-    
+
     # Generate new definition
     definition = await service.generate_definition(
-        word=request.word,
-        verse_text=request.verse_text,
-        passage_reference=request.passage_reference
+        word=definition_request.word,
+        verse_text=definition_request.verse_text,
+        passage_reference=definition_request.passage_reference
     )
-    
+
     if not definition:
         raise HTTPException(status_code=500, detail="Failed to generate definition")
-    
+
     # Save if requested
     definition_id = None
-    if request.save:
+    if definition_request.save:
         saved_definition = service.save_definition(
             db,
-            request.word,
-            request.passage_reference,
-            request.verse_text,
+            definition_request.word,
+            definition_request.passage_reference,
+            definition_request.verse_text,
             definition,
             current_user.id
         )
         definition_id = saved_definition.id
-    
+
     return {
         "id": definition_id,
-        "word": request.word,
+        "word": definition_request.word,
         "definition": definition.definition,
         "biblical_usage": definition.biblical_usage,
         "original_language": definition.original_language,
@@ -359,28 +364,30 @@ async def clear_definitions_history(
 
 
 @router.post("/chat/message")
+@limiter.limit(CHAT_ENDPOINT_LIMIT)
 async def send_chat_message(
-    request: ChatMessageRequest,
+    request: Request,
+    chat_request: ChatMessageRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Send a chat message and get AI response."""
     service = ChatService()
-    
+
     try:
         response = await service.send_message(
             db=db,
-            insight_id=request.insight_id,
+            insight_id=chat_request.insight_id,
             user_id=current_user.id,
-            user_message=request.message,
-            passage_text=request.passage_text,
-            passage_reference=request.passage_reference,
-            insight_context=request.insight_context
+            user_message=chat_request.message,
+            passage_text=chat_request.passage_text,
+            passage_reference=chat_request.passage_reference,
+            insight_context=chat_request.insight_context
         )
-        
+
         if not response:
             raise HTTPException(status_code=500, detail="Failed to generate chat response")
-        
+
         return {"response": response}
     except Exception as e:
         logger.error(f"Error in chat endpoint: {e}", exc_info=True)
@@ -422,29 +429,31 @@ async def clear_chat_messages(
 
 
 @router.post("/standalone-chat")
+@limiter.limit(CHAT_ENDPOINT_LIMIT)
 async def create_standalone_chat(
-    request: StandaloneChatCreateRequest,
+    request: Request,
+    chat_create_request: StandaloneChatCreateRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Create a new standalone chat session."""
     service = ChatService()
-    
+
     try:
         chat_id = await service.create_standalone_chat(
             db=db,
             user_id=current_user.id,
-            user_message=request.message,
-            passage_text=request.passage_text,
-            passage_reference=request.passage_reference
+            user_message=chat_create_request.message,
+            passage_text=chat_create_request.passage_text,
+            passage_reference=chat_create_request.passage_reference
         )
-        
+
         if not chat_id:
             raise HTTPException(status_code=500, detail="Failed to create chat")
-        
+
         # Get the messages for the new chat
         messages = service.get_standalone_chat_messages(db, chat_id, current_user.id)
-        
+
         return {
             "chat_id": chat_id,
             "messages": [
@@ -463,25 +472,27 @@ async def create_standalone_chat(
 
 
 @router.post("/standalone-chat/message")
+@limiter.limit(CHAT_ENDPOINT_LIMIT)
 async def send_standalone_chat_message(
-    request: StandaloneChatMessageRequest,
+    request: Request,
+    chat_message_request: StandaloneChatMessageRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Send a message in a standalone chat."""
     service = ChatService()
-    
+
     try:
         response = await service.send_standalone_message(
             db=db,
-            chat_id=request.chat_id,
+            chat_id=chat_message_request.chat_id,
             user_id=current_user.id,
-            user_message=request.message
+            user_message=chat_message_request.message
         )
-        
+
         if not response:
             raise HTTPException(status_code=500, detail="Failed to send message")
-        
+
         return {"response": response}
     except Exception as e:
         logger.error(f"Error in standalone chat message endpoint: {e}", exc_info=True)
