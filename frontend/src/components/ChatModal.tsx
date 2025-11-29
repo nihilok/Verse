@@ -19,6 +19,7 @@ interface ChatModalProps {
   messages: ChatMessage[] | StandaloneChatMessage[];
   onSendMessage: (message: string) => Promise<void>;
   loading: boolean;
+  streamingMessage?: string;
 }
 
 const ChatModal: React.FC<ChatModalProps> = ({
@@ -31,6 +32,7 @@ const ChatModal: React.FC<ChatModalProps> = ({
   messages,
   onSendMessage,
   loading,
+  streamingMessage,
 }) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -60,6 +62,7 @@ const ChatModal: React.FC<ChatModalProps> = ({
             messages={messages}
             onSendMessage={onSendMessage}
             loading={loading}
+            streamingMessage={streamingMessage}
           />
         </div>
       </DialogContent>

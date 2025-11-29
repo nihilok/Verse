@@ -10,12 +10,14 @@ interface ChatInterfaceProps {
   messages: ChatMessage[];
   onSendMessage: (message: string) => Promise<void>;
   loading: boolean;
+  streamingMessage?: string;
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({
   messages,
   onSendMessage,
   loading,
+  streamingMessage,
 }) => {
   const [inputValue, setInputValue] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -26,7 +28,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, streamingMessage]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,7 +80,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             </div>
           ))
         )}
-        {loading && (
+        {streamingMessage && (
+          <div className="flex justify-start">
+            <div className="max-w-[95%] md:max-w-[85%] rounded-lg px-4 py-2 bg-muted">
+              <div className="prose prose-sm llm-response dark:prose-invert max-w-none">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {streamingMessage}
+                </ReactMarkdown>
+              </div>
+            </div>
+          </div>
+        )}
+        {loading && !streamingMessage && (
           <div className="flex justify-start">
             <div className="bg-muted rounded-lg px-4 py-2 flex items-center gap-2">
               <Loader2 size={16} className="animate-spin" />
