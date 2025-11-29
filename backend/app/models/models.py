@@ -22,6 +22,11 @@ class User(Base):
 
 
 # Linking table for many-to-many relationship between users and insights
+# NOTE: The indexes defined below require database migrations for existing databases.
+# For new deployments, indexes are created automatically by create_all().
+# For existing databases, use Alembic migrations:
+#   alembic revision --autogenerate -m "add composite indexes"
+#   alembic upgrade head
 user_insights = Table(
     'user_insights',
     Base.metadata,

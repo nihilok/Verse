@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -5,6 +6,19 @@ from app.core.config import get_settings
 from app.core.database import engine, Base
 from app.core.middleware import AnonymousUserMiddleware
 from app.api.routes import router
+
+# Configure logging for the application
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler()  # Output to console (captured by Docker/systemd in production)
+    ]
+)
+
+# Set specific log levels for noisy libraries
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("anthropic").setLevel(logging.WARNING)
 
 
 @asynccontextmanager
@@ -32,7 +46,7 @@ app.add_middleware(
     allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "DELETE"],
-    allow_headers=["Content-Type", "Accept", "Cookie"],
+    allow_headers=["Content-Type", "Accept", "Cookie", "Authorization"],
 )
 
 # Add anonymous user middleware

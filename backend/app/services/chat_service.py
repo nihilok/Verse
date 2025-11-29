@@ -12,7 +12,12 @@ class ChatService:
     """Service for chat operations with AI."""
 
     # Configuration Constants
-    MAX_CHAT_TITLE_LENGTH = 50  # Maximum length for auto-generated chat titles
+    # The database allows chat titles up to 200 characters (see models.py: title = Column(String(200))).
+    # We limit auto-generated titles to 50 characters for UI clarity and to prevent overly long
+    # titles from the first message. This value is intentionally lower than the database maximum
+    # to ensure titles display well in all UI contexts (chat history lists, mobile views, etc.).
+    # User-provided titles or manual edits can still use the full 200 characters if needed.
+    MAX_CHAT_TITLE_LENGTH = 50  # Maximum length for auto-generated chat titles (UI/display limit)
 
     def __init__(self):
         self.client = ClaudeAIClient()
