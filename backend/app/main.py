@@ -2,9 +2,12 @@ import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from app.core.config import get_settings
 from app.core.database import engine, Base
 from app.core.middleware import AnonymousUserMiddleware
+from app.core.rate_limiter import limiter
 from app.api.routes import router
 
 # Configure logging for the application
@@ -39,6 +42,10 @@ app = FastAPI(
     debug=settings.debug,
     lifespan=lifespan
 )
+
+# Add rate limiter to app state
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Configure CORS
 app.add_middleware(
