@@ -65,13 +65,15 @@ function App() {
   const [currentInsightId, setCurrentInsightId] = useState<number | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
-  
+  const [chatStreamingMessage, setChatStreamingMessage] = useState<string>("");
+
   // Standalone chat state
   const [chatHistory, setChatHistory] = useState<StandaloneChat[]>([]);
   const [currentChatId, setCurrentChatId] = useState<number | null>(null);
   const [currentChatPassage, setCurrentChatPassage] = useState<{ text: string; reference: string } | null>(null);
   const [standaloneChatMessages, setStandaloneChatMessages] = useState<StandaloneChatMessage[]>([]);
   const [standaloneChatLoading, setStandaloneChatLoading] = useState(false);
+  const [standaloneChatStreamingMessage, setStandaloneChatStreamingMessage] = useState<string>("");
   const [chatModalOpen, setChatModalOpen] = useState(false);
   const [insightChatModalOpen, setInsightChatModalOpen] = useState(false);
   const [pendingChatPassage, setPendingChatPassage] = useState<{ text: string; reference: string } | null>(null);
@@ -382,32 +384,49 @@ function App() {
     // Optimistically add the user's message
     setStandaloneChatMessages((prev) => [...prev, tempMessage]);
     setStandaloneChatLoading(true);
+    setStandaloneChatStreamingMessage("");
 
     try {
-      // If no chat exists yet, create it with the first message
+      // If no chat exists yet, create it with the first message (now with streaming!)
       if (!currentChatId) {
-        const result = await bibleService.createStandaloneChat(
+        const chatId = await bibleService.createStandaloneChat(
           message,
+          (token: string) => {
+            // Accumulate tokens as they arrive
+            setStandaloneChatStreamingMessage((prev) => prev + token);
+          },
           pendingChatPassage?.text,
           pendingChatPassage?.reference
         );
-        
-        setCurrentChatId(result.chat_id);
-        setStandaloneChatMessages(result.messages);
+
+        setCurrentChatId(chatId);
         setPendingChatPassage(null); // Clear pending passage flag after creating chat
         // Note: currentChatPassage is kept so the passage stays visible
+
+        // After successful send, reload authoritative messages from server
+        const messages = await bibleService.getStandaloneChatMessages(chatId);
+        setStandaloneChatMessages(messages);
+        setStandaloneChatStreamingMessage("");
 
         // Reload chat history
         const chats = await bibleService.getStandaloneChats(MAX_HISTORY_ITEMS);
         setChatHistory(chats);
       } else {
-        // Send message to existing chat
-        await bibleService.sendStandaloneChatMessage(currentChatId, message);
+        // Send message to existing chat with streaming
+        await bibleService.sendStandaloneChatMessage(
+          currentChatId,
+          message,
+          (token: string) => {
+            // Accumulate tokens as they arrive
+            setStandaloneChatStreamingMessage((prev) => prev + token);
+          }
+        );
 
         // After successful send, reload authoritative messages from server
         const messages = await bibleService.getStandaloneChatMessages(currentChatId);
         setStandaloneChatMessages(messages);
-        
+        setStandaloneChatStreamingMessage("");
+
         // Update chat history to reflect new message
         const chats = await bibleService.getStandaloneChats(MAX_HISTORY_ITEMS);
         setChatHistory(chats);
@@ -418,6 +437,7 @@ function App() {
 
       // Remove the optimistic temp message on failure
       setStandaloneChatMessages((prev) => prev.filter((m) => m.id !== tempId));
+      setStandaloneChatStreamingMessage("");
     } finally {
       setStandaloneChatLoading(false);
     }
@@ -461,26 +481,33 @@ function App() {
     // Optimistically add the user's message
     setChatMessages((prev) => [...prev, tempMessage]);
     setChatLoading(true);
+    setChatStreamingMessage("");
 
     try {
-      // Send message to server
+      // Send message to server with streaming
       await bibleService.sendChatMessage(
         currentInsightId,
         message,
         selectedText,
         selectedReference,
         insight,
+        (token: string) => {
+          // Accumulate tokens as they arrive
+          setChatStreamingMessage((prev) => prev + token);
+        }
       );
 
       // After successful send, reload authoritative messages from server
       const messages = await bibleService.getChatMessages(currentInsightId);
       setChatMessages(messages);
+      setChatStreamingMessage("");
     } catch (err) {
       console.error("Failed to send chat message:", err);
       setError("Failed to send message. Please try again.");
 
       // Remove the optimistic temp message on failure
       setChatMessages((prev) => prev.filter((m) => m.id !== tempId));
+      setChatStreamingMessage("");
     } finally {
       setChatLoading(false);
     }
@@ -740,6 +767,7 @@ function App() {
         messages={standaloneChatMessages}
         onSendMessage={handleSendStandaloneChatMessage}
         loading={standaloneChatLoading}
+        streamingMessage={standaloneChatStreamingMessage}
       />
 
       {/* Insight Chat Modal */}
@@ -751,6 +779,7 @@ function App() {
         messages={chatMessages}
         onSendMessage={handleSendInsightChatMessage}
         loading={chatLoading}
+        streamingMessage={chatStreamingMessage}
       />
 
       {/* Loading overlays */}
