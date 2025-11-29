@@ -7,6 +7,7 @@ from slowapi.errors import RateLimitExceeded
 from app.core.config import get_settings
 from app.core.database import engine, Base
 from app.core.middleware import AnonymousUserMiddleware
+from app.core.security_headers import SecurityHeadersMiddleware
 from app.core.rate_limiter import limiter
 from app.api.routes import router
 
@@ -55,6 +56,9 @@ app.add_middleware(
     allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["Content-Type", "Accept", "Cookie", "Authorization"],
 )
+
+# Add security headers middleware
+app.add_middleware(SecurityHeadersMiddleware)
 
 # Add anonymous user middleware
 app.add_middleware(AnonymousUserMiddleware)
