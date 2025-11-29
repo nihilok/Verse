@@ -127,14 +127,14 @@ class ChatService:
     ) -> Optional[int]:
         """
         Create a new standalone chat session and send the first message.
-        
+
         Args:
             db: Database session
             user_id: ID of the user creating the chat
             user_message: The user's first message
             passage_text: Optional Bible passage text for context
             passage_reference: Optional Bible passage reference
-        
+
         Returns:
             The chat ID if successful, None otherwise
         """
@@ -146,7 +146,7 @@ class ChatService:
         )
         db.add(chat)
         db.flush()  # Flush to get the chat ID
-        
+
         # Generate AI response
         ai_response = await self.client.generate_standalone_chat_response(
             user_message=user_message,
@@ -154,17 +154,17 @@ class ChatService:
             passage_reference=passage_reference,
             chat_history=[]
         )
-        
+
         if not ai_response:
             db.rollback()
             return None
-        
+
         # Generate title from the first message
         title = user_message[:self.MAX_CHAT_TITLE_LENGTH] + (
             "..." if len(user_message) > self.MAX_CHAT_TITLE_LENGTH else ""
         )
         chat.title = title
-        
+
         try:
             # Save user message
             user_msg = StandaloneChatMessage(
@@ -173,7 +173,7 @@ class ChatService:
                 content=user_message
             )
             db.add(user_msg)
-            
+
             # Save AI response
             ai_msg = StandaloneChatMessage(
                 chat_id=chat.id,
@@ -181,13 +181,89 @@ class ChatService:
                 content=ai_response
             )
             db.add(ai_msg)
-            
+
             db.commit()
             return chat.id
         except Exception as e:
             db.rollback()
             logger.error(f"Error creating standalone chat for user {user_id}: {e}", exc_info=True)
             return None
+
+    async def create_standalone_chat_stream(
+        self,
+        db: Session,
+        user_id: int,
+        user_message: str,
+        passage_text: Optional[str] = None,
+        passage_reference: Optional[str] = None
+    ):
+        """
+        Create a new standalone chat session and stream the first message.
+
+        Args:
+            db: Database session
+            user_id: ID of the user creating the chat
+            user_message: The user's first message
+            passage_text: Optional Bible passage text for context
+            passage_reference: Optional Bible passage reference
+
+        Yields:
+            Text tokens as they arrive from Claude, then chat_id as final event
+        """
+        # Create the chat session
+        chat = StandaloneChat(
+            user_id=user_id,
+            passage_text=passage_text,
+            passage_reference=passage_reference
+        )
+        db.add(chat)
+        db.flush()  # Flush to get the chat ID
+
+        # Generate title from the first message
+        title = user_message[:self.MAX_CHAT_TITLE_LENGTH] + (
+            "..." if len(user_message) > self.MAX_CHAT_TITLE_LENGTH else ""
+        )
+        chat.title = title
+
+        # Buffer the complete response as we stream
+        complete_response = ""
+
+        try:
+            # Stream from AI client
+            async for token in self.client.generate_standalone_chat_response_stream(
+                user_message=user_message,
+                passage_text=passage_text,
+                passage_reference=passage_reference,
+                chat_history=[]
+            ):
+                complete_response += token
+                yield token
+
+            # Save to database atomically after streaming completes
+            # Save user message
+            user_msg = StandaloneChatMessage(
+                chat_id=chat.id,
+                role="user",
+                content=user_message
+            )
+            db.add(user_msg)
+
+            # Save AI response
+            ai_msg = StandaloneChatMessage(
+                chat_id=chat.id,
+                role="assistant",
+                content=complete_response
+            )
+            db.add(ai_msg)
+
+            db.commit()
+
+            # Yield the chat_id as a special marker at the end
+            yield f"__CHAT_ID__:{chat.id}"
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error creating standalone chat stream for user {user_id}: {e}", exc_info=True)
+            raise
     
     async def send_standalone_message(
         self,
@@ -307,3 +383,141 @@ class ChatService:
             db.commit()
             return True
         return False
+
+    async def send_message_stream(
+        self,
+        db: Session,
+        insight_id: int,
+        user_id: int,
+        user_message: str,
+        passage_text: str,
+        passage_reference: str,
+        insight_context: dict
+    ):
+        """
+        Stream chat response and save to database after completion.
+
+        Args:
+            db: Database session
+            insight_id: ID of the insight this chat belongs to
+            user_id: ID of the user sending the message
+            user_message: The user's message
+            passage_text: The Bible passage text
+            passage_reference: The Bible passage reference
+            insight_context: The original insights (historical, theological, practical)
+
+        Yields:
+            Text tokens as they arrive from Claude
+        """
+        # Get previous chat history for this user
+        chat_history = self.get_chat_messages(db, insight_id, user_id)
+
+        # Buffer the complete response as we stream
+        complete_response = ""
+
+        try:
+            # Stream from AI client
+            async for token in self.client.generate_chat_response_stream(
+                user_message=user_message,
+                passage_text=passage_text,
+                passage_reference=passage_reference,
+                insight_context=insight_context,
+                chat_history=chat_history
+            ):
+                complete_response += token
+                yield token
+
+            # Save to database atomically after streaming completes
+            # Save user message
+            user_msg = ChatMessage(
+                insight_id=insight_id,
+                user_id=user_id,
+                role="user",
+                content=user_message
+            )
+            db.add(user_msg)
+
+            # Save AI response
+            ai_msg = ChatMessage(
+                insight_id=insight_id,
+                user_id=user_id,
+                role="assistant",
+                content=complete_response
+            )
+            db.add(ai_msg)
+
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error streaming chat messages for insight {insight_id}, user {user_id}: {e}", exc_info=True)
+            raise
+
+    async def send_standalone_message_stream(
+        self,
+        db: Session,
+        chat_id: int,
+        user_id: int,
+        user_message: str
+    ):
+        """
+        Stream standalone chat response and save to database after completion.
+
+        Args:
+            db: Database session
+            chat_id: ID of the chat session
+            user_id: ID of the user sending the message
+            user_message: The user's message
+
+        Yields:
+            Text tokens as they arrive from Claude
+        """
+        # Get the chat session and verify it belongs to the user
+        chat = db.query(StandaloneChat).filter(
+            StandaloneChat.id == chat_id,
+            StandaloneChat.user_id == user_id
+        ).first()
+        if not chat:
+            raise ValueError(f"Chat {chat_id} not found for user {user_id}")
+
+        # Get previous chat history
+        chat_history = self.get_standalone_chat_messages(db, chat_id, user_id)
+
+        # Buffer the complete response as we stream
+        complete_response = ""
+
+        try:
+            # Stream from AI client
+            async for token in self.client.generate_standalone_chat_response_stream(
+                user_message=user_message,
+                passage_text=chat.passage_text,
+                passage_reference=chat.passage_reference,
+                chat_history=chat_history
+            ):
+                complete_response += token
+                yield token
+
+            # Save to database atomically after streaming completes
+            # Save user message
+            user_msg = StandaloneChatMessage(
+                chat_id=chat_id,
+                role="user",
+                content=user_message
+            )
+            db.add(user_msg)
+
+            # Save AI response
+            ai_msg = StandaloneChatMessage(
+                chat_id=chat_id,
+                role="assistant",
+                content=complete_response
+            )
+            db.add(ai_msg)
+
+            # Update chat's updated_at timestamp
+            chat.updated_at = func.now()
+
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error streaming standalone chat message for chat {chat_id}, user {user_id}: {e}", exc_info=True)
+            raise
