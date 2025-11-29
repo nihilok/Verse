@@ -63,7 +63,7 @@ Comprehensive documentation is available in the [`/docs`](docs/) directory:
 - **[Configuration](docs/reference/configuration.md)** - Environment variables and settings
 
 ### Architecture
-- **[Architecture Overview](docs/architecture.md)** - High-level system design
+- **[Architecture Overview](docs/architecture/)** - High-level system design
 - **[Security](docs/architecture/security.md)** - Security features and best practices
 
 ## Technology Stack
@@ -130,7 +130,7 @@ class AIClient(ABC):
     async def generate_insights(...): pass
 ```
 
-See [Architecture Documentation](docs/architecture.md) for more details.
+See [Architecture Documentation](docs/architecture/README.md) for more details.
 
 ### Intelligent Caching
 

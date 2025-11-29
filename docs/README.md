@@ -11,7 +11,7 @@ New to Verse? Start here:
 
 ## Using Verse
 
-- **[User Guide](guides/user-guide.md)** - Learn how to use Verse features
+- **[FAQ](faq.md)** - Frequently asked questions
 - **[API Reference](reference/api.md)** - Complete API endpoint documentation
 - **[Environment Configuration](reference/configuration.md)** - Configuration options and environment variables
 
@@ -20,9 +20,7 @@ New to Verse? Start here:
 Contributing to Verse or running it locally:
 
 - **[Development Setup](guides/development.md)** - Set up your local development environment
-- **[Backend Development](guides/backend-development.md)** - Working with the FastAPI backend
-- **[Frontend Development](guides/frontend-development.md)** - Working with the React frontend
-- **[Testing Guide](guides/testing.md)** - Running and writing tests
+- **[Troubleshooting](guides/troubleshooting.md)** - Common issues and solutions
 - **[Contributing Guidelines](../CONTRIBUTING.md)** - How to contribute to the project
 
 ## Reference
@@ -35,14 +33,7 @@ Contributing to Verse or running it locally:
 ## Architecture
 
 - **[System Architecture](architecture/)** - High-level system design
-- **[Backend Architecture](architecture/backend.md)** - Backend layer structure and patterns
-- **[Frontend Architecture](architecture/frontend.md)** - Frontend component structure
 - **[Security](architecture/security.md)** - Security features and best practices
-
-## Deployment
-
-- **[Docker Deployment](guides/docker-deployment.md)** - Deploy with Docker Compose
-- **[Production Setup](guides/production.md)** - Production deployment considerations
 
 ## Additional Resources
 

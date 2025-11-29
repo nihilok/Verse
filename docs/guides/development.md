@@ -418,9 +418,9 @@ ANTHROPIC_API_KEY=your_prod_key
 
 ## Next Steps
 
-- [Backend Development Guide](backend-development.md) - Deep dive into backend
-- [Frontend Development Guide](frontend-development.md) - Deep dive into frontend
-- [Testing Guide](testing.md) - Writing tests
+- [Architecture Documentation](../architecture/) - System design and patterns
+- [API Reference](../reference/api.md) - Complete API documentation
+- [Database Schema](../reference/database.md) - Database structure
 - [Contributing Guidelines](../../CONTRIBUTING.md) - Contribution workflow
 
 ## Getting Help

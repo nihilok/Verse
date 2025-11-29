@@ -27,11 +27,12 @@ Yes, you can export all your insights, definitions, and chats through the user e
 ### What Bible translations are supported?
 
 Verse supports multiple translations through the HelloAO Bible API, including:
-- WEB (World English Bible) - default
+- WEB (World English Bible) – default
 - KJV (King James Version)
-- ASV (American Standard Version)
-- BBE (Bible in Basic English)
-- YLT (Young's Literal Translation)
+- BSB (Berean Standard Bible)
+- LSV (Literal Standard Version)
+- SRV (Spanish Reina-Valera)
+- BES (Bible in Easy Spanish)
 
 Check the [HelloAO API documentation](https://bible.helloao.org) for the complete list.
 
@@ -293,7 +294,7 @@ Yes! Verse uses an abstraction layer. You just need to:
 1. Create a new client implementing `BibleClient`
 2. Update `BibleService` to use your client
 
-See [Backend Development Guide](guides/backend-development.md) for details.
+Backend development documentation is planned and will be added soon.
 
 ### Can I add a new AI provider?
 
@@ -367,7 +368,7 @@ Check existing [GitHub Issues](https://github.com/nihilok/Verse/issues) to see i
 ## Related Documentation
 
 - [Getting Started](getting-started.md) - Quick start guide
-- [User Guide](guides/user-guide.md) - Feature guide (planned)
+- User Guide (planned) - Feature guide coming soon
 - [Development Guide](guides/development.md) - Development setup
 - [Troubleshooting](guides/troubleshooting.md) - Common issues
 - [API Reference](reference/api.md) - API documentation
