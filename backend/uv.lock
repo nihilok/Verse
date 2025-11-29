@@ -493,6 +493,18 @@ wheels = [
 ]
 
 [[package]]
+name = "pytest-mock"
+version = "3.12.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pytest" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b3/96/25588c55fbe330b751bd7c7d723c3544957566bc090f6d506551b514f488/pytest-mock-3.12.0.tar.gz", hash = "sha256:31a40f038c22cad32287bb43932054451ff5583ff094bca6f675df2f8bc1a6e9", size = 32139, upload-time = "2023-10-19T16:25:57.7Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b9/25/b29fd10dd062cf41e66787a7951b3842881a2a2d7e3a41fcbb58a8466046/pytest_mock-3.12.0-py3-none-any.whl", hash = "sha256:0972719a7263072da3a21c7f4773069bcc7486027d7e8e1f81d98a47e701bc4f", size = 9771, upload-time = "2023-10-19T16:25:55.764Z" },
+]
+
+[[package]]
 name = "python-dotenv"
 version = "1.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -719,6 +731,7 @@ dependencies = [
 dev = [
     { name = "pytest" },
     { name = "pytest-asyncio" },
+    { name = "pytest-mock" },
 ]
 
 [package.metadata]
@@ -740,6 +753,7 @@ requires-dist = [
 dev = [
     { name = "pytest", specifier = "==7.4.3" },
     { name = "pytest-asyncio", specifier = "==0.21.1" },
+    { name = "pytest-mock", specifier = "==3.12.0" },
 ]
 
 [[package]]
