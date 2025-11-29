@@ -147,8 +147,8 @@ export const bibleService = {
                     if (data.token) {
                       onToken(data.token);
                     }
-                  } catch {
-                    console.error('Error parsing SSE data');
+                  } catch (e) {
+                    console.error('Error parsing SSE data:', e);
                   }
                 }
                 if (line.startsWith('event: done')) {
@@ -251,8 +251,8 @@ export const bibleService = {
                     } else if (data.token) {
                       onToken(data.token);
                     }
-                  } catch {
-                    console.error('Error parsing SSE data');
+                  } catch (e) {
+                    console.error('Error parsing SSE data:', e);
                   }
                 }
                 if (line.startsWith('event: done')) {
@@ -339,8 +339,8 @@ export const bibleService = {
                     if (data.token) {
                       onToken(data.token);
                     }
-                  } catch {
-                    console.error('Error parsing SSE data');
+                  } catch (e) {
+                    console.error('Error parsing SSE data:', e);
                   }
                 }
                 if (line.startsWith('event: done')) {
