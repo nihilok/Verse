@@ -13,7 +13,8 @@ class UserService:
     MAX_STANDALONE_CHATS_IMPORT = 500  # Maximum chats per import
     MAX_TEXT_LENGTH = 50000  # Maximum passage text length
     MAX_FIELD_LENGTH = 10000  # Maximum field length for insights/messages
-    MAX_REFERENCE_LENGTH = 200  # Maximum reference/title length
+    MAX_REFERENCE_LENGTH = 100  # Maximum passage reference length (matches DB schema String(100))
+    MAX_TITLE_LENGTH = 200  # Maximum title length (matches DB schema String(200))
 
     def get_or_create_user(self, db: Session, anonymous_id: Optional[str] = None) -> User:
         """
@@ -173,7 +174,24 @@ class UserService:
             "insights": insights_data,
             "standalone_chats": standalone_chats_data
         }
-    
+
+    def _validate_field_length(self, value: Optional[str], field_name: str, max_length: int) -> None:
+        """
+        Validate that a field value doesn't exceed maximum length.
+
+        Args:
+            value: The field value to validate (may be None)
+            field_name: Name of the field for error messages
+            max_length: Maximum allowed length
+
+        Raises:
+            ValueError: If field exceeds maximum length
+        """
+        # Handle None values by converting to empty string
+        actual_value = value or ""
+        if len(actual_value) > max_length:
+            raise ValueError(f"{field_name} too long (max {max_length} characters)")
+
     def import_user_data(self, db: Session, user_id: int, data: Dict[str, Any]) -> Dict[str, int]:
         """
         Import user data from JSON.
@@ -225,16 +243,11 @@ class UserService:
                         raise ValueError(f"Missing required field '{field}' in insight data")
 
                 # Validate field lengths
-                if len(insight_data.get("passage_text", "")) > self.MAX_TEXT_LENGTH:
-                    raise ValueError(f"Passage text too long (max {self.MAX_TEXT_LENGTH} characters)")
-                if len(insight_data.get("passage_reference", "")) > self.MAX_REFERENCE_LENGTH:
-                    raise ValueError(f"Passage reference too long (max {self.MAX_REFERENCE_LENGTH} characters)")
-                if len(insight_data.get("historical_context", "")) > self.MAX_FIELD_LENGTH:
-                    raise ValueError(f"Historical context too long (max {self.MAX_FIELD_LENGTH} characters)")
-                if len(insight_data.get("theological_significance", "")) > self.MAX_FIELD_LENGTH:
-                    raise ValueError(f"Theological significance too long (max {self.MAX_FIELD_LENGTH} characters)")
-                if len(insight_data.get("practical_application", "")) > self.MAX_FIELD_LENGTH:
-                    raise ValueError(f"Practical application too long (max {self.MAX_FIELD_LENGTH} characters)")
+                self._validate_field_length(insight_data.get("passage_text"), "Passage text", self.MAX_TEXT_LENGTH)
+                self._validate_field_length(insight_data.get("passage_reference"), "Passage reference", self.MAX_REFERENCE_LENGTH)
+                self._validate_field_length(insight_data.get("historical_context"), "Historical context", self.MAX_FIELD_LENGTH)
+                self._validate_field_length(insight_data.get("theological_significance"), "Theological significance", self.MAX_FIELD_LENGTH)
+                self._validate_field_length(insight_data.get("practical_application"), "Practical application", self.MAX_FIELD_LENGTH)
                 
                 # Check if insight already exists (by reference and text)
                 existing_insight = db.query(SavedInsight).filter(
@@ -270,8 +283,7 @@ class UserService:
                         continue  # Skip invalid messages
 
                     # Validate message content length
-                    if len(msg_data.get("content", "")) > self.MAX_FIELD_LENGTH:
-                        raise ValueError(f"Message content too long (max {self.MAX_FIELD_LENGTH} characters)")
+                    self._validate_field_length(msg_data.get("content"), "Message content", self.MAX_FIELD_LENGTH)
 
                     new_msg = ChatMessage(
                         insight_id=insight_id,
@@ -284,17 +296,14 @@ class UserService:
             
             # Import standalone chats
             for chat_data in data.get("standalone_chats", []):
-                # Validate chat field lengths
-                title = chat_data.get("title", "")
-                passage_text = chat_data.get("passage_text", "")
-                passage_reference = chat_data.get("passage_reference", "")
+                # Extract and validate chat field lengths
+                title = chat_data.get("title")
+                passage_text = chat_data.get("passage_text")
+                passage_reference = chat_data.get("passage_reference")
 
-                if title and len(title) > self.MAX_REFERENCE_LENGTH:
-                    raise ValueError(f"Chat title too long (max {self.MAX_REFERENCE_LENGTH} characters)")
-                if passage_text and len(passage_text) > self.MAX_TEXT_LENGTH:
-                    raise ValueError(f"Chat passage text too long (max {self.MAX_TEXT_LENGTH} characters)")
-                if passage_reference and len(passage_reference) > self.MAX_REFERENCE_LENGTH:
-                    raise ValueError(f"Chat passage reference too long (max {self.MAX_REFERENCE_LENGTH} characters)")
+                self._validate_field_length(title, "Chat title", self.MAX_TITLE_LENGTH)
+                self._validate_field_length(passage_text, "Chat passage text", self.MAX_TEXT_LENGTH)
+                self._validate_field_length(passage_reference, "Chat passage reference", self.MAX_REFERENCE_LENGTH)
 
                 new_chat = StandaloneChat(
                     user_id=user_id,
@@ -311,8 +320,7 @@ class UserService:
                         continue  # Skip invalid messages
 
                     # Validate message content length
-                    if len(msg_data.get("content", "")) > self.MAX_FIELD_LENGTH:
-                        raise ValueError(f"Message content too long (max {self.MAX_FIELD_LENGTH} characters)")
+                    self._validate_field_length(msg_data.get("content"), "Message content", self.MAX_FIELD_LENGTH)
 
                     new_msg = StandaloneChatMessage(
                         chat_id=new_chat.id,

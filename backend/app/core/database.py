@@ -14,6 +14,12 @@ if settings.database_url.startswith("sqlite"):
     )
 else:
     # PostgreSQL with connection pooling
+    # These values support typical FastAPI deployments with up to 10 concurrent worker
+    # processes/threads and occasional bursts up to 30 total connections.
+    # Adjust pool_size and max_overflow based on:
+    # - Expected concurrent requests (pool_size ≈ number of workers)
+    # - Peak load bursts (max_overflow for temporary spikes)
+    # - Database connection limits (ensure total doesn't exceed server max_connections)
     engine = create_engine(
         settings.database_url,
         pool_size=10,  # Maximum number of permanent connections
