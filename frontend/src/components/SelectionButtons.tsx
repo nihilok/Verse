@@ -64,7 +64,7 @@ const SelectionButtons: React.FC<SelectionButtonsProps> = ({
       style={{
         left: `${adjustedPosition.x}px`,
         top: `${adjustedPosition.y}px`,
-        transform: "translate(-50%, -50%)",
+        transform: "translate(-50%, 0)",
       }}
     >
       <div className="flex gap-1.5">
