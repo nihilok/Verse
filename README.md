@@ -1,18 +1,70 @@
 # Verse
 
-📖 An interactive Bible reader with AI-powered insights. Highlight any passage to explore its historical context, theological significance, and practical application.
+An interactive Bible reader with AI-powered insights. Highlight any passage to explore its historical context, theological significance, and practical application.
 
 ## Features
 
-- **Interactive Bible Reading**: Search and read any Bible passage
-- **Text Selection**: Highlight any text in the Bible reader
-- **AI-Powered Insights**: Get instant insights on selected passages including:
-  - Historical Context
-  - Theological Significance
-  - Practical Application
-- **Multiple Translations**: Support for various Bible translations (default: WEB)
-- **Caching**: Insights are cached in the database to improve performance
-- **Responsive Design**: Works on desktop and mobile devices
+- **Interactive Bible Reading** - Search and read any Bible passage in multiple translations
+- **AI-Powered Insights** - Get instant contextual analysis including:
+  - Historical Context - Background and setting of the passage
+  - Theological Significance - Doctrinal themes and meaning
+  - Practical Application - Modern-day relevance and application
+- **Word Definitions** - Select any word to get biblical definitions and original language insights
+- **Chat Interface** - Ask follow-up questions about passages and insights
+- **Insight History** - Save and revisit your previous insights
+- **Responsive Design** - Works seamlessly on desktop and mobile devices
+
+## Quick Start
+
+### Prerequisites
+
+- Docker and Docker Compose
+- Anthropic API key ([Get one here](https://console.anthropic.com/))
+
+### Get Running in 3 Steps
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/nihilok/Verse.git
+cd Verse
+
+# 2. Configure environment
+cp .env.example .env
+# Edit .env and add your ANTHROPIC_API_KEY
+
+# 3. Start the application
+docker compose up --build
+```
+
+**Access Points:**
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:8000
+- API Documentation: http://localhost:8000/docs
+
+For detailed setup instructions, see the [Getting Started Guide](docs/getting-started.md).
+
+## Documentation
+
+Comprehensive documentation is available in the [`/docs`](docs/) directory:
+
+### Getting Started
+- **[Quick Start Guide](docs/getting-started.md)** - Get up and running in minutes
+- **[User Guide](docs/guides/user-guide.md)** - Learn all features (coming soon)
+
+### Development
+- **[Development Setup](docs/guides/development.md)** - Set up your local environment
+- **[Backend Development](docs/guides/backend-development.md)** - Working with FastAPI (coming soon)
+- **[Frontend Development](docs/guides/frontend-development.md)** - Working with React (coming soon)
+- **[Testing Guide](docs/guides/testing.md)** - Running and writing tests (coming soon)
+
+### Reference
+- **[API Reference](docs/reference/api.md)** - Complete API endpoint documentation
+- **[Database Schema](docs/reference/database.md)** - Database models and relationships
+- **[Configuration](docs/reference/configuration.md)** - Environment variables and settings
+
+### Architecture
+- **[Architecture Overview](docs/architecture.md)** - High-level system design
+- **[Security](docs/architecture/security.md)** - Security features and best practices
 
 ## Technology Stack
 
@@ -20,174 +72,163 @@
 - React 18 with TypeScript
 - Vite for fast development and building
 - Bun as the package manager
-- Axios for API calls
-- Modern CSS with responsive design
+- Axios for API communication
+- Modern responsive CSS
 
 ### Backend
-- Python 3.11
-- FastAPI for REST API
+- Python 3.11+ with FastAPI
 - PostgreSQL for data storage
 - SQLAlchemy ORM
 - Anthropic Claude AI for insights
 - HelloAO Bible API for Bible text
+- Rate limiting and security middleware
 
 ### Infrastructure
 - Docker & Docker Compose
 - Nginx (production)
 - Hot-reloading in development
 
-## Architecture
-
-The application follows a modular architecture with clear separation of concerns:
-
-- **Abstraction Layers**: Bible API and AI clients are abstracted to prevent vendor lock-in
-- **Service Layer**: Business logic is separated from API endpoints
-- **Database Models**: SQLAlchemy models for saved passages and insights
-- **RESTful API**: Clean API design with proper HTTP methods
-
-## Prerequisites
-
-- Docker and Docker Compose
-- Anthropic API key (for Claude AI)
-
-## Getting Started
-
-### 1. Clone the Repository
-
-```bash
-git clone https://github.com/nihilok/Verse.git
-cd Verse
-```
-
-### 2. Configure Environment Variables
-
-Copy the example environment file and add your API keys:
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env` and add your Anthropic API key:
-
-```
-ANTHROPIC_API_KEY=your_actual_api_key_here
-```
-
-You can get an API key from [Anthropic Console](https://console.anthropic.com/).
-
-### 3. Start the Application
-
-Run the entire application stack with Docker Compose:
-
-```bash
-docker compose up --build
-```
-
-This will:
-- Start a PostgreSQL database
-- Start the FastAPI backend on port 8000
-- Start the React frontend on port 5173
-- Automatically create database tables
-
-### 4. Access the Application
-
-- **Frontend**: http://localhost:5173
-- **Backend API**: http://localhost:8000
-- **API Documentation**: http://localhost:8000/docs
-
-## Usage
-
-1. **Search for a Passage**:
-   - Enter a book name (e.g., "John", "Genesis", "Romans")
-   - Enter chapter and verse numbers
-   - Click "Load Passage"
-
-2. **Get AI Insights**:
-   - Read the loaded passage
-   - Highlight any text you want insights on
-   - Click "Get AI Insights on Selected Text"
-   - View the generated insights in the right panel
-
-## API Endpoints
-
-### Bible Endpoints
-
-- `GET /api/passage` - Get a specific Bible passage
-  - Parameters: book, chapter, verse_start, verse_end (optional), translation (optional)
-- `GET /api/chapter` - Get an entire chapter
-  - Parameters: book, chapter, translation (optional)
-
-### Insights Endpoint
-
-- `POST /api/insights` - Generate AI insights for a passage
-  - Body: `{ "passage_text": "...", "passage_reference": "...", "save": true }`
-
-## Development
-
-### Backend Development
-
-```bash
-cd backend
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload
-```
-
-### Frontend Development
-
-```bash
-cd frontend
-bun install
-bun run dev
-```
-
 ## Project Structure
 
 ```
 Verse/
-├── backend/
+├── backend/                 # Python FastAPI backend
 │   ├── app/
-│   │   ├── api/           # API routes
-│   │   ├── clients/       # Abstracted API clients
-│   │   ├── core/          # Core configuration
-│   │   ├── models/        # Database models
-│   │   ├── services/      # Business logic
-│   │   └── main.py        # FastAPI application
-│   ├── Dockerfile
-│   └── requirements.txt
-├── frontend/
+│   │   ├── api/            # API routes
+│   │   ├── clients/        # External API clients (abstracted)
+│   │   ├── core/           # Configuration and middleware
+│   │   ├── models/         # Database models
+│   │   └── services/       # Business logic
+│   └── tests/              # Backend tests
+├── frontend/                # React TypeScript frontend
 │   ├── src/
-│   │   ├── components/    # React components
-│   │   ├── services/      # API service layer
-│   │   ├── types/         # TypeScript types
-│   │   ├── App.tsx        # Main application
-│   │   └── main.tsx       # Entry point
-│   ├── Dockerfile
-│   ├── Dockerfile.dev
-│   └── package.json
-├── docker-compose.yml
-└── README.md
+│   │   ├── components/     # React components
+│   │   ├── services/       # API client
+│   │   └── types/          # TypeScript types
+│   └── public/             # Static assets
+├── docs/                    # Documentation
+├── .github/workflows/       # CI/CD workflows
+├── docker-compose.yml       # Docker configuration
+└── README.md               # This file
 ```
 
-## Extensibility
+## Key Features
 
-The application is designed to be easily extensible:
+### Abstraction Layer Architecture
 
-### Adding a New Bible API
+The backend uses abstract base classes for external services, making it easy to switch providers:
 
-1. Create a new client in `backend/app/clients/` that implements `BibleClient`
-2. Update the service to use your new client
+```python
+# Easy to swap Bible API providers
+class BibleClient(ABC):
+    @abstractmethod
+    async def get_verse(...): pass
 
-### Adding a New AI Provider
+# Easy to swap AI providers
+class AIClient(ABC):
+    @abstractmethod
+    async def generate_insights(...): pass
+```
 
-1. Create a new client in `backend/app/clients/` that implements `AIClient`
-2. Update the service to use your new client
+See [Architecture Documentation](docs/architecture.md) for more details.
 
-## License
+### Intelligent Caching
 
-MIT
+- AI insights are cached in PostgreSQL to reduce API calls and costs
+- Automatic deduplication based on passage text
+- User-specific insight history
+
+### Rate Limiting
+
+- AI endpoints: 10 requests/minute
+- Chat endpoints: 20 requests/minute
+- Prevents abuse and manages API costs
+
+### Anonymous User Sessions
+
+- No authentication required
+- Privacy-preserving user tracking
+- All data is linked to anonymous user IDs
+- Can export/import user data
+
+## Development
+
+### Backend (Python/FastAPI)
+
+```bash
+cd backend
+uv sync                    # Install dependencies
+uv sync --group dev        # Include test dependencies
+uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+**Run tests:**
+```bash
+uv run pytest              # Run all tests
+uv run pytest --cov=app    # With coverage
+```
+
+### Frontend (TypeScript/React)
+
+```bash
+cd frontend
+bun install               # Install dependencies (use Bun, not npm)
+bun run dev              # Start dev server
+bun run lint             # Check linting
+bun test                 # Run tests
+```
+
+For detailed development instructions, see the [Development Guide](docs/guides/development.md).
+
+## API Endpoints
+
+### Bible
+- `GET /api/passage` - Get specific verses
+- `GET /api/chapter` - Get entire chapter
+
+### AI Features
+- `POST /api/insights` - Generate passage insights
+- `POST /api/definitions` - Get word definitions
+- `POST /api/chat/message` - Chat about an insight
+- `POST /api/chat/standalone` - Start standalone chat
+
+### User
+- `GET /api/user/insights` - Get insight history
+- `GET /api/user/definitions` - Get definition history
+- `POST /api/user/export` - Export user data
+- `POST /api/user/import` - Import user data
+
+For complete API documentation, see the [API Reference](docs/reference/api.md).
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+
+### Quick Contribution Guide
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes
+4. Run tests (`pytest` for backend, `bun test` for frontend)
+5. Commit your changes (`git commit -m 'Add amazing feature'`)
+6. Push to the branch (`git push origin feature/amazing-feature`)
+7. Open a Pull Request
+
+## License
+
+MIT License - See [LICENSE](LICENSE) file for details.
+
+## Support
+
+- **Documentation**: Check the [docs](docs/) directory
+- **Issues**: [GitHub Issues](https://github.com/nihilok/Verse/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/nihilok/Verse/discussions)
+
+## Acknowledgments
+
+- Bible text provided by [HelloAO Bible API](https://bible.helloao.org)
+- AI insights powered by [Anthropic Claude](https://www.anthropic.com/)
+
+---
+
+**Made with ❤️ by the Verse contributors**
