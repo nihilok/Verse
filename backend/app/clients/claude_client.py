@@ -250,25 +250,25 @@ Continue the conversation by answering the user's questions thoughtfully and in 
     ) -> Optional[str]:
         """
         Generate a chat response for standalone chats (not linked to insights).
-        
+
         Args:
             user_message: The user's question
             passage_text: Optional Bible passage text for context
             passage_reference: Optional Bible passage reference
             chat_history: List of previous StandaloneChatMessage objects
-            
+
         Returns:
             The AI's response text
         """
         if chat_history is None:
             chat_history = []
-        
+
         try:
             # Build the system message
-            system_prompt = """You are a knowledgeable biblical scholar and theologian having a conversation. 
-Answer questions about the Bible, theology, and faith thoughtfully and in depth. Draw from biblical scholarship, 
+            system_prompt = """You are a knowledgeable biblical scholar and theologian having a conversation.
+Answer questions about the Bible, theology, and faith thoughtfully and in depth. Draw from biblical scholarship,
 theology, and practical wisdom."""
-            
+
             # If there's a passage, add it to the system prompt
             if passage_text and passage_reference:
                 truncated_passage = passage_text[:self.MAX_PASSAGE_TEXT_LENGTH] + (
@@ -282,23 +282,23 @@ Passage Reference: {truncated_reference}
 Passage Text: {truncated_passage}
 
 Answer questions thoughtfully and in depth. Draw from biblical scholarship, theology, and practical wisdom."""
-            
+
             # Build conversation messages
             messages = []
-            
+
             # Add chat history
             for msg in chat_history:
                 messages.append({
                     "role": msg.role,
                     "content": msg.content
                 })
-            
+
             # Add current user message
             messages.append({
                 "role": "user",
                 "content": user_message
             })
-            
+
             # Generate response
             response = self.client.messages.create(
                 model=self.MODEL_NAME,
@@ -306,8 +306,149 @@ Answer questions thoughtfully and in depth. Draw from biblical scholarship, theo
                 system=system_prompt,
                 messages=messages
             )
-            
+
             return response.content[0].text
         except Exception as e:
             logger.error(f"Error generating standalone chat response: {e}", exc_info=True)
             return None
+
+    async def generate_chat_response_stream(
+        self,
+        user_message: str,
+        passage_text: str,
+        passage_reference: str,
+        insight_context: dict,
+        chat_history: List
+    ):
+        """
+        Generate a streaming chat response using Claude with conversation context.
+
+        Args:
+            user_message: The user's question
+            passage_text: The Bible passage text
+            passage_reference: The Bible passage reference
+            insight_context: Dict with historical_context, theological_significance, practical_application
+            chat_history: List of previous ChatMessage objects
+
+        Yields:
+            Text tokens as they arrive from Claude
+        """
+        try:
+            # Truncate passage text if too long to avoid token limits
+            truncated_passage = passage_text[:self.MAX_PASSAGE_TEXT_LENGTH] + (
+                "..." if len(passage_text) > self.MAX_PASSAGE_TEXT_LENGTH else ""
+            )
+            truncated_reference = passage_reference[:self.MAX_REFERENCE_LENGTH]
+
+            # Build the system message with context
+            system_prompt = f"""You are a knowledgeable biblical scholar and theologian having a conversation about a Bible passage.
+
+Passage Reference: {truncated_reference}
+Passage Text: {truncated_passage}
+
+You previously provided these insights:
+- Historical Context: {insight_context.get('historical_context', '')[:self.MAX_CONTEXT_LENGTH]}
+- Theological Significance: {insight_context.get('theological_significance', '')[:self.MAX_CONTEXT_LENGTH]}
+- Practical Application: {insight_context.get('practical_application', '')[:self.MAX_CONTEXT_LENGTH]}
+
+Continue the conversation by answering the user's questions thoughtfully and in depth. Draw from biblical scholarship, theology, and practical wisdom. Keep your responses focused and relevant to the passage and previous insights."""
+
+            # Build conversation messages
+            messages = []
+
+            # Add chat history
+            for msg in chat_history:
+                messages.append({
+                    "role": msg.role,
+                    "content": msg.content
+                })
+
+            # Add current user message
+            messages.append({
+                "role": "user",
+                "content": user_message
+            })
+
+            # Stream response
+            with self.client.messages.stream(
+                model=self.MODEL_NAME,
+                max_tokens=self.MAX_TOKENS_CHAT,
+                system=system_prompt,
+                messages=messages
+            ) as stream:
+                for text in stream.text_stream:
+                    yield text
+        except Exception as e:
+            logger.error(f"Error generating streaming chat response: {e}", exc_info=True)
+            raise
+
+    async def generate_standalone_chat_response_stream(
+        self,
+        user_message: str,
+        passage_text: Optional[str] = None,
+        passage_reference: Optional[str] = None,
+        chat_history: List = None
+    ):
+        """
+        Generate a streaming chat response for standalone chats (not linked to insights).
+
+        Args:
+            user_message: The user's question
+            passage_text: Optional Bible passage text for context
+            passage_reference: Optional Bible passage reference
+            chat_history: List of previous StandaloneChatMessage objects
+
+        Yields:
+            Text tokens as they arrive from Claude
+        """
+        if chat_history is None:
+            chat_history = []
+
+        try:
+            # Build the system message
+            system_prompt = """You are a knowledgeable biblical scholar and theologian having a conversation.
+Answer questions about the Bible, theology, and faith thoughtfully and in depth. Draw from biblical scholarship,
+theology, and practical wisdom."""
+
+            # If there's a passage, add it to the system prompt
+            if passage_text and passage_reference:
+                truncated_passage = passage_text[:self.MAX_PASSAGE_TEXT_LENGTH] + (
+                    "..." if len(passage_text) > self.MAX_PASSAGE_TEXT_LENGTH else ""
+                )
+                truncated_reference = passage_reference[:self.MAX_REFERENCE_LENGTH]
+
+                system_prompt = f"""You are a knowledgeable biblical scholar and theologian having a conversation about a Bible passage.
+
+Passage Reference: {truncated_reference}
+Passage Text: {truncated_passage}
+
+Answer questions thoughtfully and in depth. Draw from biblical scholarship, theology, and practical wisdom."""
+
+            # Build conversation messages
+            messages = []
+
+            # Add chat history
+            for msg in chat_history:
+                messages.append({
+                    "role": msg.role,
+                    "content": msg.content
+                })
+
+            # Add current user message
+            messages.append({
+                "role": "user",
+                "content": user_message
+            })
+
+            # Stream response
+            with self.client.messages.stream(
+                model=self.MODEL_NAME,
+                max_tokens=self.MAX_TOKENS_CHAT,
+                system=system_prompt,
+                messages=messages
+            ) as stream:
+                for text in stream.text_stream:
+                    yield text
+        except Exception as e:
+            logger.error(f"Error generating standalone streaming chat response: {e}", exc_info=True)
+            raise
