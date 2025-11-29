@@ -6,6 +6,94 @@ const API_BASE_URL = "/api";
 // Configure axios to send credentials (cookies) with every request
 axios.defaults.withCredentials = true;
 
+// Helper function to handle SSE streaming
+interface SSEEventHandlers {
+  onToken?: (token: string) => void;
+  onChatId?: (chatId: number) => void;
+  onDone?: () => void;
+  onError?: (error: Error) => void;
+}
+
+async function handleSSEStream(
+  response: Response,
+  handlers: SSEEventHandlers
+): Promise<void> {
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) {
+    throw new Error('ReadableStream not supported');
+  }
+
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  try {
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (data.token && handlers.onToken) {
+              handlers.onToken(data.token);
+            } else if (data.chat_id && handlers.onChatId) {
+              handlers.onChatId(data.chat_id);
+            }
+          } catch (e) {
+            console.error('Error parsing SSE data:', e);
+          }
+        }
+        if (line.startsWith('event: done')) {
+          if (handlers.onDone) {
+            handlers.onDone();
+          }
+          return;
+        }
+        if (line.startsWith('event: error')) {
+          const errorLine = lines.find(l => l.startsWith('data: '));
+          if (errorLine) {
+            try {
+              const errorData = JSON.parse(errorLine.slice(6));
+              const error = new Error(errorData.error || 'Unknown error');
+              if (handlers.onError) {
+                handlers.onError(error);
+              }
+              throw error;
+            } catch (e) {
+              const error = e instanceof Error ? e : new Error('Unknown error');
+              if (handlers.onError) {
+                handlers.onError(error);
+              }
+              throw error;
+            }
+          } else {
+            const error = new Error('Unknown error');
+            if (handlers.onError) {
+              handlers.onError(error);
+            }
+            throw error;
+          }
+        }
+      }
+    }
+  } catch (error) {
+    if (handlers.onError && error instanceof Error) {
+      handlers.onError(error);
+    }
+    throw error;
+  }
+}
+
 export const bibleService = {
   async getPassage(query: PassageQuery): Promise<BiblePassage> {
     const params = new URLSearchParams({
@@ -95,90 +183,26 @@ export const bibleService = {
     insightContext: Insight,
     onToken: (token: string) => void,
   ): Promise<void> {
-    return new Promise((resolve, reject) => {
-      fetch(`${API_BASE_URL}/chat/message`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+    const response = await fetch(`${API_BASE_URL}/chat/message`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        insight_id: insightId,
+        message,
+        passage_text: passageText,
+        passage_reference: passageReference,
+        insight_context: {
+          historical_context: insightContext.historical_context,
+          theological_significance: insightContext.theological_significance,
+          practical_application: insightContext.practical_application,
         },
-        credentials: 'include',
-        body: JSON.stringify({
-          insight_id: insightId,
-          message,
-          passage_text: passageText,
-          passage_reference: passageReference,
-          insight_context: {
-            historical_context: insightContext.historical_context,
-            theological_significance: insightContext.theological_significance,
-            practical_application: insightContext.practical_application,
-          },
-        }),
-      }).then(response => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const reader = response.body?.getReader();
-        if (!reader) {
-          throw new Error('ReadableStream not supported');
-        }
-
-        const decoder = new TextDecoder();
-        let buffer = '';
-
-        const readStream = async () => {
-          try {
-            // eslint-disable-next-line no-constant-condition
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-
-              buffer += decoder.decode(value, { stream: true });
-              const lines = buffer.split('\n');
-              buffer = lines.pop() || '';
-
-              for (const line of lines) {
-                if (line.startsWith('event: token')) {
-                  continue;
-                }
-                if (line.startsWith('data: ')) {
-                  try {
-                    const data = JSON.parse(line.slice(6));
-                    if (data.token) {
-                      onToken(data.token);
-                    }
-                  } catch (e) {
-                    console.error('Error parsing SSE data:', e);
-                  }
-                }
-                if (line.startsWith('event: done')) {
-                  resolve();
-                  return;
-                }
-                if (line.startsWith('event: error')) {
-                  const errorLine = lines.find(l => l.startsWith('data: '));
-                  if (errorLine) {
-                    try {
-                      const errorData = JSON.parse(errorLine.slice(6));
-                      reject(new Error(errorData.error || 'Unknown error'));
-                    } catch {
-                      reject(new Error('Unknown error'));
-                    }
-                  } else {
-                    reject(new Error('Unknown error'));
-                  }
-                  return;
-                }
-              }
-            }
-          } catch (error) {
-            reject(error);
-          }
-        };
-
-        readStream().catch(reject);
-      }).catch(reject);
+      }),
     });
+
+    await handleSSEStream(response, { onToken });
   },
 
   async getChatMessages(insightId: number): Promise<ChatMessage[]> {
@@ -198,95 +222,38 @@ export const bibleService = {
     passageText?: string,
     passageReference?: string,
   ): Promise<number> {
-    return new Promise((resolve, reject) => {
-      let chatId: number | null = null;
+    let chatId: number | null = null;
 
-      fetch(`${API_BASE_URL}/standalone-chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          message,
-          passage_text: passageText,
-          passage_reference: passageReference,
-        }),
-      }).then(response => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const reader = response.body?.getReader();
-        if (!reader) {
-          throw new Error('ReadableStream not supported');
-        }
-
-        const decoder = new TextDecoder();
-        let buffer = '';
-
-        const readStream = async () => {
-          try {
-            // eslint-disable-next-line no-constant-condition
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-
-              buffer += decoder.decode(value, { stream: true });
-              const lines = buffer.split('\n');
-              buffer = lines.pop() || '';
-
-              for (const line of lines) {
-                if (line.startsWith('event: chat_id')) {
-                  continue;
-                }
-                if (line.startsWith('event: token')) {
-                  continue;
-                }
-                if (line.startsWith('data: ')) {
-                  try {
-                    const data = JSON.parse(line.slice(6));
-                    if (data.chat_id) {
-                      chatId = data.chat_id;
-                    } else if (data.token) {
-                      onToken(data.token);
-                    }
-                  } catch (e) {
-                    console.error('Error parsing SSE data:', e);
-                  }
-                }
-                if (line.startsWith('event: done')) {
-                  if (chatId !== null) {
-                    resolve(chatId);
-                  } else {
-                    reject(new Error('No chat ID received'));
-                  }
-                  return;
-                }
-                if (line.startsWith('event: error')) {
-                  const errorLine = lines.find(l => l.startsWith('data: '));
-                  if (errorLine) {
-                    try {
-                      const errorData = JSON.parse(errorLine.slice(6));
-                      reject(new Error(errorData.error || 'Unknown error'));
-                    } catch {
-                      reject(new Error('Unknown error'));
-                    }
-                  } else {
-                    reject(new Error('Unknown error'));
-                  }
-                  return;
-                }
-              }
-            }
-          } catch (error) {
-            reject(error);
-          }
-        };
-
-        readStream().catch(reject);
-      }).catch(reject);
+    const response = await fetch(`${API_BASE_URL}/standalone-chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        message,
+        passage_text: passageText,
+        passage_reference: passageReference,
+      }),
     });
+
+    await handleSSEStream(response, {
+      onToken,
+      onChatId: (id) => {
+        chatId = id;
+      },
+      onDone: () => {
+        if (chatId === null) {
+          throw new Error('No chat ID received');
+        }
+      }
+    });
+
+    if (chatId === null) {
+      throw new Error('No chat ID received');
+    }
+
+    return chatId;
   },
 
   async sendStandaloneChatMessage(
@@ -294,83 +261,19 @@ export const bibleService = {
     message: string,
     onToken: (token: string) => void,
   ): Promise<void> {
-    return new Promise((resolve, reject) => {
-      fetch(`${API_BASE_URL}/standalone-chat/message`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          chat_id: chatId,
-          message,
-        }),
-      }).then(response => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const reader = response.body?.getReader();
-        if (!reader) {
-          throw new Error('ReadableStream not supported');
-        }
-
-        const decoder = new TextDecoder();
-        let buffer = '';
-
-        const readStream = async () => {
-          try {
-            // eslint-disable-next-line no-constant-condition
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-
-              buffer += decoder.decode(value, { stream: true });
-              const lines = buffer.split('\n');
-              buffer = lines.pop() || '';
-
-              for (const line of lines) {
-                if (line.startsWith('event: token')) {
-                  continue;
-                }
-                if (line.startsWith('data: ')) {
-                  try {
-                    const data = JSON.parse(line.slice(6));
-                    if (data.token) {
-                      onToken(data.token);
-                    }
-                  } catch (e) {
-                    console.error('Error parsing SSE data:', e);
-                  }
-                }
-                if (line.startsWith('event: done')) {
-                  resolve();
-                  return;
-                }
-                if (line.startsWith('event: error')) {
-                  const errorLine = lines.find(l => l.startsWith('data: '));
-                  if (errorLine) {
-                    try {
-                      const errorData = JSON.parse(errorLine.slice(6));
-                      reject(new Error(errorData.error || 'Unknown error'));
-                    } catch {
-                      reject(new Error('Unknown error'));
-                    }
-                  } else {
-                    reject(new Error('Unknown error'));
-                  }
-                  return;
-                }
-              }
-            }
-          } catch (error) {
-            reject(error);
-          }
-        };
-
-        readStream().catch(reject);
-      }).catch(reject);
+    const response = await fetch(`${API_BASE_URL}/standalone-chat/message`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        chat_id: chatId,
+        message,
+      }),
     });
+
+    await handleSSEStream(response, { onToken });
   },
 
   async getStandaloneChats(limit: number = 50): Promise<StandaloneChat[]> {

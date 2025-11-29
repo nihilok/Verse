@@ -11,7 +11,7 @@ from app.core.rate_limiter import limiter, AI_ENDPOINT_LIMIT, CHAT_ENDPOINT_LIMI
 from app.services.bible_service import BibleService
 from app.services.insight_service import InsightService
 from app.services.definition_service import DefinitionService
-from app.services.chat_service import ChatService
+from app.services.chat_service import ChatService, CHAT_ID_MARKER
 from app.services.user_service import UserService
 from app.models.models import User
 
@@ -463,7 +463,7 @@ async def create_standalone_chat(
                 passage_reference=chat_create_request.passage_reference
             ):
                 # Check if this is the chat_id marker
-                if token.startswith("__CHAT_ID__:"):
+                if token.startswith(CHAT_ID_MARKER):
                     chat_id = int(token.split(":", 1)[1])
                     # Send chat_id event
                     yield f"event: chat_id\ndata: {json.dumps({'chat_id': chat_id})}\n\n"

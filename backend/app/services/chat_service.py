@@ -7,6 +7,9 @@ from app.models.models import ChatMessage, StandaloneChat, StandaloneChatMessage
 
 logger = logging.getLogger(__name__)
 
+# Special marker for streaming chat_id in SSE responses
+CHAT_ID_MARKER = "__CHAT_ID__:"
+
 
 class ChatService:
     """Service for chat operations with AI."""
@@ -259,7 +262,7 @@ class ChatService:
             db.commit()
 
             # Yield the chat_id as a special marker at the end
-            yield f"__CHAT_ID__:{chat.id}"
+            yield f"{CHAT_ID_MARKER}{chat.id}"
         except Exception as e:
             db.rollback()
             logger.error(f"Error creating standalone chat stream for user {user_id}: {e}", exc_info=True)

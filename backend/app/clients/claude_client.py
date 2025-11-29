@@ -30,6 +30,38 @@ class ClaudeAIClient(AIClient):
             api_key=settings.anthropic_api_key,
             timeout=self.API_TIMEOUT_SECONDS
         )
+
+    def _build_conversation_messages(
+        self,
+        user_message: str,
+        chat_history: List
+    ) -> List[dict]:
+        """
+        Build conversation messages from chat history and current message.
+
+        Args:
+            user_message: The current user's message
+            chat_history: List of previous message objects
+
+        Returns:
+            List of message dicts formatted for Claude API
+        """
+        messages = []
+
+        # Add chat history
+        for msg in chat_history:
+            messages.append({
+                "role": msg.role,
+                "content": msg.content
+            })
+
+        # Add current user message
+        messages.append({
+            "role": "user",
+            "content": user_message
+        })
+
+        return messages
     
     async def generate_insights(
         self, 
@@ -354,20 +386,7 @@ You previously provided these insights:
 Continue the conversation by answering the user's questions thoughtfully and in depth. Draw from biblical scholarship, theology, and practical wisdom. Keep your responses focused and relevant to the passage and previous insights."""
 
             # Build conversation messages
-            messages = []
-
-            # Add chat history
-            for msg in chat_history:
-                messages.append({
-                    "role": msg.role,
-                    "content": msg.content
-                })
-
-            # Add current user message
-            messages.append({
-                "role": "user",
-                "content": user_message
-            })
+            messages = self._build_conversation_messages(user_message, chat_history)
 
             # Stream response
             with self.client.messages.stream(
@@ -425,20 +444,7 @@ Passage Text: {truncated_passage}
 Answer questions thoughtfully and in depth. Draw from biblical scholarship, theology, and practical wisdom."""
 
             # Build conversation messages
-            messages = []
-
-            # Add chat history
-            for msg in chat_history:
-                messages.append({
-                    "role": msg.role,
-                    "content": msg.content
-                })
-
-            # Add current user message
-            messages.append({
-                "role": "user",
-                "content": user_message
-            })
+            messages = self._build_conversation_messages(user_message, chat_history)
 
             # Stream response
             with self.client.messages.stream(
