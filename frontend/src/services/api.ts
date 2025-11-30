@@ -63,7 +63,7 @@ async function handleSSEStream(
 
       // Process complete events (accumulate fields until blank line)
       let currentEvent = "";
-      let currentData: SSEEventData = null;
+      let currentData: SSEEventData | null = null;
 
       for (const line of lines) {
         if (line === "") {
