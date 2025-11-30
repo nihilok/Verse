@@ -29,7 +29,6 @@ async function handleSSEStream(
 
   const decoder = new TextDecoder();
   let buffer = '';
-  let stopReason: string | undefined;
 
   try {
     // eslint-disable-next-line no-constant-condition
@@ -41,50 +40,43 @@ async function handleSSEStream(
       const lines = buffer.split('\n');
       buffer = lines.pop() || '';
 
+      // Process complete events (accumulate fields until blank line)
+      let currentEvent = '';
+      let currentData: any = null;
+
       for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          try {
-            const data = JSON.parse(line.slice(6));
-            if (data.token && handlers.onToken) {
-              handlers.onToken(data.token);
-            } else if (data.chat_id && handlers.onChatId) {
-              handlers.onChatId(data.chat_id);
-            } else if (data.stop_reason !== undefined) {
-              stopReason = data.stop_reason;
+        if (line === '') {
+          // Blank line marks end of event - process accumulated event
+          if (currentEvent === 'done' && currentData) {
+            if (handlers.onDone) {
+              handlers.onDone(currentData.stop_reason);
             }
-          } catch (e) {
-            console.error('Error parsing SSE data:', e);
-          }
-        }
-        if (line.startsWith('event: done')) {
-          if (handlers.onDone) {
-            handlers.onDone(stopReason);
-          }
-          return;
-        }
-        if (line.startsWith('event: error')) {
-          const errorLine = lines.find(l => l.startsWith('data: '));
-          if (errorLine) {
-            try {
-              const errorData = JSON.parse(errorLine.slice(6));
-              const error = new Error(errorData.error || 'Unknown error');
-              if (handlers.onError) {
-                handlers.onError(error);
-              }
-              throw error;
-            } catch (e) {
-              const error = e instanceof Error ? e : new Error('Unknown error');
-              if (handlers.onError) {
-                handlers.onError(error);
-              }
-              throw error;
-            }
-          } else {
-            const error = new Error('Unknown error');
+            return;
+          } else if (currentEvent === 'error' && currentData) {
+            const error = new Error(currentData.error || 'Unknown error');
             if (handlers.onError) {
               handlers.onError(error);
             }
             throw error;
+          }
+          // Reset for next event
+          currentEvent = '';
+          currentData = null;
+        } else if (line.startsWith('event: ')) {
+          currentEvent = line.slice(7);
+        } else if (line.startsWith('data: ')) {
+          try {
+            const data = JSON.parse(line.slice(6));
+            currentData = data;
+
+            // Handle token and chat_id events immediately (they're single-line)
+            if (data.token && handlers.onToken) {
+              handlers.onToken(data.token);
+            } else if (data.chat_id && handlers.onChatId) {
+              handlers.onChatId(data.chat_id);
+            }
+          } catch (e) {
+            console.error('Error parsing SSE data:', e);
           }
         }
       }

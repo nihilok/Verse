@@ -319,35 +319,36 @@ async def test_streaming_atomic_db_save_on_error(db, test_user):
 @pytest.mark.asyncio
 async def test_sse_event_format():
     """Test that SSE events are formatted correctly."""
-    from app.api.routes import router
-    from fastapi import Request
+    import json
     from app.services.chat_service import ChatService
-
-    # Create a mock request with the required state
-    mock_request = Mock(spec=Request)
-    mock_request.state.anonymous_id = "test-anonymous-id"
-    mock_request.state.user = Mock(id=1)
 
     # Create a test service instance
     service = ChatService()
 
-    # Mock the streaming method
+    # Mock the streaming method to return tuples
     with patch.object(service, 'send_message_stream') as mock_stream:
         async def async_gen():
-            yield "Hello"
-            yield " "
-            yield "world"
+            yield ("Hello", None)
+            yield (" ", None)
+            yield ("world", None)
+            yield ("", "end_turn")
 
         mock_stream.return_value = async_gen()
 
         # Manually create the event stream generator like the endpoint does
         async def event_stream():
+            stop_reason = None
             try:
-                async for token in async_gen():
-                    yield f"event: token\ndata: {{'token': '{token}'}}\n\n"
-                yield f"event: done\ndata: {{'status': 'complete'}}\n\n"
+                async for chunk, chunk_stop_reason in async_gen():
+                    if chunk:  # Send non-empty content chunks
+                        yield f"event: token\ndata: {json.dumps({'token': chunk})}\n\n"
+                    if chunk_stop_reason:  # Capture stop_reason
+                        stop_reason = chunk_stop_reason
+
+                # Send completion event with stop_reason
+                yield f"event: done\ndata: {json.dumps({'status': 'complete', 'stop_reason': stop_reason})}\n\n"
             except Exception as e:
-                yield f"event: error\ndata: {{'error': '{str(e)}'}}\n\n"
+                yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
 
         # Collect events
         events = []
@@ -357,36 +358,265 @@ async def test_sse_event_format():
         # Verify event format
         assert len(events) == 4  # 3 tokens + 1 done
         assert events[0].startswith("event: token\ndata:")
+        assert '"token": "Hello"' in events[0]
         assert events[1].startswith("event: token\ndata:")
+        assert '"token": " "' in events[1]
         assert events[2].startswith("event: token\ndata:")
+        assert '"token": "world"' in events[2]
         assert events[3].startswith("event: done\ndata:")
+        assert '"stop_reason": "end_turn"' in events[3]
 
 
 @pytest.mark.asyncio
 async def test_sse_chat_id_marker_event():
     """Test that chat_id marker is properly converted to SSE event."""
+    import json
     from app.services.chat_service import CHAT_ID_MARKER
 
-    # Simulate what the endpoint does with the chat_id marker
+    # Simulate what the endpoint does with the chat_id marker (returns tuples)
     async def event_stream():
-        tokens = ["First", " ", "message", f"{CHAT_ID_MARKER}123"]
-        for token in tokens:
-            if token.startswith(CHAT_ID_MARKER):
-                chat_id = int(token.split(":", 1)[1])
-                yield f"event: chat_id\ndata: {{'chat_id': {chat_id}}}\n\n"
-            else:
-                yield f"event: token\ndata: {{'token': '{token}'}}\n\n"
-        yield f"event: done\ndata: {{'status': 'complete'}}\n\n"
+        # Simulate the tuple stream from create_standalone_chat_stream
+        token_tuples = [
+            ("First", None),
+            (" ", None),
+            ("message", None),
+            (f"{CHAT_ID_MARKER}123", None),
+            ("", "end_turn")
+        ]
+
+        stop_reason = None
+        for chunk, chunk_stop_reason in token_tuples:
+            # Check if this is the chat_id marker
+            if chunk.startswith(CHAT_ID_MARKER):
+                chat_id = int(chunk.split(":", 1)[1])
+                # Send chat_id event
+                yield f"event: chat_id\ndata: {json.dumps({'chat_id': chat_id})}\n\n"
+            elif chunk:  # Send non-empty content chunks
+                # Send token as SSE event
+                yield f"event: token\ndata: {json.dumps({'token': chunk})}\n\n"
+
+            if chunk_stop_reason:  # Capture stop_reason
+                stop_reason = chunk_stop_reason
+
+        # Send completion event with stop_reason
+        yield f"event: done\ndata: {json.dumps({'status': 'complete', 'stop_reason': stop_reason})}\n\n"
 
     # Collect events
     events = []
     async for event in event_stream():
         events.append(event)
 
-    # Verify events
-    assert len(events) == 5  # 3 tokens + 1 chat_id + 1 done
+    # Verify events (3 tokens + 1 chat_id + 1 done)
+    assert len(events) == 5
 
     # Check for chat_id event
     chat_id_events = [e for e in events if 'event: chat_id' in e]
     assert len(chat_id_events) == 1
-    assert "'chat_id': 123" in chat_id_events[0]
+    assert '"chat_id": 123' in chat_id_events[0]
+
+    # Check for done event with stop_reason
+    done_events = [e for e in events if 'event: done' in e]
+    assert len(done_events) == 1
+    assert '"stop_reason": "end_turn"' in done_events[0]
+
+
+@pytest.mark.asyncio
+async def test_was_truncated_field_when_max_tokens(db, test_user):
+    """Test that was_truncated is set to True when stop_reason is max_tokens."""
+    # Create an insight
+    insight = SavedInsight(
+        passage_reference="Test 1:1",
+        passage_text="Test passage",
+        historical_context="History",
+        theological_significance="Theology",
+        practical_application="Practice"
+    )
+    db.add(insight)
+    db.commit()
+    db.refresh(insight)
+
+    service = ChatService()
+    mock_tokens = ["This", " ", "was", " ", "truncated"]
+
+    # Mock the AI client to return max_tokens as stop_reason
+    with patch.object(service.client, 'generate_chat_response_stream') as mock_stream:
+        async def async_gen():
+            for token in mock_tokens:
+                yield (token, None)
+            yield ("", "max_tokens")  # Indicate truncation
+
+        mock_stream.return_value = async_gen()
+
+        # Stream the message
+        tokens = []
+        async for chunk, stop_reason in service.send_message_stream(
+            db=db,
+            insight_id=insight.id,
+            user_id=test_user.id,
+            user_message="Test message",
+            passage_text="Test passage",
+            passage_reference="Test 1:1",
+            insight_context={}
+        ):
+            if chunk:
+                tokens.append(chunk)
+
+        # Verify message was saved with was_truncated=True
+        messages = db.query(ChatMessage).filter(
+            ChatMessage.insight_id == insight.id,
+            ChatMessage.user_id == test_user.id,
+            ChatMessage.role == "assistant"
+        ).all()
+
+        assert len(messages) == 1
+        assert messages[0].was_truncated is True
+        assert messages[0].content == "".join(mock_tokens)
+
+
+@pytest.mark.asyncio
+async def test_was_truncated_field_when_end_turn(db, test_user):
+    """Test that was_truncated is set to False when stop_reason is end_turn."""
+    # Create an insight
+    insight = SavedInsight(
+        passage_reference="Test 1:1",
+        passage_text="Test passage",
+        historical_context="History",
+        theological_significance="Theology",
+        practical_application="Practice"
+    )
+    db.add(insight)
+    db.commit()
+    db.refresh(insight)
+
+    service = ChatService()
+    mock_tokens = ["Complete", " ", "response"]
+
+    # Mock the AI client to return end_turn as stop_reason
+    with patch.object(service.client, 'generate_chat_response_stream') as mock_stream:
+        async def async_gen():
+            for token in mock_tokens:
+                yield (token, None)
+            yield ("", "end_turn")  # Normal completion
+
+        mock_stream.return_value = async_gen()
+
+        # Stream the message
+        tokens = []
+        async for chunk, stop_reason in service.send_message_stream(
+            db=db,
+            insight_id=insight.id,
+            user_id=test_user.id,
+            user_message="Test message",
+            passage_text="Test passage",
+            passage_reference="Test 1:1",
+            insight_context={}
+        ):
+            if chunk:
+                tokens.append(chunk)
+
+        # Verify message was saved with was_truncated=False
+        messages = db.query(ChatMessage).filter(
+            ChatMessage.insight_id == insight.id,
+            ChatMessage.user_id == test_user.id,
+            ChatMessage.role == "assistant"
+        ).all()
+
+        assert len(messages) == 1
+        assert messages[0].was_truncated is False
+        assert messages[0].content == "".join(mock_tokens)
+
+
+@pytest.mark.asyncio
+async def test_was_truncated_field_standalone_chat_max_tokens(db, test_user):
+    """Test that was_truncated works for standalone chats when truncated."""
+    # Create a standalone chat
+    chat = StandaloneChat(
+        user_id=test_user.id,
+        title="Test Chat",
+        passage_text="Test passage",
+        passage_reference="Test 1:1"
+    )
+    db.add(chat)
+    db.commit()
+    db.refresh(chat)
+
+    service = ChatService()
+    mock_tokens = ["Truncated", " ", "standalone"]
+
+    # Mock the AI client to return max_tokens as stop_reason
+    with patch.object(service.client, 'generate_standalone_chat_response_stream') as mock_stream:
+        async def async_gen():
+            for token in mock_tokens:
+                yield (token, None)
+            yield ("", "max_tokens")  # Indicate truncation
+
+        mock_stream.return_value = async_gen()
+
+        # Stream the message
+        tokens = []
+        async for chunk, stop_reason in service.send_standalone_message_stream(
+            db=db,
+            chat_id=chat.id,
+            user_id=test_user.id,
+            user_message="Test message"
+        ):
+            if chunk:
+                tokens.append(chunk)
+
+        # Verify message was saved with was_truncated=True
+        messages = db.query(StandaloneChatMessage).filter(
+            StandaloneChatMessage.chat_id == chat.id,
+            StandaloneChatMessage.role == "assistant"
+        ).all()
+
+        assert len(messages) == 1
+        assert messages[0].was_truncated is True
+        assert messages[0].content == "".join(mock_tokens)
+
+
+@pytest.mark.asyncio
+async def test_was_truncated_field_standalone_chat_complete(db, test_user):
+    """Test that was_truncated works for standalone chats when complete."""
+    # Create a standalone chat
+    chat = StandaloneChat(
+        user_id=test_user.id,
+        title="Test Chat",
+        passage_text="Test passage",
+        passage_reference="Test 1:1"
+    )
+    db.add(chat)
+    db.commit()
+    db.refresh(chat)
+
+    service = ChatService()
+    mock_tokens = ["Complete", " ", "standalone"]
+
+    # Mock the AI client to return end_turn as stop_reason
+    with patch.object(service.client, 'generate_standalone_chat_response_stream') as mock_stream:
+        async def async_gen():
+            for token in mock_tokens:
+                yield (token, None)
+            yield ("", "end_turn")  # Normal completion
+
+        mock_stream.return_value = async_gen()
+
+        # Stream the message
+        tokens = []
+        async for chunk, stop_reason in service.send_standalone_message_stream(
+            db=db,
+            chat_id=chat.id,
+            user_id=test_user.id,
+            user_message="Test message"
+        ):
+            if chunk:
+                tokens.append(chunk)
+
+        # Verify message was saved with was_truncated=False
+        messages = db.query(StandaloneChatMessage).filter(
+            StandaloneChatMessage.chat_id == chat.id,
+            StandaloneChatMessage.role == "assistant"
+        ).all()
+
+        assert len(messages) == 1
+        assert messages[0].was_truncated is False
+        assert messages[0].content == "".join(mock_tokens)
