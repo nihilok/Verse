@@ -211,7 +211,9 @@ class ChatService:
             passage_reference: Optional Bible passage reference
 
         Yields:
-            Text tokens as they arrive from Claude, then chat_id as final event
+            Tuple[str, Optional[str]]: (text_chunk, stop_reason)
+                - text_chunk: Text content from the stream or special markers
+                - stop_reason: None for intermediate chunks, set to stop reason on completion
         """
         # Create the chat session
         chat = StandaloneChat(
@@ -230,17 +232,21 @@ class ChatService:
 
         # Buffer the complete response as we stream
         complete_response = ""
+        stop_reason = None
 
         try:
             # Stream from AI client
-            async for token in self.client.generate_standalone_chat_response_stream(
+            async for chunk, chunk_stop_reason in self.client.generate_standalone_chat_response_stream(
                 user_message=user_message,
                 passage_text=passage_text,
                 passage_reference=passage_reference,
                 chat_history=[]
             ):
-                complete_response += token
-                yield token
+                if chunk:  # Only yield non-empty chunks
+                    complete_response += chunk
+                    yield (chunk, None)
+                if chunk_stop_reason:  # Final chunk with stop_reason
+                    stop_reason = chunk_stop_reason
 
             # Save to database atomically after streaming completes
             # Save user message
@@ -255,14 +261,18 @@ class ChatService:
             ai_msg = StandaloneChatMessage(
                 chat_id=chat.id,
                 role="assistant",
-                content=complete_response
+                content=complete_response,
+                was_truncated=(stop_reason == "max_tokens")
             )
             db.add(ai_msg)
 
             db.commit()
 
-            # Yield the chat_id as a special marker at the end
-            yield f"{CHAT_ID_MARKER}{chat.id}"
+            # Yield the chat_id as a special marker (maintaining backward compatibility)
+            yield (f"{CHAT_ID_MARKER}{chat.id}", None)
+
+            # Yield final chunk with stop_reason
+            yield ("", stop_reason)
         except Exception as e:
             db.rollback()
             logger.error(f"Error creating standalone chat stream for user {user_id}: {e}", exc_info=True)
@@ -410,25 +420,31 @@ class ChatService:
             insight_context: The original insights (historical, theological, practical)
 
         Yields:
-            Text tokens as they arrive from Claude
+            Tuple[str, Optional[str]]: (text_chunk, stop_reason)
+                - text_chunk: Text content from the stream
+                - stop_reason: None for intermediate chunks, set to stop reason on final chunk
         """
         # Get previous chat history for this user
         chat_history = self.get_chat_messages(db, insight_id, user_id)
 
         # Buffer the complete response as we stream
         complete_response = ""
+        stop_reason = None
 
         try:
             # Stream from AI client
-            async for token in self.client.generate_chat_response_stream(
+            async for chunk, chunk_stop_reason in self.client.generate_chat_response_stream(
                 user_message=user_message,
                 passage_text=passage_text,
                 passage_reference=passage_reference,
                 insight_context=insight_context,
                 chat_history=chat_history
             ):
-                complete_response += token
-                yield token
+                if chunk:  # Only yield non-empty chunks
+                    complete_response += chunk
+                    yield (chunk, None)
+                if chunk_stop_reason:  # Final chunk with stop_reason
+                    stop_reason = chunk_stop_reason
 
             # Save to database atomically after streaming completes
             # Save user message
@@ -445,11 +461,15 @@ class ChatService:
                 insight_id=insight_id,
                 user_id=user_id,
                 role="assistant",
-                content=complete_response
+                content=complete_response,
+                was_truncated=(stop_reason == "max_tokens")
             )
             db.add(ai_msg)
 
             db.commit()
+
+            # Yield final chunk with stop_reason
+            yield ("", stop_reason)
         except Exception as e:
             db.rollback()
             logger.error(f"Error streaming chat messages for insight {insight_id}, user {user_id}: {e}", exc_info=True)
@@ -472,7 +492,9 @@ class ChatService:
             user_message: The user's message
 
         Yields:
-            Text tokens as they arrive from Claude
+            Tuple[str, Optional[str]]: (text_chunk, stop_reason)
+                - text_chunk: Text content from the stream
+                - stop_reason: None for intermediate chunks, set to stop reason on final chunk
         """
         # Get the chat session and verify it belongs to the user
         chat = db.query(StandaloneChat).filter(
@@ -487,17 +509,21 @@ class ChatService:
 
         # Buffer the complete response as we stream
         complete_response = ""
+        stop_reason = None
 
         try:
             # Stream from AI client
-            async for token in self.client.generate_standalone_chat_response_stream(
+            async for chunk, chunk_stop_reason in self.client.generate_standalone_chat_response_stream(
                 user_message=user_message,
                 passage_text=chat.passage_text,
                 passage_reference=chat.passage_reference,
                 chat_history=chat_history
             ):
-                complete_response += token
-                yield token
+                if chunk:  # Only yield non-empty chunks
+                    complete_response += chunk
+                    yield (chunk, None)
+                if chunk_stop_reason:  # Final chunk with stop_reason
+                    stop_reason = chunk_stop_reason
 
             # Save to database atomically after streaming completes
             # Save user message
@@ -512,7 +538,8 @@ class ChatService:
             ai_msg = StandaloneChatMessage(
                 chat_id=chat_id,
                 role="assistant",
-                content=complete_response
+                content=complete_response,
+                was_truncated=(stop_reason == "max_tokens")
             )
             db.add(ai_msg)
 
@@ -520,6 +547,9 @@ class ChatService:
             chat.updated_at = func.now()
 
             db.commit()
+
+            # Yield final chunk with stop_reason
+            yield ("", stop_reason)
         except Exception as e:
             db.rollback()
             logger.error(f"Error streaming standalone chat message for chat {chat_id}, user {user_id}: {e}", exc_info=True)

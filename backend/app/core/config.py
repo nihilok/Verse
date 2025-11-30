@@ -1,16 +1,22 @@
 from pydantic_settings import BaseSettings
+from pydantic import Field
 from functools import lru_cache
 
 
 class Settings(BaseSettings):
     """Application settings."""
-    
+
     # Database
     database_url: str = "postgresql://verse_user:verse_password@db:5432/verse_db"
-    
+
     # AI Provider
     anthropic_api_key: str = ""
-    
+
+    # AI Token Limits
+    max_tokens_insights: int = Field(default=2000, ge=500, le=16000)
+    max_tokens_definition: int = Field(default=1000, ge=500, le=16000)
+    max_tokens_chat: int = Field(default=3000, ge=500, le=16000)
+
     # Application
     environment: str = "development"
     debug: bool = True

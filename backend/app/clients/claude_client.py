@@ -1,6 +1,6 @@
 import anthropic
 import logging
-from typing import Optional, List
+from typing import Optional, List, AsyncGenerator, Tuple
 from app.clients.ai_client import AIClient, InsightRequest, InsightResponse, DefinitionRequest, DefinitionResponse
 from app.core.config import get_settings
 
@@ -14,11 +14,6 @@ class ClaudeAIClient(AIClient):
     API_TIMEOUT_SECONDS = 30.0
     MODEL_NAME = "claude-sonnet-4-5-20250929"
 
-    # Token Limits for Different Operations
-    MAX_TOKENS_INSIGHTS = 1500  # For generating biblical insights
-    MAX_TOKENS_DEFINITION = 1000  # For word definitions
-    MAX_TOKENS_CHAT = 2000  # For chat responses
-
     # Text Truncation Limits (to avoid token limits)
     MAX_PASSAGE_TEXT_LENGTH = 2000  # Maximum passage text length in characters
     MAX_REFERENCE_LENGTH = 200  # Maximum reference string length
@@ -30,6 +25,10 @@ class ClaudeAIClient(AIClient):
             api_key=settings.anthropic_api_key,
             timeout=self.API_TIMEOUT_SECONDS
         )
+        # Token limits from settings (configurable via environment variables)
+        self.MAX_TOKENS_INSIGHTS = settings.max_tokens_insights
+        self.MAX_TOKENS_DEFINITION = settings.max_tokens_definition
+        self.MAX_TOKENS_CHAT = settings.max_tokens_chat
 
     def _build_conversation_messages(
         self,
@@ -351,7 +350,7 @@ Answer questions thoughtfully and in depth. Draw from biblical scholarship, theo
         passage_reference: str,
         insight_context: dict,
         chat_history: List
-    ):
+    ) -> AsyncGenerator[Tuple[str, Optional[str]], None]:
         """
         Generate a streaming chat response using Claude with conversation context.
 
@@ -363,7 +362,9 @@ Answer questions thoughtfully and in depth. Draw from biblical scholarship, theo
             chat_history: List of previous ChatMessage objects
 
         Yields:
-            Text tokens as they arrive from Claude
+            Tuple[str, Optional[str]]: (text_chunk, stop_reason)
+                - text_chunk: Text content from the stream
+                - stop_reason: None for intermediate chunks, set to stop reason on final chunk
         """
         try:
             # Truncate passage text if too long to avoid token limits
@@ -389,6 +390,7 @@ Continue the conversation by answering the user's questions thoughtfully and in 
             messages = self._build_conversation_messages(user_message, chat_history)
 
             # Stream response
+            stop_reason = None
             with self.client.messages.stream(
                 model=self.MODEL_NAME,
                 max_tokens=self.MAX_TOKENS_CHAT,
@@ -396,7 +398,14 @@ Continue the conversation by answering the user's questions thoughtfully and in 
                 messages=messages
             ) as stream:
                 for text in stream.text_stream:
-                    yield text
+                    yield (text, None)
+
+                # Get final message to extract stop_reason
+                final_message = stream.get_final_message()
+                stop_reason = final_message.stop_reason
+
+            # Yield final empty chunk with stop_reason
+            yield ("", stop_reason)
         except Exception as e:
             logger.error(f"Error generating streaming chat response: {e}", exc_info=True)
             raise
@@ -407,7 +416,7 @@ Continue the conversation by answering the user's questions thoughtfully and in 
         passage_text: Optional[str] = None,
         passage_reference: Optional[str] = None,
         chat_history: List = None
-    ):
+    ) -> AsyncGenerator[Tuple[str, Optional[str]], None]:
         """
         Generate a streaming chat response for standalone chats (not linked to insights).
 
@@ -418,7 +427,9 @@ Continue the conversation by answering the user's questions thoughtfully and in 
             chat_history: List of previous StandaloneChatMessage objects
 
         Yields:
-            Text tokens as they arrive from Claude
+            Tuple[str, Optional[str]]: (text_chunk, stop_reason)
+                - text_chunk: Text content from the stream
+                - stop_reason: None for intermediate chunks, set to stop reason on final chunk
         """
         if chat_history is None:
             chat_history = []
@@ -447,6 +458,7 @@ Answer questions thoughtfully and in depth. Draw from biblical scholarship, theo
             messages = self._build_conversation_messages(user_message, chat_history)
 
             # Stream response
+            stop_reason = None
             with self.client.messages.stream(
                 model=self.MODEL_NAME,
                 max_tokens=self.MAX_TOKENS_CHAT,
@@ -454,7 +466,14 @@ Answer questions thoughtfully and in depth. Draw from biblical scholarship, theo
                 messages=messages
             ) as stream:
                 for text in stream.text_stream:
-                    yield text
+                    yield (text, None)
+
+                # Get final message to extract stop_reason
+                final_message = stream.get_final_message()
+                stop_reason = final_message.stop_reason
+
+            # Yield final empty chunk with stop_reason
+            yield ("", stop_reason)
         except Exception as e:
             logger.error(f"Error generating standalone streaming chat response: {e}", exc_info=True)
             raise

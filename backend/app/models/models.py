@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, UniqueConstraint, Index, ForeignKey, Table
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, UniqueConstraint, Index, ForeignKey, Table
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
@@ -121,6 +121,7 @@ class ChatMessage(Base):
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
     role = Column(String(20), nullable=False)  # 'user' or 'assistant'
     content = Column(Text, nullable=False)
+    was_truncated = Column(Boolean, default=False, nullable=False, server_default='false')
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
@@ -157,14 +158,15 @@ class StandaloneChat(Base):
 
 class StandaloneChatMessage(Base):
     """Model for messages in standalone chat sessions."""
-    
+
     __tablename__ = "standalone_chat_messages"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     chat_id = Column(Integer, ForeignKey('standalone_chats.id', ondelete='CASCADE'), nullable=False, index=True)
     role = Column(String(20), nullable=False)  # 'user' or 'assistant'
     content = Column(Text, nullable=False)
+    was_truncated = Column(Boolean, default=False, nullable=False, server_default='false')
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    
+
     # Relationship to chat
     chat = relationship("StandaloneChat", back_populates="messages")
