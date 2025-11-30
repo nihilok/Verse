@@ -10,7 +10,7 @@ axios.defaults.withCredentials = true;
 interface SSEEventHandlers {
   onToken?: (token: string) => void;
   onChatId?: (chatId: number) => void;
-  onDone?: () => void;
+  onDone?: (stopReason?: string) => void;
   onError?: (error: Error) => void;
 }
 
@@ -29,6 +29,7 @@ async function handleSSEStream(
 
   const decoder = new TextDecoder();
   let buffer = '';
+  let stopReason: string | undefined;
 
   try {
     // eslint-disable-next-line no-constant-condition
@@ -48,6 +49,8 @@ async function handleSSEStream(
               handlers.onToken(data.token);
             } else if (data.chat_id && handlers.onChatId) {
               handlers.onChatId(data.chat_id);
+            } else if (data.stop_reason !== undefined) {
+              stopReason = data.stop_reason;
             }
           } catch (e) {
             console.error('Error parsing SSE data:', e);
@@ -55,7 +58,7 @@ async function handleSSEStream(
         }
         if (line.startsWith('event: done')) {
           if (handlers.onDone) {
-            handlers.onDone();
+            handlers.onDone(stopReason);
           }
           return;
         }

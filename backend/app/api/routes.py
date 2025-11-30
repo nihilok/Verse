@@ -377,8 +377,9 @@ async def send_chat_message(
     service = ChatService()
 
     async def event_stream():
+        stop_reason = None
         try:
-            async for token in service.send_message_stream(
+            async for chunk, chunk_stop_reason in service.send_message_stream(
                 db=db,
                 insight_id=chat_request.insight_id,
                 user_id=current_user.id,
@@ -387,11 +388,13 @@ async def send_chat_message(
                 passage_reference=chat_request.passage_reference,
                 insight_context=chat_request.insight_context
             ):
-                # Send token as SSE event
-                yield f"event: token\ndata: {json.dumps({'token': token})}\n\n"
+                if chunk:  # Send non-empty content chunks
+                    yield f"event: token\ndata: {json.dumps({'token': chunk})}\n\n"
+                if chunk_stop_reason:  # Capture stop_reason
+                    stop_reason = chunk_stop_reason
 
-            # Send completion event
-            yield f"event: done\ndata: {json.dumps({'status': 'complete'})}\n\n"
+            # Send completion event with stop_reason
+            yield f"event: done\ndata: {json.dumps({'status': 'complete', 'stop_reason': stop_reason})}\n\n"
         except Exception as e:
             logger.error(f"Error streaming chat: {e}", exc_info=True)
             yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
@@ -454,8 +457,9 @@ async def create_standalone_chat(
 
     async def event_stream():
         chat_id = None
+        stop_reason = None
         try:
-            async for token in service.create_standalone_chat_stream(
+            async for chunk, chunk_stop_reason in service.create_standalone_chat_stream(
                 db=db,
                 user_id=current_user.id,
                 user_message=chat_create_request.message,
@@ -463,16 +467,19 @@ async def create_standalone_chat(
                 passage_reference=chat_create_request.passage_reference
             ):
                 # Check if this is the chat_id marker
-                if token.startswith(CHAT_ID_MARKER):
-                    chat_id = int(token.split(":", 1)[1])
+                if chunk.startswith(CHAT_ID_MARKER):
+                    chat_id = int(chunk.split(":", 1)[1])
                     # Send chat_id event
                     yield f"event: chat_id\ndata: {json.dumps({'chat_id': chat_id})}\n\n"
-                else:
+                elif chunk:  # Send non-empty content chunks
                     # Send token as SSE event
-                    yield f"event: token\ndata: {json.dumps({'token': token})}\n\n"
+                    yield f"event: token\ndata: {json.dumps({'token': chunk})}\n\n"
 
-            # Send completion event
-            yield f"event: done\ndata: {json.dumps({'status': 'complete'})}\n\n"
+                if chunk_stop_reason:  # Capture stop_reason
+                    stop_reason = chunk_stop_reason
+
+            # Send completion event with stop_reason
+            yield f"event: done\ndata: {json.dumps({'status': 'complete', 'stop_reason': stop_reason})}\n\n"
         except Exception as e:
             logger.error(f"Error streaming standalone chat creation: {e}", exc_info=True)
             yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
@@ -500,18 +507,21 @@ async def send_standalone_chat_message(
     service = ChatService()
 
     async def event_stream():
+        stop_reason = None
         try:
-            async for token in service.send_standalone_message_stream(
+            async for chunk, chunk_stop_reason in service.send_standalone_message_stream(
                 db=db,
                 chat_id=chat_message_request.chat_id,
                 user_id=current_user.id,
                 user_message=chat_message_request.message
             ):
-                # Send token as SSE event
-                yield f"event: token\ndata: {json.dumps({'token': token})}\n\n"
+                if chunk:  # Send non-empty content chunks
+                    yield f"event: token\ndata: {json.dumps({'token': chunk})}\n\n"
+                if chunk_stop_reason:  # Capture stop_reason
+                    stop_reason = chunk_stop_reason
 
-            # Send completion event
-            yield f"event: done\ndata: {json.dumps({'status': 'complete'})}\n\n"
+            # Send completion event with stop_reason
+            yield f"event: done\ndata: {json.dumps({'status': 'complete', 'stop_reason': stop_reason})}\n\n"
         except Exception as e:
             logger.error(f"Error streaming standalone chat: {e}", exc_info=True)
             yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
