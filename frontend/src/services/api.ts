@@ -1,5 +1,18 @@
 import axios from "axios";
-import { BiblePassage, Insight, PassageQuery, InsightHistory, Definition, DefinitionHistory, ChatMessage, StandaloneChat, StandaloneChatMessage, UserSession, UserDataExport, DataOperationResult } from "../types";
+import {
+  BiblePassage,
+  Insight,
+  PassageQuery,
+  InsightHistory,
+  Definition,
+  DefinitionHistory,
+  ChatMessage,
+  StandaloneChat,
+  StandaloneChatMessage,
+  UserSession,
+  UserDataExport,
+  DataOperationResult,
+} from "../types";
 
 const API_BASE_URL = "/api";
 
@@ -14,9 +27,17 @@ interface SSEEventHandlers {
   onError?: (error: Error) => void;
 }
 
+interface SSEEventData {
+  token?: string;
+  chat_id?: number;
+  stop_reason?: string;
+  status?: string;
+  error?: string;
+}
+
 async function handleSSEStream(
   response: Response,
-  handlers: SSEEventHandlers
+  handlers: SSEEventHandlers,
 ): Promise<void> {
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
@@ -24,11 +45,11 @@ async function handleSSEStream(
 
   const reader = response.body?.getReader();
   if (!reader) {
-    throw new Error('ReadableStream not supported');
+    throw new Error("ReadableStream not supported");
   }
 
   const decoder = new TextDecoder();
-  let buffer = '';
+  let buffer = "";
 
   try {
     // eslint-disable-next-line no-constant-condition
@@ -37,34 +58,34 @@ async function handleSSEStream(
       if (done) break;
 
       buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
 
       // Process complete events (accumulate fields until blank line)
-      let currentEvent = '';
-      let currentData: any = null;
+      let currentEvent = "";
+      let currentData: SSEEventData = null;
 
       for (const line of lines) {
-        if (line === '') {
+        if (line === "") {
           // Blank line marks end of event - process accumulated event
-          if (currentEvent === 'done' && currentData) {
+          if (currentEvent === "done" && currentData) {
             if (handlers.onDone) {
               handlers.onDone(currentData.stop_reason);
             }
             return;
-          } else if (currentEvent === 'error' && currentData) {
-            const error = new Error(currentData.error || 'Unknown error');
+          } else if (currentEvent === "error" && currentData) {
+            const error = new Error(currentData.error || "Unknown error");
             if (handlers.onError) {
               handlers.onError(error);
             }
             throw error;
           }
           // Reset for next event
-          currentEvent = '';
+          currentEvent = "";
           currentData = null;
-        } else if (line.startsWith('event: ')) {
+        } else if (line.startsWith("event: ")) {
           currentEvent = line.slice(7);
-        } else if (line.startsWith('data: ')) {
+        } else if (line.startsWith("data: ")) {
           try {
             const data = JSON.parse(line.slice(6));
             currentData = data;
@@ -76,7 +97,7 @@ async function handleSSEStream(
               handlers.onChatId(data.chat_id);
             }
           } catch (e) {
-            console.error('Error parsing SSE data:', e);
+            console.error("Error parsing SSE data:", e);
           }
         }
       }
@@ -150,16 +171,21 @@ export const bibleService = {
     verseText: string,
     passageReference: string,
   ): Promise<Definition> {
-    const response = await axios.post<Definition>(`${API_BASE_URL}/definitions`, {
-      word: word,
-      verse_text: verseText,
-      passage_reference: passageReference,
-      save: true,
-    });
+    const response = await axios.post<Definition>(
+      `${API_BASE_URL}/definitions`,
+      {
+        word: word,
+        verse_text: verseText,
+        passage_reference: passageReference,
+        save: true,
+      },
+    );
     return response.data;
   },
 
-  async getDefinitionsHistory(limit: number = 50): Promise<DefinitionHistory[]> {
+  async getDefinitionsHistory(
+    limit: number = 50,
+  ): Promise<DefinitionHistory[]> {
     const response = await axios.get<DefinitionHistory[]>(
       `${API_BASE_URL}/definitions/history?limit=${limit}`,
     );
@@ -179,11 +205,11 @@ export const bibleService = {
     onToken: (token: string) => void,
   ): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/chat/message`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
-      credentials: 'include',
+      credentials: "include",
       body: JSON.stringify({
         insight_id: insightId,
         message,
@@ -220,11 +246,11 @@ export const bibleService = {
     let chatId: number | null = null;
 
     const response = await fetch(`${API_BASE_URL}/standalone-chat`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
-      credentials: 'include',
+      credentials: "include",
       body: JSON.stringify({
         message,
         passage_text: passageText,
@@ -239,13 +265,13 @@ export const bibleService = {
       },
       onDone: () => {
         if (chatId === null) {
-          throw new Error('No chat ID received');
+          throw new Error("No chat ID received");
         }
-      }
+      },
     });
 
     if (chatId === null) {
-      throw new Error('No chat ID received');
+      throw new Error("No chat ID received");
     }
 
     return chatId;
@@ -257,11 +283,11 @@ export const bibleService = {
     onToken: (token: string) => void,
   ): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/standalone-chat/message`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
-      credentials: 'include',
+      credentials: "include",
       body: JSON.stringify({
         chat_id: chatId,
         message,
@@ -278,7 +304,9 @@ export const bibleService = {
     return response.data;
   },
 
-  async getStandaloneChatMessages(chatId: number): Promise<StandaloneChatMessage[]> {
+  async getStandaloneChatMessages(
+    chatId: number,
+  ): Promise<StandaloneChatMessage[]> {
     const response = await axios.get<StandaloneChatMessage[]>(
       `${API_BASE_URL}/standalone-chat/${chatId}/messages`,
     );
@@ -290,22 +318,31 @@ export const bibleService = {
   },
 
   async getUserSession(): Promise<UserSession> {
-    const response = await axios.get<UserSession>(`${API_BASE_URL}/user/session`);
+    const response = await axios.get<UserSession>(
+      `${API_BASE_URL}/user/session`,
+    );
     return response.data;
   },
 
   async clearUserData(): Promise<DataOperationResult> {
-    const response = await axios.delete<DataOperationResult>(`${API_BASE_URL}/user/data`);
+    const response = await axios.delete<DataOperationResult>(
+      `${API_BASE_URL}/user/data`,
+    );
     return response.data;
   },
 
   async exportUserData(): Promise<UserDataExport> {
-    const response = await axios.get<UserDataExport>(`${API_BASE_URL}/user/export`);
+    const response = await axios.get<UserDataExport>(
+      `${API_BASE_URL}/user/export`,
+    );
     return response.data;
   },
 
   async importUserData(data: UserDataExport): Promise<DataOperationResult> {
-    const response = await axios.post<DataOperationResult>(`${API_BASE_URL}/user/import`, { data });
+    const response = await axios.post<DataOperationResult>(
+      `${API_BASE_URL}/user/import`,
+      { data },
+    );
     return response.data;
   },
 };
