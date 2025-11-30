@@ -1,6 +1,6 @@
 """Tests for streaming chat functionality."""
 import pytest
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
+from unittest.mock import Mock, patch
 from app.services.chat_service import ChatService, CHAT_ID_MARKER
 from app.clients.claude_client import ClaudeAIClient
 from app.models.models import SavedInsight, ChatMessage, StandaloneChat, StandaloneChatMessage
