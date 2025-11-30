@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- RAG (Retrieval-Augmented Generation) now correctly excludes current chat messages from retrieval
+- Added missing `rag_context` parameter to streaming chat response method
+- Improved RAG context formatting in AI prompts for better context utilization
+- Increased RAG context preview from 150 to 500 characters per message
+
+### Added
+- Debug API endpoint `/api/debug/rag-status` for diagnosing RAG configuration
+- Python diagnostic script `backend/test_rag_debug.py` for checking RAG status
+- Bash quick-check script `quick-rag-check.sh` for rapid diagnostics
+- Comprehensive RAG debugging guide in `backend/RAG_DEBUGGING.md`
+- Enhanced logging for RAG retrieval operations
+- Helper method `_format_rag_context()` for consistent context formatting
+
+### Changed
+- RAG retrieval now excludes messages from current chat/insight to avoid redundancy
+- RAG context prompts are now more explicit about instructing AI to use provided context
+- Improved RAG-related log messages with query previews and message IDs
+
 ## [1.0.0] - 2024-10-24
 
 ### Added
