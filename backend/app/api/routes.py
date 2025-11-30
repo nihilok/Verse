@@ -656,3 +656,240 @@ async def import_user_data(
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+# Debug endpoints - only available in development
+def register_debug_routes():
+    """Register debug endpoints only in development environment."""
+    from app.core.config import get_settings
+    settings = get_settings()
+
+    if settings.environment != "development":
+        return
+
+    @router.get("/debug/rag-status")
+    async def get_rag_status(
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+    ):
+        """
+        Debug endpoint to check RAG configuration and message embeddings.
+        Returns information about:
+        - Whether embedding client is configured
+        - Number of messages with/without embeddings
+        - Sample messages to verify RAG retrieval
+        """
+        from app.models.models import StandaloneChatMessage, ChatMessage, StandaloneChat
+        from sqlalchemy import func as sql_func
+        from app.core.config import get_settings
+
+        chat_service = ChatService()
+
+        # Check embedding client
+        has_embedding_client = chat_service.embedding_client is not None
+        openai_api_key_configured = bool(get_settings().openai_api_key)
+
+        # Count ALL messages in database (for debugging)
+        total_all_standalone_msgs = db.query(sql_func.count(StandaloneChatMessage.id)).scalar()
+        total_all_standalone_with_embeddings = db.query(sql_func.count(StandaloneChatMessage.id)).filter(
+            StandaloneChatMessage.embedding.isnot(None)
+        ).scalar()
+
+        total_all_insight_msgs = db.query(sql_func.count(ChatMessage.id)).scalar()
+        total_all_insight_with_embeddings = db.query(sql_func.count(ChatMessage.id)).filter(
+            ChatMessage.embedding.isnot(None)
+        ).scalar()
+
+        # Count ALL chats in database
+        total_all_standalone_chats = db.query(sql_func.count(StandaloneChat.id)).scalar()
+
+        # Count messages for CURRENT USER
+        total_standalone_msgs = db.query(sql_func.count(StandaloneChatMessage.id)).join(
+            StandaloneChat
+        ).filter(
+            StandaloneChat.user_id == current_user.id
+        ).scalar()
+
+        standalone_msgs_with_embeddings = db.query(sql_func.count(StandaloneChatMessage.id)).join(
+            StandaloneChat
+        ).filter(
+            StandaloneChat.user_id == current_user.id,
+            StandaloneChatMessage.embedding.isnot(None)
+        ).scalar()
+
+        # Count insight chat messages
+        total_insight_msgs = db.query(sql_func.count(ChatMessage.id)).filter(
+            ChatMessage.user_id == current_user.id
+        ).scalar()
+
+        insight_msgs_with_embeddings = db.query(sql_func.count(ChatMessage.id)).filter(
+            ChatMessage.user_id == current_user.id,
+            ChatMessage.embedding.isnot(None)
+        ).scalar()
+
+        # Get sample messages for current user
+        sample_standalone = db.query(StandaloneChatMessage).join(
+            StandaloneChat
+        ).filter(
+            StandaloneChat.user_id == current_user.id
+        ).limit(3).all()
+
+        sample_insight = db.query(ChatMessage).filter(
+            ChatMessage.user_id == current_user.id
+        ).limit(3).all()
+
+        # Get sample messages from ALL users (for debugging)
+        sample_all_standalone = db.query(StandaloneChatMessage).limit(3).all()
+        sample_all_insight = db.query(ChatMessage).limit(3).all()
+
+        # Get list of all user IDs with chats
+        users_with_standalone_chats = db.query(StandaloneChat.user_id).distinct().all()
+        users_with_insight_chats = db.query(ChatMessage.user_id).distinct().all()
+
+        return {
+            "current_user": {
+                "id": current_user.id,
+                "anonymous_id": current_user.anonymous_id if hasattr(current_user, 'anonymous_id') else None
+            },
+            "embedding_client_configured": has_embedding_client,
+            "openai_api_key_configured": openai_api_key_configured,
+            "database_totals": {
+                "all_standalone_chats": total_all_standalone_chats,
+                "all_standalone_messages": total_all_standalone_msgs,
+                "all_standalone_with_embeddings": total_all_standalone_with_embeddings,
+                "all_insight_messages": total_all_insight_msgs,
+                "all_insight_with_embeddings": total_all_insight_with_embeddings,
+                "users_with_standalone_chats": [uid[0] for uid in users_with_standalone_chats],
+                "users_with_insight_chats": [uid[0] for uid in users_with_insight_chats]
+            },
+            "standalone_chats": {
+                "total_messages": total_standalone_msgs,
+                "messages_with_embeddings": standalone_msgs_with_embeddings,
+                "percentage_embedded": round(100 * standalone_msgs_with_embeddings / total_standalone_msgs, 1) if total_standalone_msgs > 0 else 0,
+                "sample_messages": [
+                    {
+                        "id": msg.id,
+                        "chat_id": msg.chat_id,
+                        "role": msg.role,
+                        "content_preview": msg.content[:100] + "..." if len(msg.content) > 100 else msg.content,
+                        "has_embedding": msg.embedding is not None and len(msg.embedding) > 0 if msg.embedding is not None else False,
+                        "embedding_dimensions": len(msg.embedding) if msg.embedding is not None else 0
+                    }
+                    for msg in sample_standalone
+                ]
+            },
+            "insight_chats": {
+                "total_messages": total_insight_msgs,
+                "messages_with_embeddings": insight_msgs_with_embeddings,
+                "percentage_embedded": round(100 * insight_msgs_with_embeddings / total_insight_msgs, 1) if total_insight_msgs > 0 else 0,
+                "sample_messages": [
+                    {
+                        "id": msg.id,
+                        "insight_id": msg.insight_id,
+                        "role": msg.role,
+                        "content_preview": msg.content[:100] + "..." if len(msg.content) > 100 else msg.content,
+                        "has_embedding": msg.embedding is not None and len(msg.embedding) > 0 if msg.embedding is not None else False,
+                        "embedding_dimensions": len(msg.embedding) if msg.embedding is not None else 0
+                    }
+                    for msg in sample_insight
+                ]
+            },
+            "debug_all_messages": {
+                "sample_standalone_messages": [
+                    {
+                        "id": msg.id,
+                        "chat_id": msg.chat_id,
+                        "role": msg.role,
+                        "content_preview": msg.content[:50] + "..." if len(msg.content) > 50 else msg.content,
+                        "has_embedding": msg.embedding is not None and len(msg.embedding) > 0 if msg.embedding is not None else False
+                    }
+                    for msg in sample_all_standalone
+                ],
+                "sample_insight_messages": [
+                    {
+                        "id": msg.id,
+                        "insight_id": msg.insight_id,
+                        "user_id": msg.user_id,
+                        "role": msg.role,
+                        "content_preview": msg.content[:50] + "..." if len(msg.content) > 50 else msg.content,
+                        "has_embedding": msg.embedding is not None and len(msg.embedding) > 0 if msg.embedding is not None else False
+                    }
+                    for msg in sample_all_insight
+                ]
+            }
+        }
+
+
+    @router.get("/debug/test-rag")
+    async def test_rag_retrieval(
+        query: str = Query(..., description="Test query to search for"),
+        chat_id: Optional[int] = Query(None, description="Chat ID to exclude from results"),
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+    ):
+        """
+        Test endpoint to manually check RAG retrieval.
+
+        Usage: /api/debug/test-rag?query=What+kings+have+we+discussed&chat_id=2
+
+        This will show:
+        - What messages RAG finds for the query
+        - The actual content of those messages
+        - Whether they would be passed to Claude
+        """
+        from app.services.chat_service import ChatService
+
+        chat_service = ChatService()
+
+        try:
+            # Test RAG retrieval
+            rag_messages = await chat_service._get_relevant_standalone_context(
+                db=db,
+                user_id=current_user.id,
+                query=query,
+                current_chat_id=chat_id,
+                limit=5
+            )
+
+            # Format the results
+            results = []
+            for msg in rag_messages:
+                results.append({
+                    "message_id": msg.id,
+                    "chat_id": msg.chat_id,
+                    "role": msg.role,
+                    "content": msg.content,
+                    "has_embedding": msg.embedding is not None and len(msg.embedding) > 0 if msg.embedding is not None else False,
+                    "embedding_dimensions": len(msg.embedding) if msg.embedding is not None else 0
+                })
+
+            # Also format what would be sent to Claude
+            formatted_context = chat_service.client._format_rag_context(rag_messages) if rag_messages else ""
+
+            return {
+                "query": query,
+                "current_user_id": current_user.id,
+                "excluded_chat_id": chat_id,
+                "messages_found": len(rag_messages),
+                "rag_messages": results,
+                "formatted_context_for_claude": formatted_context,
+                "interpretation": {
+                    "rag_enabled": chat_service.embedding_client is not None,
+                    "messages_retrieved": len(rag_messages),
+                    "would_claude_see_context": len(rag_messages) > 0,
+                    "note": "If messages_found is 0, RAG won't help. If > 0, Claude should see this context."
+                }
+            }
+        except Exception as e:
+            import traceback
+            return {
+                "error": str(e),
+                "traceback": traceback.format_exc(),
+                "query": query,
+                "current_user_id": current_user.id
+            }
+
+
+# Register debug routes (only in development)
+register_debug_routes()
+

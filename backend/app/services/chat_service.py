@@ -47,6 +47,7 @@ class ChatService:
         db: Session,
         user_id: int,
         query: str,
+        current_insight_id: Optional[int] = None,
         limit: int = RAG_CONTEXT_LIMIT
     ) -> List[ChatMessage]:
         """
@@ -59,12 +60,14 @@ class ChatService:
             db: Database session
             user_id: User ID to filter messages (ensures data privacy)
             query: The query text to search for similar messages
+            current_insight_id: Optional insight ID to exclude (to avoid returning current chat's own messages)
             limit: Maximum number of relevant messages to return
 
         Returns:
             List of ChatMessage objects, ordered by relevance (most similar first)
         """
         if not self.embedding_client:
+            logger.debug(f"No embedding client configured - RAG disabled for user {user_id}")
             return []
 
         try:
@@ -80,12 +83,23 @@ class ChatService:
                     ChatMessage.user_id == user_id,
                     ChatMessage.embedding.isnot(None)  # Only consider messages with embeddings
                 )
-                .order_by(ChatMessage.embedding.cosine_distance(query_vector))
-                .limit(limit)
             )
 
+            # Exclude messages from the current insight to avoid redundancy
+            # (current chat history is already passed separately)
+            if current_insight_id is not None:
+                stmt = stmt.filter(ChatMessage.insight_id != current_insight_id)
+
+            stmt = stmt.order_by(ChatMessage.embedding.cosine_distance(query_vector)).limit(limit)
+
             result = db.execute(stmt)
-            return result.scalars().all()
+            messages = result.scalars().all()
+
+            logger.info(f"RAG retrieval for user {user_id}: query='{query[:50]}...', found {len(messages)} relevant messages from other insights")
+            if messages:
+                logger.debug(f"RAG context message IDs: {[msg.id for msg in messages]}, from insights: {set([msg.insight_id for msg in messages])}")
+
+            return messages
         except Exception as e:
             logger.error(f"Error retrieving relevant context for user {user_id}: {e}", exc_info=True)
             return []
@@ -95,6 +109,7 @@ class ChatService:
         db: Session,
         user_id: int,
         query: str,
+        current_chat_id: Optional[int] = None,
         limit: int = RAG_CONTEXT_LIMIT
     ) -> List[StandaloneChatMessage]:
         """
@@ -104,17 +119,21 @@ class ChatService:
             db: Database session
             user_id: User ID to filter messages (ensures data privacy)
             query: The query text to search for similar messages
+            current_chat_id: Optional chat ID to exclude (to avoid returning current chat's own messages)
             limit: Maximum number of relevant messages to return
 
         Returns:
             List of StandaloneChatMessage objects, ordered by relevance
         """
         if not self.embedding_client:
+            logger.debug(f"No embedding client configured - RAG disabled for user {user_id}")
             return []
 
         try:
             # Generate embedding for the current query
+            logger.info(f"RAG: Generating embedding for query from user {user_id}, chat {current_chat_id}: '{query[:100]}...'")
             query_vector = await self.embedding_client.get_embedding(query)
+            logger.debug(f"RAG: Query embedding generated, dimension: {len(query_vector) if query_vector else 0}")
 
             # Semantic search across standalone messages
             # Join with StandaloneChat to filter by user_id
@@ -125,12 +144,28 @@ class ChatService:
                     StandaloneChat.user_id == user_id,
                     StandaloneChatMessage.embedding.isnot(None)
                 )
-                .order_by(StandaloneChatMessage.embedding.cosine_distance(query_vector))
-                .limit(limit)
             )
 
+            # Exclude messages from the current chat to avoid redundancy
+            # (current chat history is already passed separately)
+            if current_chat_id is not None:
+                stmt = stmt.filter(StandaloneChatMessage.chat_id != current_chat_id)
+                logger.debug(f"RAG: Excluding messages from current chat_id={current_chat_id}")
+
+            stmt = stmt.order_by(StandaloneChatMessage.embedding.cosine_distance(query_vector)).limit(limit)
+
             result = db.execute(stmt)
-            return result.scalars().all()
+            messages = result.scalars().all()
+
+            logger.info(f"RAG retrieval for user {user_id}, chat {current_chat_id}: query='{query[:50]}...', found {len(messages)} relevant messages from other chats")
+            if messages:
+                logger.info(f"RAG context message IDs: {[msg.id for msg in messages]}, from chats: {set([msg.chat_id for msg in messages])}")
+                for i, msg in enumerate(messages[:3]):  # Log first 3 messages
+                    logger.debug(f"  RAG message {i+1}: chat_id={msg.chat_id}, role={msg.role}, content='{msg.content[:80]}...'")
+            else:
+                logger.warning(f"RAG found 0 relevant messages for user {user_id}, chat {current_chat_id} - this may indicate no other chats exist or no semantic matches")
+
+            return messages
         except Exception as e:
             logger.error(f"Error retrieving relevant standalone context for user {user_id}: {e}", exc_info=True)
             return []
@@ -162,14 +197,25 @@ class ChatService:
         """
         # Get previous chat history for this user
         chat_history = self.get_chat_messages(db, insight_id, user_id)
-        
+
+        # Get relevant RAG context from OTHER user's insights (exclude current insight)
+        rag_context = []
+        if self.embedding_client:
+            try:
+                rag_context = await self._get_relevant_context(db, user_id, user_message, current_insight_id=insight_id)
+                logger.info(f"Retrieved {len(rag_context)} RAG context messages for insight {insight_id} (user {user_id})")
+            except Exception as e:
+                logger.warning(f"Failed to retrieve RAG context for user {user_id}: {e}")
+                # Continue without RAG context
+
         # Generate AI response with context
         ai_response = await self.client.generate_chat_response(
             user_message=user_message,
             passage_text=passage_text,
             passage_reference=passage_reference,
             insight_context=insight_context,
-            chat_history=chat_history
+            chat_history=chat_history,
+            rag_context=rag_context
         )
         
         if not ai_response:
@@ -459,13 +505,24 @@ class ChatService:
         
         # Get previous chat history
         chat_history = self.get_standalone_chat_messages(db, chat_id, user_id)
-        
+
+        # Get relevant RAG context from OTHER user's standalone chats (exclude current chat)
+        rag_context = []
+        if self.embedding_client:
+            try:
+                rag_context = await self._get_relevant_standalone_context(db, user_id, user_message, current_chat_id=chat_id)
+                logger.info(f"Retrieved {len(rag_context)} RAG context messages for standalone chat {chat_id} (user {user_id})")
+            except Exception as e:
+                logger.warning(f"Failed to retrieve RAG context for standalone chat (user {user_id}): {e}")
+                # Continue without RAG context
+
         # Generate AI response
         ai_response = await self.client.generate_standalone_chat_response(
             user_message=user_message,
             passage_text=chat.passage_text,
             passage_reference=chat.passage_reference,
-            chat_history=chat_history
+            chat_history=chat_history,
+            rag_context=rag_context
         )
         
         if not ai_response:
@@ -593,6 +650,16 @@ class ChatService:
         # Get previous chat history for this user
         chat_history = self.get_chat_messages(db, insight_id, user_id)
 
+        # Get relevant RAG context from OTHER user's insights (exclude current insight)
+        rag_context = []
+        if self.embedding_client:
+            try:
+                rag_context = await self._get_relevant_context(db, user_id, user_message, current_insight_id=insight_id)
+                logger.info(f"Retrieved {len(rag_context)} RAG context messages for streaming insight {insight_id} (user {user_id})")
+            except Exception as e:
+                logger.warning(f"Failed to retrieve RAG context for streaming chat (user {user_id}): {e}")
+                # Continue without RAG context
+
         # Buffer the complete response as we stream
         complete_response = ""
         stop_reason = None
@@ -604,7 +671,8 @@ class ChatService:
                 passage_text=passage_text,
                 passage_reference=passage_reference,
                 insight_context=insight_context,
-                chat_history=chat_history
+                chat_history=chat_history,
+                rag_context=rag_context
             ):
                 if chunk:  # Only yield non-empty chunks
                     complete_response += chunk
@@ -687,6 +755,16 @@ class ChatService:
         # Get previous chat history
         chat_history = self.get_standalone_chat_messages(db, chat_id, user_id)
 
+        # Get relevant RAG context from OTHER user's standalone chats (exclude current chat)
+        rag_context = []
+        if self.embedding_client:
+            try:
+                rag_context = await self._get_relevant_standalone_context(db, user_id, user_message, current_chat_id=chat_id)
+                logger.info(f"Retrieved {len(rag_context)} RAG context messages for streaming standalone chat {chat_id} (user {user_id})")
+            except Exception as e:
+                logger.warning(f"Failed to retrieve RAG context for streaming standalone chat (user {user_id}): {e}")
+                # Continue without RAG context
+
         # Buffer the complete response as we stream
         complete_response = ""
         stop_reason = None
@@ -697,7 +775,8 @@ class ChatService:
                 user_message=user_message,
                 passage_text=chat.passage_text,
                 passage_reference=chat.passage_reference,
-                chat_history=chat_history
+                chat_history=chat_history,
+                rag_context=rag_context
             ):
                 if chunk:  # Only yield non-empty chunks
                     complete_response += chunk
