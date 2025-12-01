@@ -24,7 +24,6 @@ from app.core.config import get_settings
 
 # Configuration
 BATCH_SIZE = 100  # Process messages in batches to avoid API rate limits
-MAX_CONCURRENT_REQUESTS = 5  # Limit concurrent API calls
 
 
 async def backfill_chat_messages(embedding_client: OpenAIEmbeddingClient, db: Session):

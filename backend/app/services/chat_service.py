@@ -84,7 +84,7 @@ class ChatService:
                 .limit(limit)
             )
 
-            result = await db.execute(stmt)
+            result = db.execute(stmt)
             return result.scalars().all()
         except Exception as e:
             logger.error(f"Error retrieving relevant context for user {user_id}: {e}", exc_info=True)
@@ -129,7 +129,7 @@ class ChatService:
                 .limit(limit)
             )
 
-            result = await db.execute(stmt)
+            result = db.execute(stmt)
             return result.scalars().all()
         except Exception as e:
             logger.error(f"Error retrieving relevant standalone context for user {user_id}: {e}", exc_info=True)
