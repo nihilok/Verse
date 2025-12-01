@@ -1,14 +1,14 @@
 
 services:
   db:
-    image: pgvector/pgvector:pg16
+    image: pgvector/pgvector:pg18
     container_name: verse-db
     environment:
       POSTGRES_USER: verse_user
       POSTGRES_PASSWORD: verse_password
       POSTGRES_DB: verse_db
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
     ports:
       - "5432:5432"
     healthcheck:
