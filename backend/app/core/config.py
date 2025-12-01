@@ -11,6 +11,7 @@ class Settings(BaseSettings):
 
     # AI Provider
     anthropic_api_key: str = ""
+    openai_api_key: str = ""
 
     # AI Token Limits
     max_tokens_insights: int = Field(default=2000, ge=500, le=16000)

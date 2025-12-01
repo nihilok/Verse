@@ -1,7 +1,8 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, UniqueConstraint, Index, ForeignKey, Table
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, mapped_column
 from sqlalchemy.sql import func
 from app.core.database import Base
+from pgvector.sqlalchemy import Vector
 import uuid
 
 
@@ -124,6 +125,9 @@ class ChatMessage(Base):
     was_truncated = Column(Boolean, default=False, nullable=False, server_default='false')
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+    # Vector embedding for RAG (1536 dimensions matches OpenAI text-embedding-3-small)
+    embedding = mapped_column(Vector(1536), nullable=True)
+
     # Relationships
     insight = relationship("SavedInsight", back_populates="chat_messages")
     user = relationship("User", back_populates="chat_messages")
@@ -131,6 +135,14 @@ class ChatMessage(Base):
     __table_args__ = (
         Index('idx_chat_messages_user_created', 'user_id', 'created_at'),
         Index('idx_chat_messages_insight_user_created', 'insight_id', 'user_id', 'created_at'),
+        # HNSW index for efficient vector similarity search with user isolation
+        Index(
+            'idx_chat_messages_embedding_user',
+            'embedding',
+            postgresql_using='hnsw',
+            postgresql_with={'m': 16, 'ef_construction': 64},
+            postgresql_ops={'embedding': 'vector_cosine_ops'}
+        ),
     )
 
 
@@ -168,5 +180,19 @@ class StandaloneChatMessage(Base):
     was_truncated = Column(Boolean, default=False, nullable=False, server_default='false')
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+    # Vector embedding for RAG (1536 dimensions matches OpenAI text-embedding-3-small)
+    embedding = mapped_column(Vector(1536), nullable=True)
+
     # Relationship to chat
     chat = relationship("StandaloneChat", back_populates="messages")
+
+    __table_args__ = (
+        # HNSW index for efficient vector similarity search
+        Index(
+            'idx_standalone_messages_embedding',
+            'embedding',
+            postgresql_using='hnsw',
+            postgresql_with={'m': 16, 'ef_construction': 64},
+            postgresql_ops={'embedding': 'vector_cosine_ops'}
+        ),
+    )
