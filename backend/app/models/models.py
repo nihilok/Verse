@@ -196,3 +196,21 @@ class StandaloneChatMessage(Base):
             postgresql_ops={'embedding': 'vector_cosine_ops'}
         ),
     )
+
+
+class ConversationSummary(Base):
+    """Model for cached conversation summaries used in RAG context."""
+
+    __tablename__ = "conversation_summaries"
+
+    id = Column(Integer, primary_key=True, index=True)
+    conversation_type = Column(String(20), nullable=False)  # 'insight' or 'standalone'
+    conversation_id = Column(Integer, nullable=False)
+    summary_text = Column(Text, nullable=False)
+    message_count = Column(Integer, nullable=False)  # For cache invalidation
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    __table_args__ = (
+        Index('idx_conversation_lookup', 'conversation_type', 'conversation_id', unique=True),
+    )

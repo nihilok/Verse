@@ -3,6 +3,12 @@ import logging
 from typing import Optional, List, AsyncGenerator, Tuple
 from app.clients.ai_client import AIClient, InsightRequest, InsightResponse, DefinitionRequest, DefinitionResponse
 from app.core.config import get_settings
+from app.prompts import (
+    build_insights_prompt,
+    build_definition_prompt,
+    build_chat_system_prompt,
+    build_standalone_chat_system_prompt,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -61,37 +67,6 @@ class ClaudeAIClient(AIClient):
         })
 
         return messages
-    
-    def _format_rag_context(self, rag_context: List) -> str:
-        """
-        Format RAG context messages for inclusion in system prompt.
-
-        Args:
-            rag_context: List of message objects with role and content attributes
-
-        Returns:
-            Formatted string to append to system prompt, or empty string if no context
-        """
-        if not rag_context or len(rag_context) == 0:
-            return ""
-        
-        context_items = []
-        for i, msg in enumerate(rag_context, 1):
-            # Include substantial content (500 chars) to provide meaningful context
-            content_preview = msg.content[:500]
-            if len(msg.content) > 500:
-                content_preview += "..."
-            role_label = "User" if msg.role == "user" else "You (previous response)"
-            context_items.append(f"{i}. {role_label}: {content_preview}")
-
-        return f"""
-
-IMPORTANT - RELEVANT CONTEXT FROM PAST CONVERSATIONS:
-You DO have access to these {len(rag_context)} relevant excerpts from your previous conversations with this user. When the user asks about past discussions, reference this context:
-
-""" + "\n\n".join(context_items) + """
-
-When the user asks "What have we discussed about X?" or similar questions, YOU SHOULD reference the above context."""
 
     async def generate_insights(
         self, 
@@ -99,21 +74,10 @@ When the user asks "What have we discussed about X?" or similar questions, YOU S
     ) -> Optional[InsightResponse]:
         """Generate insights using Claude."""
         try:
-            prompt = f"""You are a biblical scholar and theologian. Analyze the following Bible passage and provide insights in three categories:
-
-Passage Reference: {request.passage_reference}
-Passage Text: {request.passage_text}
-
-Please provide:
-1. Historical Context: The historical background, cultural setting, and when/why this was written
-2. Theological Significance: The theological themes, doctrines, and spiritual meaning
-3. Practical Application: How this passage applies to modern life and practical ways to apply its teachings
-
-Format your response as follows:
-HISTORICAL_CONTEXT: [your analysis]
-THEOLOGICAL_SIGNIFICANCE: [your analysis]
-PRACTICAL_APPLICATION: [your analysis]
-"""
+            prompt = build_insights_prompt(
+                passage_reference=request.passage_reference,
+                passage_text=request.passage_text
+            )
             
             message = self.client.messages.create(
                 model=self.MODEL_NAME,
@@ -168,22 +132,11 @@ PRACTICAL_APPLICATION: [your analysis]
     ) -> Optional[DefinitionResponse]:
         """Generate a definition for a word in context using Claude."""
         try:
-            prompt = f"""You are a biblical scholar and linguist. Define the following word in its biblical context.
-
-Word: {request.word}
-Verse Reference: {request.passage_reference}
-Full Verse: {request.verse_text}
-
-Please provide:
-1. Definition: A clear definition of this word as used in this specific biblical context
-2. Biblical Usage: How this word is used throughout the Bible and its significance in Scripture
-3. Original Language: Information about the original Hebrew/Greek word, its transliteration, and any nuances in meaning
-
-Format your response as follows:
-DEFINITION: [your definition]
-BIBLICAL_USAGE: [your analysis of biblical usage]
-ORIGINAL_LANGUAGE: [original language information]
-"""
+            prompt = build_definition_prompt(
+                word=request.word,
+                passage_reference=request.passage_reference,
+                verse_text=request.verse_text
+            )
             
             message = self.client.messages.create(
                 model=self.MODEL_NAME,
@@ -239,7 +192,7 @@ ORIGINAL_LANGUAGE: [original language information]
         passage_reference: str,
         insight_context: dict,
         chat_history: List,
-        rag_context: List = None
+        rag_context: str = ""
     ) -> Optional[str]:
         """
         Generate a chat response using Claude with conversation context.
@@ -250,35 +203,28 @@ ORIGINAL_LANGUAGE: [original language information]
             passage_reference: The Bible passage reference
             insight_context: Dict with historical_context, theological_significance, practical_application
             chat_history: List of previous ChatMessage objects
-            rag_context: List of relevant messages from RAG retrieval (optional)
+            rag_context: Formatted RAG context string from RagService (optional)
 
         Returns:
             The AI's response text
         """
         try:
             # Truncate passage text if too long to avoid token limits
-            # Claude has a context window, so we limit each field to reasonable size
             truncated_passage = passage_text[:self.MAX_PASSAGE_TEXT_LENGTH] + (
                 "..." if len(passage_text) > self.MAX_PASSAGE_TEXT_LENGTH else ""
             )
             truncated_reference = passage_reference[:self.MAX_REFERENCE_LENGTH]
 
-            # Format RAG context if provided
-            rag_context_text = self._format_rag_context(rag_context)
-
-            # Build the system message with context
-            system_prompt = f"""You are a knowledgeable biblical scholar and theologian having a conversation about a Bible passage.
-
-Passage Reference: {truncated_reference}
-Passage Text: {truncated_passage}
-
-You previously provided these insights:
-- Historical Context: {insight_context.get('historical_context', '')[:self.MAX_CONTEXT_LENGTH]}
-- Theological Significance: {insight_context.get('theological_significance', '')[:self.MAX_CONTEXT_LENGTH]}
-- Practical Application: {insight_context.get('practical_application', '')[:self.MAX_CONTEXT_LENGTH]}
-{rag_context_text}
-
-Continue the conversation by answering the user's questions thoughtfully and in depth. Draw from biblical scholarship, theology, and practical wisdom. Keep your responses focused and relevant to the passage and previous insights."""
+            # Build system prompt using prompt builder
+            system_prompt = build_chat_system_prompt(
+                passage_reference=truncated_reference,
+                passage_text=truncated_passage,
+                historical_context=insight_context.get('historical_context', ''),
+                theological_significance=insight_context.get('theological_significance', ''),
+                practical_application=insight_context.get('practical_application', ''),
+                rag_context=rag_context,
+                max_context_length=self.MAX_CONTEXT_LENGTH
+            )
 
             # Build conversation messages
             messages = []
@@ -315,7 +261,7 @@ Continue the conversation by answering the user's questions thoughtfully and in 
         passage_text: Optional[str] = None,
         passage_reference: Optional[str] = None,
         chat_history: List = None,
-        rag_context: List = None
+        rag_context: str = ""
     ) -> Optional[str]:
         """
         Generate a chat response for standalone chats (not linked to insights).
@@ -325,7 +271,7 @@ Continue the conversation by answering the user's questions thoughtfully and in 
             passage_text: Optional Bible passage text for context
             passage_reference: Optional Bible passage reference
             chat_history: List of previous StandaloneChatMessage objects
-            rag_context: List of relevant messages from RAG retrieval (optional)
+            rag_context: Formatted RAG context string from RagService (optional)
 
         Returns:
             The AI's response text
@@ -334,28 +280,21 @@ Continue the conversation by answering the user's questions thoughtfully and in 
             chat_history = []
 
         try:
-            # Format RAG context if provided
-            rag_context_text = self._format_rag_context(rag_context)
-
-            # Build the system message
-            system_prompt = f"""You are a knowledgeable biblical scholar and theologian having a conversation.
-Answer questions about the Bible, theology, and faith thoughtfully and in depth. Draw from biblical scholarship,
-theology, and practical wisdom.{rag_context_text}"""
-
-            # If there's a passage, add it to the system prompt
+            # Handle passage truncation if provided
+            truncated_passage = None
+            truncated_reference = None
             if passage_text and passage_reference:
                 truncated_passage = passage_text[:self.MAX_PASSAGE_TEXT_LENGTH] + (
                     "..." if len(passage_text) > self.MAX_PASSAGE_TEXT_LENGTH else ""
                 )
                 truncated_reference = passage_reference[:self.MAX_REFERENCE_LENGTH]
-
-                system_prompt = f"""You are a knowledgeable biblical scholar and theologian having a conversation about a Bible passage.
-
-Passage Reference: {truncated_reference}
-Passage Text: {truncated_passage}
-{rag_context_text}
-
-Answer questions thoughtfully and in depth. Draw from biblical scholarship, theology, and practical wisdom."""
+            
+            # Build system prompt using prompt builder
+            system_prompt = build_standalone_chat_system_prompt(
+                passage_reference=truncated_reference,
+                passage_text=truncated_passage,
+                rag_context=rag_context
+            )
 
             # Build conversation messages
             messages = []
@@ -393,7 +332,7 @@ Answer questions thoughtfully and in depth. Draw from biblical scholarship, theo
         passage_reference: str,
         insight_context: dict,
         chat_history: List,
-        rag_context: List = None
+        rag_context: str = ""
     ) -> AsyncGenerator[Tuple[str, Optional[str]], None]:
         """
         Generate a streaming chat response using Claude with conversation context.
@@ -404,7 +343,7 @@ Answer questions thoughtfully and in depth. Draw from biblical scholarship, theo
             passage_reference: The Bible passage reference
             insight_context: Dict with historical_context, theological_significance, practical_application
             chat_history: List of previous ChatMessage objects
-            rag_context: List of relevant messages from RAG retrieval (optional)
+            rag_context: Formatted RAG context string from RagService (optional)
 
         Yields:
             Tuple[str, Optional[str]]: (text_chunk, stop_reason)
@@ -418,22 +357,16 @@ Answer questions thoughtfully and in depth. Draw from biblical scholarship, theo
             )
             truncated_reference = passage_reference[:self.MAX_REFERENCE_LENGTH]
 
-            # Format RAG context if provided
-            rag_context_text = self._format_rag_context(rag_context)
-
-            # Build the system message with context
-            system_prompt = f"""You are a knowledgeable biblical scholar and theologian having a conversation about a Bible passage.
-
-Passage Reference: {truncated_reference}
-Passage Text: {truncated_passage}
-
-You previously provided these insights:
-- Historical Context: {insight_context.get('historical_context', '')[:self.MAX_CONTEXT_LENGTH]}
-- Theological Significance: {insight_context.get('theological_significance', '')[:self.MAX_CONTEXT_LENGTH]}
-- Practical Application: {insight_context.get('practical_application', '')[:self.MAX_CONTEXT_LENGTH]}
-{rag_context_text}
-
-Continue the conversation by answering the user's questions thoughtfully and in depth. Draw from biblical scholarship, theology, and practical wisdom. Keep your responses focused and relevant to the passage and previous insights."""
+            # Build system prompt using prompt builder
+            system_prompt = build_chat_system_prompt(
+                passage_reference=truncated_reference,
+                passage_text=truncated_passage,
+                historical_context=insight_context.get('historical_context', ''),
+                theological_significance=insight_context.get('theological_significance', ''),
+                practical_application=insight_context.get('practical_application', ''),
+                rag_context=rag_context,
+                max_context_length=self.MAX_CONTEXT_LENGTH
+            )
 
             # Build conversation messages
             messages = self._build_conversation_messages(user_message, chat_history)
@@ -465,7 +398,7 @@ Continue the conversation by answering the user's questions thoughtfully and in 
         passage_text: Optional[str] = None,
         passage_reference: Optional[str] = None,
         chat_history: List = None,
-        rag_context: List = None
+        rag_context: str = ""
     ) -> AsyncGenerator[Tuple[str, Optional[str]], None]:
         """
         Generate a streaming chat response for standalone chats (not linked to insights).
@@ -475,7 +408,7 @@ Continue the conversation by answering the user's questions thoughtfully and in 
             passage_text: Optional Bible passage text for context
             passage_reference: Optional Bible passage reference
             chat_history: List of previous StandaloneChatMessage objects
-            rag_context: List of relevant messages from RAG retrieval (optional)
+            rag_context: Formatted RAG context string from RagService (optional)
 
         Yields:
             Tuple[str, Optional[str]]: (text_chunk, stop_reason)
@@ -486,28 +419,21 @@ Continue the conversation by answering the user's questions thoughtfully and in 
             chat_history = []
 
         try:
-            # Format RAG context if provided
-            rag_context_text = self._format_rag_context(rag_context)
-
-            # Build the system message
-            system_prompt = f"""You are a knowledgeable biblical scholar and theologian having a conversation.
-Answer questions about the Bible, theology, and faith thoughtfully and in depth. Draw from biblical scholarship,
-theology, and practical wisdom.{rag_context_text}"""
-
-            # If there's a passage, add it to the system prompt
+            # Handle passage truncation if provided
+            truncated_passage = None
+            truncated_reference = None
             if passage_text and passage_reference:
                 truncated_passage = passage_text[:self.MAX_PASSAGE_TEXT_LENGTH] + (
                     "..." if len(passage_text) > self.MAX_PASSAGE_TEXT_LENGTH else ""
                 )
                 truncated_reference = passage_reference[:self.MAX_REFERENCE_LENGTH]
-
-                system_prompt = f"""You are a knowledgeable biblical scholar and theologian having a conversation about a Bible passage.
-
-Passage Reference: {truncated_reference}
-Passage Text: {truncated_passage}
-{rag_context_text}
-
-Answer questions thoughtfully and in depth. Draw from biblical scholarship, theology, and practical wisdom."""
+            
+            # Build system prompt using prompt builder
+            system_prompt = build_standalone_chat_system_prompt(
+                passage_reference=truncated_reference,
+                passage_text=truncated_passage,
+                rag_context=rag_context
+            )
 
             # Build conversation messages
             messages = self._build_conversation_messages(user_message, chat_history)
@@ -532,3 +458,49 @@ Answer questions thoughtfully and in depth. Draw from biblical scholarship, theo
         except Exception as e:
             logger.error(f"Error generating standalone streaming chat response: {e}", exc_info=True)
             raise
+
+    async def generate_conversation_summary(
+        self,
+        conversation_text: str
+    ) -> Optional[str]:
+        """
+        Generate a 1-2 sentence summary of a conversation using Claude Haiku.
+        
+        This is used for RAG context enhancement to provide quick summaries
+        of past conversations. Uses Haiku for cost efficiency.
+        
+        Args:
+            conversation_text: Formatted conversation history
+            
+        Returns:
+            Summary text (1-2 sentences) or None on error
+        """
+        try:
+            # Use Haiku for fast, cheap summaries
+            HAIKU_MODEL = "claude-3-haiku-20240307"
+            MAX_TOKENS_SUMMARY = 100  # Keep summaries concise
+            
+            system_prompt = """You are a helpful assistant that creates concise summaries of conversations.
+Summarize the following conversation in 1-2 sentences, focusing on the main topics discussed."""
+            
+            message = self.client.messages.create(
+                model=HAIKU_MODEL,
+                max_tokens=MAX_TOKENS_SUMMARY,
+                system=system_prompt,
+                messages=[{
+                    "role": "user",
+                    "content": f"Summarize this conversation:\n\n{conversation_text}"
+                }]
+            )
+            
+            if message.content and len(message.content) > 0:
+                summary = message.content[0].text.strip()
+                logger.debug(f"Generated conversation summary: {summary[:100]}...")
+                return summary
+            else:
+                logger.warning("Empty response from Claude Haiku for summary generation")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error generating conversation summary: {e}", exc_info=True)
+            return None
