@@ -1,7 +1,7 @@
 
 services:
   db:
-    image: postgres:18-alpine
+    image: pgvector/pgvector:pg16
     container_name: verse-db
     environment:
       POSTGRES_USER: verse_user
@@ -25,6 +25,7 @@ services:
     environment:
       DATABASE_URL: postgresql://verse_user:verse_password@db:5432/verse_db
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
       ENVIRONMENT: development
       DEBUG: "true"
     ports:

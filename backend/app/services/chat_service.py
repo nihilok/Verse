@@ -2,8 +2,12 @@ import logging
 from typing import Optional, List
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
+from sqlalchemy import select
 from app.clients.claude_client import ClaudeAIClient
+from app.clients.openai_embedding_client import OpenAIEmbeddingClient
+from app.clients.embedding_client import EmbeddingClient
 from app.models.models import ChatMessage, StandaloneChat, StandaloneChatMessage
+from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -22,9 +26,115 @@ class ChatService:
     # User-provided titles or manual edits can still use the full 200 characters if needed.
     MAX_CHAT_TITLE_LENGTH = 50  # Maximum length for auto-generated chat titles (UI/display limit)
 
-    def __init__(self):
+    # RAG Configuration
+    RAG_CONTEXT_LIMIT = 5  # Number of relevant messages to retrieve for context
+
+    def __init__(self, embedding_client: Optional[EmbeddingClient] = None):
         self.client = ClaudeAIClient()
-    
+        settings = get_settings()
+
+        # Use provided embedding client or create default OpenAI client if API key is available
+        if embedding_client:
+            self.embedding_client = embedding_client
+        elif settings.openai_api_key:
+            self.embedding_client = OpenAIEmbeddingClient(settings.openai_api_key)
+        else:
+            self.embedding_client = None
+            logger.warning("No OpenAI API key configured - RAG functionality will be disabled")
+
+    async def _get_relevant_context(
+        self,
+        db: Session,
+        user_id: int,
+        query: str,
+        limit: int = RAG_CONTEXT_LIMIT
+    ) -> List[ChatMessage]:
+        """
+        Retrieve the most semantically similar messages for a specific user.
+
+        This implements RAG (Retrieval-Augmented Generation) by finding relevant
+        historical context from the user's chat history using vector similarity search.
+
+        Args:
+            db: Database session
+            user_id: User ID to filter messages (ensures data privacy)
+            query: The query text to search for similar messages
+            limit: Maximum number of relevant messages to return
+
+        Returns:
+            List of ChatMessage objects, ordered by relevance (most similar first)
+        """
+        if not self.embedding_client:
+            return []
+
+        try:
+            # Generate embedding for the current query
+            query_vector = await self.embedding_client.get_embedding(query)
+
+            # Semantic search with metadata filtering
+            # The <=> operator represents Cosine Distance in pgvector
+            # We filter by user_id first for privacy and performance
+            stmt = (
+                select(ChatMessage)
+                .filter(
+                    ChatMessage.user_id == user_id,
+                    ChatMessage.embedding.isnot(None)  # Only consider messages with embeddings
+                )
+                .order_by(ChatMessage.embedding.cosine_distance(query_vector))
+                .limit(limit)
+            )
+
+            result = await db.execute(stmt)
+            return result.scalars().all()
+        except Exception as e:
+            logger.error(f"Error retrieving relevant context for user {user_id}: {e}", exc_info=True)
+            return []
+
+    async def _get_relevant_standalone_context(
+        self,
+        db: Session,
+        user_id: int,
+        query: str,
+        limit: int = RAG_CONTEXT_LIMIT
+    ) -> List[StandaloneChatMessage]:
+        """
+        Retrieve the most semantically similar standalone chat messages for a specific user.
+
+        Args:
+            db: Database session
+            user_id: User ID to filter messages (ensures data privacy)
+            query: The query text to search for similar messages
+            limit: Maximum number of relevant messages to return
+
+        Returns:
+            List of StandaloneChatMessage objects, ordered by relevance
+        """
+        if not self.embedding_client:
+            return []
+
+        try:
+            # Generate embedding for the current query
+            query_vector = await self.embedding_client.get_embedding(query)
+
+            # Semantic search across standalone messages
+            # Join with StandaloneChat to filter by user_id
+            stmt = (
+                select(StandaloneChatMessage)
+                .join(StandaloneChat)
+                .filter(
+                    StandaloneChat.user_id == user_id,
+                    StandaloneChatMessage.embedding.isnot(None)
+                )
+                .order_by(StandaloneChatMessage.embedding.cosine_distance(query_vector))
+                .limit(limit)
+            )
+
+            result = await db.execute(stmt)
+            return result.scalars().all()
+        except Exception as e:
+            logger.error(f"Error retrieving relevant standalone context for user {user_id}: {e}", exc_info=True)
+            return []
+
     async def send_message(
         self,
         db: Session,
@@ -67,24 +177,38 @@ class ChatService:
         
         # Save user message and AI response in a transaction
         try:
+            # Generate embeddings for both messages if embedding client is available
+            user_embedding = None
+            ai_embedding = None
+
+            if self.embedding_client:
+                try:
+                    user_embedding = await self.embedding_client.get_embedding(user_message)
+                    ai_embedding = await self.embedding_client.get_embedding(ai_response)
+                except Exception as e:
+                    logger.error(f"Error generating embeddings for insight {insight_id}, user {user_id}: {e}", exc_info=True)
+                    # Continue without embeddings rather than failing the entire operation
+
             # Save user message
             user_msg = ChatMessage(
                 insight_id=insight_id,
                 user_id=user_id,
                 role="user",
-                content=user_message
+                content=user_message,
+                embedding=user_embedding
             )
             db.add(user_msg)
-            
+
             # Save AI response
             ai_msg = ChatMessage(
                 insight_id=insight_id,
                 user_id=user_id,
                 role="assistant",
-                content=ai_response
+                content=ai_response,
+                embedding=ai_embedding
             )
             db.add(ai_msg)
-            
+
             db.commit()
         except Exception as e:
             db.rollback()
@@ -169,11 +293,24 @@ class ChatService:
         chat.title = title
 
         try:
+            # Generate embeddings for both messages if embedding client is available
+            user_embedding = None
+            ai_embedding = None
+
+            if self.embedding_client:
+                try:
+                    user_embedding = await self.embedding_client.get_embedding(user_message)
+                    ai_embedding = await self.embedding_client.get_embedding(ai_response)
+                except Exception as e:
+                    logger.error(f"Error generating embeddings for standalone chat, user {user_id}: {e}", exc_info=True)
+                    # Continue without embeddings
+
             # Save user message
             user_msg = StandaloneChatMessage(
                 chat_id=chat.id,
                 role="user",
-                content=user_message
+                content=user_message,
+                embedding=user_embedding
             )
             db.add(user_msg)
 
@@ -181,7 +318,8 @@ class ChatService:
             ai_msg = StandaloneChatMessage(
                 chat_id=chat.id,
                 role="assistant",
-                content=ai_response
+                content=ai_response,
+                embedding=ai_embedding
             )
             db.add(ai_msg)
 
@@ -249,11 +387,24 @@ class ChatService:
                     stop_reason = chunk_stop_reason
 
             # Save to database atomically after streaming completes
+            # Generate embeddings for both messages if embedding client is available
+            user_embedding = None
+            ai_embedding = None
+
+            if self.embedding_client:
+                try:
+                    user_embedding = await self.embedding_client.get_embedding(user_message)
+                    ai_embedding = await self.embedding_client.get_embedding(complete_response)
+                except Exception as e:
+                    logger.error(f"Error generating embeddings for standalone chat stream, user {user_id}: {e}", exc_info=True)
+                    # Continue without embeddings
+
             # Save user message
             user_msg = StandaloneChatMessage(
                 chat_id=chat.id,
                 role="user",
-                content=user_message
+                content=user_message,
+                embedding=user_embedding
             )
             db.add(user_msg)
 
@@ -262,7 +413,8 @@ class ChatService:
                 chat_id=chat.id,
                 role="assistant",
                 content=complete_response,
-                was_truncated=(stop_reason == "max_tokens")
+                was_truncated=(stop_reason == "max_tokens"),
+                embedding=ai_embedding
             )
             db.add(ai_msg)
 
@@ -320,25 +472,39 @@ class ChatService:
             return None
         
         try:
+            # Generate embeddings for both messages if embedding client is available
+            user_embedding = None
+            ai_embedding = None
+
+            if self.embedding_client:
+                try:
+                    user_embedding = await self.embedding_client.get_embedding(user_message)
+                    ai_embedding = await self.embedding_client.get_embedding(ai_response)
+                except Exception as e:
+                    logger.error(f"Error generating embeddings for chat {chat_id}, user {user_id}: {e}", exc_info=True)
+                    # Continue without embeddings
+
             # Save user message
             user_msg = StandaloneChatMessage(
                 chat_id=chat_id,
                 role="user",
-                content=user_message
+                content=user_message,
+                embedding=user_embedding
             )
             db.add(user_msg)
-            
+
             # Save AI response
             ai_msg = StandaloneChatMessage(
                 chat_id=chat_id,
                 role="assistant",
-                content=ai_response
+                content=ai_response,
+                embedding=ai_embedding
             )
             db.add(ai_msg)
-            
+
             # Update chat's updated_at timestamp
             chat.updated_at = func.now()
-            
+
             db.commit()
         except Exception as e:
             db.rollback()
@@ -447,12 +613,25 @@ class ChatService:
                     stop_reason = chunk_stop_reason
 
             # Save to database atomically after streaming completes
+            # Generate embeddings for both messages if embedding client is available
+            user_embedding = None
+            ai_embedding = None
+
+            if self.embedding_client:
+                try:
+                    user_embedding = await self.embedding_client.get_embedding(user_message)
+                    ai_embedding = await self.embedding_client.get_embedding(complete_response)
+                except Exception as e:
+                    logger.error(f"Error generating embeddings for insight {insight_id}, user {user_id}: {e}", exc_info=True)
+                    # Continue without embeddings
+
             # Save user message
             user_msg = ChatMessage(
                 insight_id=insight_id,
                 user_id=user_id,
                 role="user",
-                content=user_message
+                content=user_message,
+                embedding=user_embedding
             )
             db.add(user_msg)
 
@@ -462,7 +641,8 @@ class ChatService:
                 user_id=user_id,
                 role="assistant",
                 content=complete_response,
-                was_truncated=(stop_reason == "max_tokens")
+                was_truncated=(stop_reason == "max_tokens"),
+                embedding=ai_embedding
             )
             db.add(ai_msg)
 
@@ -526,11 +706,24 @@ class ChatService:
                     stop_reason = chunk_stop_reason
 
             # Save to database atomically after streaming completes
+            # Generate embeddings for both messages if embedding client is available
+            user_embedding = None
+            ai_embedding = None
+
+            if self.embedding_client:
+                try:
+                    user_embedding = await self.embedding_client.get_embedding(user_message)
+                    ai_embedding = await self.embedding_client.get_embedding(complete_response)
+                except Exception as e:
+                    logger.error(f"Error generating embeddings for chat {chat_id}, user {user_id}: {e}", exc_info=True)
+                    # Continue without embeddings
+
             # Save user message
             user_msg = StandaloneChatMessage(
                 chat_id=chat_id,
                 role="user",
-                content=user_message
+                content=user_message,
+                embedding=user_embedding
             )
             db.add(user_msg)
 
@@ -539,7 +732,8 @@ class ChatService:
                 chat_id=chat_id,
                 role="assistant",
                 content=complete_response,
-                was_truncated=(stop_reason == "max_tokens")
+                was_truncated=(stop_reason == "max_tokens"),
+                embedding=ai_embedding
             )
             db.add(ai_msg)
 

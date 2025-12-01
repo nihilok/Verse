@@ -61,6 +61,63 @@ ALTER TABLE chat_messages DROP COLUMN IF EXISTS was_truncated;
 ALTER TABLE standalone_chat_messages DROP COLUMN IF EXISTS was_truncated;
 ```
 
+## RAG (Retrieval-Augmented Generation) Setup
+
+To enable RAG functionality for chat messages, run these migrations in order:
+
+### 1. Enable pgvector Extension
+
+This migration enables the pgvector extension in PostgreSQL, which is required for vector similarity search.
+
+```bash
+cd backend
+uv run python -m migrations.enable_vector
+```
+
+**Note:** This requires your database to support pgvector. If you're using Docker Compose, make sure you're using the `pgvector/pgvector:pg16` image (already configured in docker-compose.yml).
+
+### 2. Update Database Schema
+
+After enabling pgvector, restart your backend to create the new columns and indexes:
+
+```bash
+# If using Docker Compose:
+docker compose restart backend
+
+# Or if running locally:
+uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+The application will automatically create the `embedding` columns and HNSW indexes via SQLAlchemy's `create_all()`.
+
+### 3. Backfill Existing Messages (Optional)
+
+If you have existing chat messages, backfill embeddings for them:
+
+```bash
+cd backend
+uv run python -m migrations.backfill_embeddings
+```
+
+This script:
+- Processes all existing messages without embeddings
+- Generates embeddings using OpenAI's text-embedding-3-small model
+- Processes messages in batches of 100 to respect API rate limits
+- Can be safely interrupted and rerun
+
+**Requirements:**
+- `OPENAI_API_KEY` must be set in your .env file
+
+**Cost Estimate:**
+- OpenAI text-embedding-3-small: ~$0.00002 per 1,000 tokens
+- 1,000 messages ≈ $0.02-0.04
+
+### RAG Migration Order
+
+1. `enable_vector.py` - Enable the extension
+2. Restart backend - Create schema changes
+3. `backfill_embeddings.py` - Populate existing data (optional)
+
 ## Future Migrations
 
 For future schema changes, consider setting up Alembic for automatic migration management:
