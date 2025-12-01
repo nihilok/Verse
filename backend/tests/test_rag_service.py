@@ -2,12 +2,12 @@
 Tests for RagService - Enhanced RAG context with summaries and surrounding messages
 """
 import pytest
-from unittest.mock import Mock, AsyncMock, MagicMock
+from unittest.mock import Mock, AsyncMock
 from datetime import datetime
 from sqlalchemy.orm import Session
 
 from app.services.rag_service import RagService, EnhancedRagContext
-from app.models.models import ChatMessage, StandaloneChatMessage, ConversationSummary
+from app.models.models import ChatMessage, ConversationSummary
 
 
 @pytest.fixture

@@ -4,8 +4,6 @@ Base Prompt Components
 Reusable prompt snippets that define core context and role for the AI.
 """
 
-from typing import Optional
-
 
 # Core app context that appears in all prompts
 VERSE_APP_CONTEXT = """You are a study companion in Verse, an interactive Bible reading app."""

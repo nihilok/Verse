@@ -10,7 +10,7 @@ from typing import Optional, List, Dict, Type, Any, Tuple
 from dataclasses import dataclass
 from datetime import datetime
 from sqlalchemy.orm import Session
-from sqlalchemy import select, and_, or_
+from sqlalchemy import select, and_
 from app.clients.embedding_client import EmbeddingClient
 from app.clients.ai_client import AIClient
 from app.models.models import (
