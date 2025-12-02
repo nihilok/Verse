@@ -30,33 +30,37 @@ STUDY_COMPANION_ROLE_GENERAL = """Context About Your Role:
 def build_passage_context(passage_reference: str, passage_text: str) -> str:
     """
     Build formatted passage context section.
-    
+
     Args:
         passage_reference: Bible reference (e.g., "John 3:16")
         passage_text: The actual passage text
-        
+
     Returns:
         Formatted passage context string
     """
     return f"""The Passage They're Studying:
 Reference: {passage_reference}
-Text: {passage_text}"""
+Text: {passage_text}
+
+Note: The user has the ability to switch between multiple Bible translations. The passage text provided may come from one or more translations, but there may be a translation specified with the passage reference, in which case focus on that translation only."""
 
 
 def build_passage_context_exploration(passage_reference: str, passage_text: str) -> str:
     """
     Build formatted passage context for exploratory chats.
-    
+
     Args:
         passage_reference: Bible reference (e.g., "John 3:16")
         passage_text: The actual passage text
-        
+
     Returns:
         Formatted passage context string with exploration framing
     """
     return f"""The Passage They're Exploring:
 Reference: {passage_reference}
-Text: {passage_text}"""
+Text: {passage_text}
+
+Note: The user has the ability to switch between multiple Bible translations. The passage text provided may come from one or more translations, but there may be a translation specified with the passage reference, in which case focus on that translation only."""
 
 
 def build_insights_context(
@@ -113,18 +117,20 @@ def build_engagement_guidelines(for_passage: bool = True) -> str:
 def build_definition_context(word: str, passage_reference: str, verse_text: str) -> str:
     """
     Build context for word definition requests.
-    
+
     Args:
         word: The word to define
         passage_reference: Where the word appears
         verse_text: The full verse containing the word
-        
+
     Returns:
         Formatted definition context
     """
     return f"""Word: {word}
 Verse Reference: {passage_reference}
-Full Verse: {verse_text}"""
+Full Verse: {verse_text}
+
+Note: The user has the ability to switch between multiple Bible translations. The passage text provided may come from one or more translations, but there may be a translation specified with the passage reference, in which case focus on that translation only."""
 
 
 def add_rag_context(base_prompt: str, rag_context: str) -> str:
