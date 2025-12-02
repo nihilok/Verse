@@ -137,7 +137,9 @@ Concrete Client Implementations
 - Use British English spelling in user-facing strings and documentation
 - Extract magic numbers to module-level constants
 - Use environment variables for deployment settings (e.g., `cookie_secure` for HTTPS)
-- Clean up unused imports
+- Clean up unused imports - especially after refactoring that changes types or interfaces
+- When refactoring changes data structures (e.g., EnhancedContext → MergedContext), remove old type imports from all affected files
+- Run linting (`bun run lint` for frontend) before committing to catch unused imports and other issues
 - Use `delete().rowcount` directly instead of separate count queries
 - Wrap `JSON.parse` in try-catch with specific error messages
 - Specify `ondelete='CASCADE'` on foreign keys for proper cleanup
