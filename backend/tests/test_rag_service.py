@@ -6,8 +6,8 @@ from unittest.mock import Mock, AsyncMock
 from datetime import datetime
 from sqlalchemy.orm import Session
 
-from app.services.rag_service import RagService, EnhancedRagContext, MergedRagContext
-from app.models.models import ChatMessage, StandaloneChatMessage, ConversationSummary
+from app.services.rag_service import RagService, MergedRagContext
+from app.models.models import ChatMessage, ConversationSummary
 
 
 @pytest.fixture
