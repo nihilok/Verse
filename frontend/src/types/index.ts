@@ -12,6 +12,36 @@ export interface BiblePassage {
   translation: string;
 }
 
+/**
+ * Format a passage reference with translation in parentheses.
+ * Example: "John 3:16" with "KJV" becomes "John 3:16 (KJV)"
+ */
+export function formatReferenceWithTranslation(
+  reference: string,
+  translation: string,
+): string {
+  // Don't add translation if already present
+  if (reference.includes("(") && reference.includes(")")) {
+    return reference;
+  }
+  return `${reference} (${translation})`;
+}
+
+/**
+ * Extract reference and translation from a formatted reference.
+ * Example: "John 3:16 (KJV)" returns { reference: "John 3:16", translation: "KJV" }
+ */
+export function parseReferenceWithTranslation(formattedReference: string): {
+  reference: string;
+  translation: string | null;
+} {
+  const match = formattedReference.match(/^(.+?)\s*\(([^)]+)\)\s*$/);
+  if (match) {
+    return { reference: match[1].trim(), translation: match[2].trim() };
+  }
+  return { reference: formattedReference, translation: null };
+}
+
 export interface Insight {
   historical_context: string;
   theological_significance: string;

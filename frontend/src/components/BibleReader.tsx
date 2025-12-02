@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import type { BiblePassage } from "../types";
+import { formatReferenceWithTranslation } from "../types";
 import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import SelectionButtons from "./SelectionButtons";
 
@@ -15,7 +16,12 @@ const SWIPE_MAX_VERTICAL = 100; // maximum vertical movement allowed for horizon
 
 interface BibleReaderProps {
   passage: BiblePassage | null;
-  onTextSelected: (text: string, reference: string, isSingleWord: boolean, verseText?: string) => void;
+  onTextSelected: (
+    text: string,
+    reference: string,
+    isSingleWord: boolean,
+    verseText?: string,
+  ) => void;
   onAskQuestion: (text: string, reference: string) => void;
   onNavigate?: (direction: "prev" | "next") => void;
   loading?: boolean;
@@ -130,12 +136,14 @@ const BibleReader: React.FC<BibleReaderProps> = ({
   };
 
   // Helper function to find the verse containing the selected text
-  const findContainingVerse = (text: string): { verseText: string; verseReference: string } | null => {
+  const findContainingVerse = (
+    text: string,
+  ): { verseText: string; verseReference: string } | null => {
     if (!passage) return null;
 
     // Create a regex with word boundaries for exact word matching, case-insensitive
-    const escapedText = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const wordRegex = new RegExp(`\\b${escapedText}\\b`, 'i');
+    const escapedText = text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const wordRegex = new RegExp(`\\b${escapedText}\\b`, "i");
     for (const verse of passage.verses) {
       if (wordRegex.test(verse.text)) {
         // Create the specific verse reference (e.g., "John 3:16")
@@ -162,8 +170,15 @@ const BibleReader: React.FC<BibleReaderProps> = ({
       const isSingleWordSelection = isSingleWord(textToSend);
 
       // For single word selections, find the verse containing the word
-      const verseInfo = isSingleWordSelection ? findContainingVerse(textToSend) : null;
-      const referenceToSend = verseInfo?.verseReference || passage.reference;
+      const verseInfo = isSingleWordSelection
+        ? findContainingVerse(textToSend)
+        : null;
+      const baseReference = verseInfo?.verseReference || passage.reference;
+      // Include translation in reference
+      const referenceToSend = formatReferenceWithTranslation(
+        baseReference,
+        passage.translation,
+      );
       const verseTextToSend = verseInfo?.verseText;
 
       // Clear the UI immediately
@@ -171,7 +186,12 @@ const BibleReader: React.FC<BibleReaderProps> = ({
       setSelectionPosition(null);
 
       // Send the text after clearing the selection
-      onTextSelected(textToSend, referenceToSend, isSingleWordSelection, verseTextToSend);
+      onTextSelected(
+        textToSend,
+        referenceToSend,
+        isSingleWordSelection,
+        verseTextToSend,
+      );
 
       // Clear the browser selection after a brief delay to ensure click is processed
       setTimeout(() => {
@@ -188,7 +208,11 @@ const BibleReader: React.FC<BibleReaderProps> = ({
     if (selectedText && passage) {
       // Store the text before clearing
       const textToSend = selectedText;
-      const referenceToSend = passage.reference;
+      // Include translation in reference
+      const referenceToSend = formatReferenceWithTranslation(
+        passage.reference,
+        passage.translation,
+      );
 
       // Clear the UI immediately
       setSelectedText("");
