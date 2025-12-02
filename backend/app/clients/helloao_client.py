@@ -17,7 +17,18 @@ class HelloAOBibleClient(BibleClient):
         "WEB": "ENGWEBP",  # World English Bible
         "KJV": "eng_kjv",   # King James Version
         "BSB": "BSB",   # Berean Standard Bible
+        "ASV": "eng_asv",   # American Standard Version (1901)
         "LSV": "eng_lsv",   # Literal Standard Version
+        "BST": "eng_bre",   # Brenton English Septuagint
+        "GLW": "eng_glw",   # God's Living Word
+        "LXXSB": "eng_lxu",   # British English Septuagint 2012
+        "TOJB": "eng_ojb",   # The Orthodox Jewish Bible
+        "PEV": "eng_pev",   # Plain English Version
+        "RVA": "eng_rv5",   # Revised Version
+        "MSB": "eng_msb",   # Majority Standard Bible
+        "YLT": "eng_ylt",   # Young's Literal Translation
+        "BBE": "eng_bbe",   # Bible in Basic English
+        "EMTV": "eng_emtv",   # English Majority Text Version
         "SRV": "spa_r09",  # Spanish Reina-Valera 1909
         "BES": "spa_bes"  # Spanish Biblia en Español Sencillo
     }
