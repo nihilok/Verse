@@ -8,7 +8,7 @@ from app.clients.openai_embedding_client import OpenAIEmbeddingClient
 from app.clients.embedding_client import EmbeddingClient
 from app.models.models import ChatMessage, StandaloneChat, StandaloneChatMessage
 from app.core.config import get_settings
-from app.services.rag_service import RagService
+from app.services.rag_service import RagService, MergedRagContext
 
 logger = logging.getLogger(__name__)
 

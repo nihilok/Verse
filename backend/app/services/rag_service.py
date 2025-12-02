@@ -41,6 +41,25 @@ class EnhancedRagContext:
     conversation_date: datetime  # Date of first message in conversation
 
 
+@dataclass
+class MergedRagContext:
+    """
+    Container for merged RAG context with multiple matches from same conversation.
+
+    When multiple messages from the same conversation are retrieved via semantic search,
+    they are merged into a single excerpt to eliminate redundancy while preserving
+    all matched content and context.
+    """
+    conversation_id: int
+    conversation_type: str  # 'insight' or 'standalone'
+    summary: str
+    matched_messages: List[Any]  # Multiple matched messages (sorted chronologically)
+    messages_before: List[Any]  # Messages before earliest match
+    messages_between: List[Any]  # Messages between earliest and latest match
+    messages_after: List[Any]  # Messages after latest match
+    conversation_date: datetime  # Date of first message in conversation
+
+
 class RagService:
     """Service for RAG operations with enhanced context."""
 
@@ -56,10 +75,14 @@ class RagService:
         ai_client: AIClient,
         current_conversation_id: Optional[int] = None,
         limit: int = RAG_CONTEXT_LIMIT
-    ) -> List[EnhancedRagContext]:
+    ) -> List[MergedRagContext]:
         """
-        Retrieve RAG context with summaries and surrounding messages.
-        
+        Retrieve RAG context with deduplication and merged surrounding messages.
+
+        When multiple messages from the same conversation are retrieved, they are merged
+        into a single context to eliminate redundancy (duplicate summaries, overlapping
+        surrounding messages) while preserving all matched content.
+
         Args:
             db: Database session
             user_id: User ID to filter messages
@@ -68,9 +91,9 @@ class RagService:
             ai_client: AI client for generating summaries
             current_conversation_id: ID to exclude from search
             limit: Max number of relevant messages to retrieve
-            
+
         Returns:
-            List of EnhancedRagContext objects with summaries and surrounding messages
+            List of MergedRagContext objects with deduplicated summaries and merged context
         """
         if not self.embedding_client:
             logger.debug(f"No embedding client configured - RAG disabled for user {user_id}")
@@ -104,22 +127,21 @@ class RagService:
         if not relevant_messages:
             return []
 
-        # Build enhanced contexts with surrounding messages and summaries
-        enhanced_contexts = []
-        for message in relevant_messages:
-            conversation_id = getattr(message, conversation_id_field)
-            
-            # Get surrounding messages
-            surrounding = await self._get_surrounding_messages(
-                db=db,
-                model_class=model_class,
-                message=message,
-                conversation_id_field=conversation_id_field,
-                before=RAG_SURROUNDING_MESSAGES,
-                after=RAG_SURROUNDING_MESSAGES
-            )
-            
-            # Get or create conversation summary
+        # Group messages by conversation to detect and merge duplicates
+        grouped_messages = self._group_by_conversation(
+            relevant_messages=relevant_messages,
+            conversation_id_field=conversation_id_field
+        )
+
+        logger.info(
+            f"RAG retrieved {len(relevant_messages)} messages from "
+            f"{len(grouped_messages)} unique conversations for user {user_id}"
+        )
+
+        # Build merged contexts with deduplication
+        merged_contexts = []
+        for conversation_id, conv_messages in grouped_messages.items():
+            # Get or create conversation summary (only ONCE per conversation)
             summary = await self._get_or_create_conversation_summary(
                 db=db,
                 conversation_type=conversation_type,
@@ -128,26 +150,162 @@ class RagService:
                 conversation_id_field=conversation_id_field,
                 model_class=model_class
             )
-            
-            # Get conversation date (first message timestamp)
+
+            # Get conversation date (only ONCE per conversation)
             conversation_date = await self._get_conversation_date(
                 db=db,
                 model_class=model_class,
                 conversation_id=conversation_id,
                 conversation_id_field=conversation_id_field
             )
-            
-            enhanced_contexts.append(EnhancedRagContext(
+
+            # Get merged surrounding messages for all matches in this conversation
+            merged_surrounding = await self._get_merged_surrounding_messages(
+                db=db,
+                model_class=model_class,
+                messages=conv_messages,
+                conversation_id_field=conversation_id_field,
+                conversation_id=conversation_id,
+                before=RAG_SURROUNDING_MESSAGES,
+                after=RAG_SURROUNDING_MESSAGES
+            )
+
+            # Create merged context (one per conversation instead of one per message)
+            merged_contexts.append(MergedRagContext(
                 conversation_id=conversation_id,
                 conversation_type=conversation_type,
                 summary=summary,
-                matched_message=message,
-                messages_before=surrounding['before'],
-                messages_after=surrounding['after'],
+                matched_messages=merged_surrounding['matched'],
+                messages_before=merged_surrounding['before'],
+                messages_between=merged_surrounding.get('between', []),
+                messages_after=merged_surrounding['after'],
                 conversation_date=conversation_date
             ))
 
-        return enhanced_contexts
+        return merged_contexts
+
+    def _group_by_conversation(
+        self,
+        relevant_messages: List,
+        conversation_id_field: str
+    ) -> Dict[int, List]:
+        """
+        Group retrieved messages by conversation_id to detect duplicates.
+
+        When semantic search retrieves multiple messages from the same conversation,
+        this method groups them together so they can be merged into a single excerpt
+        instead of creating redundant separate excerpts.
+
+        Args:
+            relevant_messages: List of messages from semantic search
+            conversation_id_field: Field name for conversation ID ('insight_id' or 'standalone_chat_id')
+
+        Returns:
+            Dict mapping conversation_id to list of messages from that conversation
+        """
+        from collections import defaultdict
+        grouped = defaultdict(list)
+        for msg in relevant_messages:
+            conv_id = getattr(msg, conversation_id_field)
+            grouped[conv_id].append(msg)
+        return dict(grouped)
+
+    async def _get_merged_surrounding_messages(
+        self,
+        db: Session,
+        model_class: Type,
+        messages: List[Any],
+        conversation_id_field: str,
+        conversation_id: int,
+        before: int = RAG_SURROUNDING_MESSAGES,
+        after: int = RAG_SURROUNDING_MESSAGES
+    ) -> Dict[str, List]:
+        """
+        Get surrounding messages for multiple matched messages with merged ranges.
+
+        When multiple messages from same conversation are matched, merge their
+        time ranges to avoid duplicate surrounding messages in output.
+
+        Args:
+            db: Database session
+            model_class: Message model class (ChatMessage or StandaloneChatMessage)
+            messages: List of matched messages from same conversation
+            conversation_id_field: Field name for conversation ID
+            conversation_id: The conversation ID
+            before: Number of messages before merged range
+            after: Number of messages after merged range
+
+        Returns:
+            Dict with:
+              - 'before': Messages before the earliest match
+              - 'matched': All matched messages (sorted chronologically)
+              - 'between': Messages between earliest and latest match
+              - 'after': Messages after the latest match
+        """
+        try:
+            # Sort matches chronologically
+            sorted_matches = sorted(messages, key=lambda m: m.created_at)
+            earliest_match = sorted_matches[0]
+            latest_match = sorted_matches[-1]
+
+            # Get messages before earliest match
+            stmt_before = (
+                select(model_class)
+                .filter(
+                    getattr(model_class, conversation_id_field) == conversation_id,
+                    model_class.created_at < earliest_match.created_at
+                )
+                .order_by(model_class.created_at.desc())
+                .limit(before)
+            )
+            result_before = db.execute(stmt_before)
+            messages_before = list(reversed(result_before.scalars().all()))  # Oldest first
+
+            # Get messages after latest match
+            stmt_after = (
+                select(model_class)
+                .filter(
+                    getattr(model_class, conversation_id_field) == conversation_id,
+                    model_class.created_at > latest_match.created_at
+                )
+                .order_by(model_class.created_at.asc())
+                .limit(after)
+            )
+            result_after = db.execute(stmt_after)
+            messages_after = list(result_after.scalars().all())
+
+            # Get any messages BETWEEN matches (if there are gaps)
+            # These should be included in the merged excerpt
+            messages_between = []
+            if len(sorted_matches) > 1:
+                stmt_between = (
+                    select(model_class)
+                    .filter(
+                        getattr(model_class, conversation_id_field) == conversation_id,
+                        model_class.created_at > earliest_match.created_at,
+                        model_class.created_at < latest_match.created_at
+                    )
+                    .order_by(model_class.created_at.asc())
+                )
+                result_between = db.execute(stmt_between)
+                messages_between = list(result_between.scalars().all())
+
+            return {
+                'before': messages_before,
+                'matched': sorted_matches,
+                'between': messages_between,
+                'after': messages_after
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting merged surrounding messages: {e}", exc_info=True)
+            # Fallback: return at least the matched messages
+            return {
+                'before': [],
+                'matched': sorted(messages, key=lambda m: m.created_at),
+                'between': [],
+                'after': []
+            }
 
     async def _get_relevant_messages(
         self,
@@ -438,51 +596,75 @@ class RagService:
 
     def format_enhanced_rag_context(
         self,
-        enhanced_contexts: List[EnhancedRagContext]
+        enhanced_contexts: List[MergedRagContext]
     ) -> str:
         """
-        Format enhanced RAG contexts as structured excerpts.
-        
+        Format merged RAG contexts as structured excerpts.
+
+        Each context represents one conversation with potentially multiple
+        matched messages merged together to eliminate redundancy.
+
         Args:
-            enhanced_contexts: List of EnhancedRagContext objects
-            
+            enhanced_contexts: List of MergedRagContext objects
+
         Returns:
             Formatted string for system prompt injection
         """
         if not enhanced_contexts:
             return ""
-        
+
         formatted_parts = ["RELEVANT CONTEXT FROM PAST CONVERSATIONS:\n"]
-        
+
         for ctx in enhanced_contexts:
             # Format date
             date_str = ctx.conversation_date.strftime("%Y-%m-%d %H:%M")
-            
-            # Add summary header
+
+            # Add summary header (ONCE per conversation, not per message)
             formatted_parts.append(
                 f"\n[Summary of conversation from {date_str}: {ctx.summary}]"
             )
             formatted_parts.append("---excerpt---")
-            
-            # Add messages before
+
+            # Add messages before earliest match
             for msg in ctx.messages_before:
                 role_label = "User" if msg.role == "user" else "You"
                 timestamp = msg.created_at.strftime("%Y-%m-%d %H:%M")
                 formatted_parts.append(f"{role_label} ({timestamp}): {msg.content}")
-            
-            # Add matched message (mark it)
-            role_label = "User" if ctx.matched_message.role == "user" else "You"
-            timestamp = ctx.matched_message.created_at.strftime("%Y-%m-%d %H:%M")
-            formatted_parts.append(
-                f"{role_label} ({timestamp}): {ctx.matched_message.content}  ← Retrieved via semantic search"
-            )
-            
-            # Add messages after
+
+            # Add matched messages with markers
+            # If multiple matches, mark each one
+            for i, matched_msg in enumerate(ctx.matched_messages):
+                role_label = "User" if matched_msg.role == "user" else "You"
+                timestamp = matched_msg.created_at.strftime("%Y-%m-%d %H:%M")
+
+                # Mark matched messages
+                marker = "← Retrieved via semantic search"
+                if len(ctx.matched_messages) > 1:
+                    marker = f"← Match {i+1}/{len(ctx.matched_messages)} via semantic search"
+
+                formatted_parts.append(
+                    f"{role_label} ({timestamp}): {matched_msg.content}  {marker}"
+                )
+
+                # Add messages between matches (if this isn't the last match)
+                if i < len(ctx.matched_messages) - 1:
+                    # Find messages between this match and the next
+                    next_match = ctx.matched_messages[i + 1]
+                    between_for_this_gap = [
+                        msg for msg in ctx.messages_between
+                        if matched_msg.created_at < msg.created_at < next_match.created_at
+                    ]
+                    for between_msg in between_for_this_gap:
+                        role_label = "User" if between_msg.role == "user" else "You"
+                        timestamp = between_msg.created_at.strftime("%Y-%m-%d %H:%M")
+                        formatted_parts.append(f"{role_label} ({timestamp}): {between_msg.content}")
+
+            # Add messages after latest match
             for msg in ctx.messages_after:
                 role_label = "User" if msg.role == "user" else "You"
                 timestamp = msg.created_at.strftime("%Y-%m-%d %H:%M")
                 formatted_parts.append(f"{role_label} ({timestamp}): {msg.content}")
-            
+
             formatted_parts.append("---end excerpt---\n")
-        
+
         return "\n".join(formatted_parts)
