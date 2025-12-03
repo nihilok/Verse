@@ -60,4 +60,3 @@ done
 echo ""
 echo "Placeholder icons generated successfully!"
 echo "Remember to replace these with proper branded icons for production."
-

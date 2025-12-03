@@ -4,7 +4,7 @@
 
 Enhanced RAG system now includes:
 - 📝 Conversation summaries
-- ⏰ Timestamps on all messages  
+- ⏰ Timestamps on all messages
 - 📍 Surrounding context (2 before, 2 after)
 - 🎯 Better memory for AI responses
 
@@ -16,11 +16,11 @@ User: "What did we discuss about prayer?"
 AI: "I don't recall discussing prayer specifically."
 ```
 
-### After  
+### After
 ```
 User: "What did we discuss about prayer?"
-AI: "Last week on November 24th, we discussed prayer practices and 
-intercessory prayer. You asked about praying on behalf of others, 
+AI: "Last week on November 24th, we discussed prayer practices and
+intercessory prayer. You asked about praying on behalf of others,
 and I explained how this practice appears throughout scripture."
 ```
 
@@ -101,7 +101,7 @@ HAIKU_MODEL = "claude-3-opus-20240229"  # More expensive
 
 ```sql
 -- See how many summaries are cached
-SELECT 
+SELECT
     conversation_type,
     COUNT(*) as total,
     AVG(message_count) as avg_messages
@@ -113,7 +113,7 @@ GROUP BY conversation_type;
 
 ```sql
 -- See latest summaries
-SELECT 
+SELECT
     conversation_type,
     conversation_id,
     summary_text,

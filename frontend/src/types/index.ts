@@ -156,3 +156,32 @@ export interface DataOperationResult {
     standalone_chats: number;
   };
 }
+
+export interface UserDevice {
+  id: number;
+  device_name: string | null;
+  device_type: string | null;
+  user_agent: string | null;
+  created_at: string;
+  last_active: string;
+  is_current?: boolean;
+}
+
+export interface LinkCodeResponse {
+  display_code: string;
+  expires_at: string;
+  qr_data: string;
+}
+
+export interface LinkDeviceResponse {
+  success: boolean;
+  new_anonymous_id: string;
+  message: string;
+}
+
+export interface UnlinkDeviceResponse {
+  device_count: number;
+  data_deleted: boolean;
+  should_clear_cookie: boolean;
+  message: string;
+}

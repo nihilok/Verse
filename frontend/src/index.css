@@ -9,9 +9,7 @@
   --color-card-foreground: oklch(20% 0 0);
   --color-popover: oklch(100% 0 0);
   --color-popover-foreground: oklch(20% 0 0);
-  --color-primary: oklch(
-    65% 0.19 35
-  ); /* Anthropic-style orange/coral */
+  --color-primary: oklch(65% 0.19 35); /* Anthropic-style orange/coral */
   --color-primary-foreground: oklch(100% 0 0);
   --color-secondary: oklch(96% 0.01 265); /* Very light gray */
   --color-secondary-foreground: oklch(20% 0 0);
@@ -26,8 +24,12 @@
   --color-ring: oklch(65% 0.19 35); /* Orange focus ring */
 
   /* Typography - modern sans-serif fonts */
-  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-serif: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-sans:
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-serif:
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
 
   /* Border radius - modern and clean */
   --radius-lg: 0.75rem;
@@ -43,7 +45,15 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family:
+      "Inter",
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      Roboto,
+      "Helvetica Neue",
+      Arial,
+      sans-serif;
     font-feature-settings:
       "rlig" 1,
       "calt" 1,
@@ -330,7 +340,6 @@
     color: oklch(98% 0 0);
   }
 }
-
 
 @layer components {
   /* Improve readability of markdown/prose content in dark mode */

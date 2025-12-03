@@ -1,6 +1,7 @@
 """Tests for client abstractions."""
-from app.clients.bible_client import BibleVerse, BiblePassage
+
 from app.clients.ai_client import InsightRequest, InsightResponse
+from app.clients.bible_client import BiblePassage, BibleVerse
 
 
 def test_bible_verse_model():
@@ -10,7 +11,7 @@ def test_bible_verse_model():
         chapter=3,
         verse=16,
         text="For God so loved the world...",
-        translation="WEB"
+        translation="WEB",
     )
     assert verse.book == "John"
     assert verse.chapter == 3
@@ -24,23 +25,16 @@ def test_bible_passage_model():
         chapter=3,
         verse=16,
         text="For God so loved the world...",
-        translation="WEB"
+        translation="WEB",
     )
-    passage = BiblePassage(
-        reference="John 3:16",
-        verses=[verse],
-        translation="WEB"
-    )
+    passage = BiblePassage(reference="John 3:16", verses=[verse], translation="WEB")
     assert passage.reference == "John 3:16"
     assert len(passage.verses) == 1
 
 
 def test_insight_request_model():
     """Test InsightRequest model creation."""
-    request = InsightRequest(
-        passage_text="Test passage",
-        passage_reference="John 3:16"
-    )
+    request = InsightRequest(passage_text="Test passage", passage_reference="John 3:16")
     assert request.passage_text == "Test passage"
     assert request.passage_reference == "John 3:16"
 
@@ -50,7 +44,7 @@ def test_insight_response_model():
     response = InsightResponse(
         historical_context="Test context",
         theological_significance="Test significance",
-        practical_application="Test application"
+        practical_application="Test application",
     )
     assert response.historical_context == "Test context"
     assert response.theological_significance == "Test significance"

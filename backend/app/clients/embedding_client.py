@@ -1,14 +1,13 @@
 """Abstract base class for embedding providers."""
 
 from abc import ABC, abstractmethod
-from typing import List
 
 
 class EmbeddingClient(ABC):
     """Abstract base class for text embedding providers."""
 
     @abstractmethod
-    async def get_embedding(self, text: str) -> List[float]:
+    async def get_embedding(self, text: str) -> list[float]:
         """
         Convert text string into a vector embedding.
 
@@ -21,7 +20,7 @@ class EmbeddingClient(ABC):
         pass
 
     @abstractmethod
-    async def get_embeddings_batch(self, texts: List[str]) -> List[List[float]]:
+    async def get_embeddings_batch(self, texts: list[str]) -> list[list[float]]:
         """
         Convert multiple text strings into vector embeddings.
 

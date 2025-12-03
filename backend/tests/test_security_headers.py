@@ -1,8 +1,10 @@
 """Tests for security headers middleware."""
 
+from unittest.mock import patch
+
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import patch
+
 from app.main import app
 
 
@@ -91,10 +93,10 @@ def test_x_xss_protection(client):
 def test_hsts_in_production(client):
     """Test that HSTS header is added in production environment."""
     # Mock the settings to simulate production environment
-    with patch('app.core.security_headers.settings') as mock_settings:
+    with patch("app.core.security_headers.settings") as mock_settings:
         mock_settings.environment = "production"
 
-        response = client.get("/")
+        client.get("/")
 
         # In production, HSTS should be present
         # Note: This test won't actually set HSTS because the middleware
@@ -142,11 +144,14 @@ def test_security_headers_on_post_requests(client):
     assert "X-Frame-Options" in response.headers
 
 
-@pytest.mark.parametrize("endpoint", [
-    "/",
-    "/health",
-    "/api/passage?book=John&chapter=3&verse_start=16",
-])
+@pytest.mark.parametrize(
+    "endpoint",
+    [
+        "/",
+        "/health",
+        "/api/passage?book=John&chapter=3&verse_start=16",
+    ],
+)
 def test_security_headers_on_multiple_endpoints(client, endpoint):
     """Test that security headers are consistently applied across different endpoints."""
     response = client.get(endpoint)

@@ -13,14 +13,18 @@ Verse is now a fully installable Progressive Web App! This means users can insta
 ## How It Works
 
 ### Service Worker
+
 The app uses `vite-plugin-pwa` to automatically generate an optimised service worker that:
+
 - Caches static assets (JS, CSS, HTML, images)
 - Implements a network-first strategy for API calls with fallback to cache
 - Provides offline functionality
 - Handles automatic updates
 
 ### Install Prompt
+
 The app includes a custom install prompt component (`InstallPrompt.tsx`) that:
+
 - Appears after the user has used the app (respects browser's install criteria)
 - Can be dismissed and will reappear after 7 days
 - Provides a better UX than the browser's default install prompt
@@ -29,18 +33,21 @@ The app includes a custom install prompt component (`InstallPrompt.tsx`) that:
 ## Installation for Users
 
 ### Desktop (Chrome, Edge, Opera)
+
 1. Visit the Verse website
 2. Look for the install icon in the address bar
 3. Click "Install" in the popup
 4. The app will open as a standalone window
 
 ### Mobile (Android)
+
 1. Visit the Verse website in Chrome
 2. Tap the "Install" button when the prompt appears
 3. Or tap the three dots menu → "Install app"
 4. The app will be added to your home screen
 
 ### Mobile (iOS/Safari)
+
 1. Visit the Verse website in Safari
 2. Tap the share button
 3. Scroll down and tap "Add to Home Screen"
@@ -51,11 +58,13 @@ The app includes a custom install prompt component (`InstallPrompt.tsx`) that:
 ### Testing PWA Features Locally
 
 1. Build the production version:
+
    ```bash
    bun run build
    ```
 
 2. Preview the built app:
+
    ```bash
    bun run preview
    ```
@@ -75,16 +84,19 @@ The app requires various icon sizes. You can generate them using:
 ```
 
 This requires ImageMagick. Install it with:
+
 - macOS: `brew install imagemagick`
 - Ubuntu: `sudo apt-get install imagemagick`
 
 Or use an online tool like:
+
 - [PWA Asset Generator](https://github.com/elegantapp/pwa-asset-generator)
 - [RealFaviconGenerator](https://realfavicongenerator.net/)
 
 ### Icon Requirements
 
 Place icons in `/public/icons/`:
+
 - `icon-72x72.png` through `icon-512x512.png` - Standard icons
 - `icon-maskable-192x192.png` and `icon-maskable-512x512.png` - Adaptive icons
 
@@ -98,16 +110,21 @@ The PWA is configured in `vite.config.ts`:
 
 ```typescript
 VitePWA({
-  registerType: 'prompt', // Prompts user to update
-  includeAssets: ['vite.svg', 'icons/*.png'],
-  manifest: { /* app manifest */ },
-  workbox: { /* service worker config */ }
-})
+  registerType: "prompt", // Prompts user to update
+  includeAssets: ["vite.svg", "icons/*.png"],
+  manifest: {
+    /* app manifest */
+  },
+  workbox: {
+    /* service worker config */
+  },
+});
 ```
 
 ### Manifest
 
 The web app manifest defines:
+
 - App name and description
 - Theme colours
 - Display mode (standalone)
@@ -196,4 +213,3 @@ Run Lighthouse audit to verify PWA compliance:
 - [PWA Best Practices](https://web.dev/pwa/)
 - [Service Worker API](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API)
 - [Web App Manifest](https://developer.mozilla.org/en-US/docs/Web/Manifest)
-

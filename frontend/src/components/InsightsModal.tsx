@@ -43,9 +43,9 @@ const InsightsModal: React.FC<InsightsModalProps> = ({
   const [tab, setTab] = React.useState<
     "historical" | "theological" | "practical"
   >("historical");
-  
+
   const hasChatMessages = chatMessages && chatMessages.length > 0;
-  
+
   if (!insight) return null;
 
   return (
@@ -137,7 +137,7 @@ const InsightsModal: React.FC<InsightsModalProps> = ({
             </TabsContent>
           </div>
         </Tabs>
-        
+
         {/* Chat Button - Start or Continue */}
         {insightId && (
           <div className="border-t pt-4 mt-4">
@@ -147,10 +147,9 @@ const InsightsModal: React.FC<InsightsModalProps> = ({
               variant="outline"
             >
               <MessageCircle size={18} />
-              {hasChatMessages 
-                ? `Continue Chat (${chatMessages.length} message${chatMessages.length !== 1 ? 's' : ''})`
-                : 'Ask Follow-up Question'
-              }
+              {hasChatMessages
+                ? `Continue Chat (${chatMessages.length} message${chatMessages.length !== 1 ? "s" : ""})`
+                : "Ask Follow-up Question"}
             </Button>
           </div>
         )}

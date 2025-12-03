@@ -1,13 +1,15 @@
 """
 Tests for RagService - Enhanced RAG context with summaries and surrounding messages
 """
-import pytest
-from unittest.mock import Mock, AsyncMock
+
 from datetime import datetime
+from unittest.mock import AsyncMock, Mock
+
+import pytest
 from sqlalchemy.orm import Session
 
-from app.services.rag_service import RagService, MergedRagContext
 from app.models.models import ChatMessage, ConversationSummary
+from app.services.rag_service import MergedRagContext, RagService
 
 
 @pytest.fixture
@@ -58,15 +60,15 @@ def test_rag_service_with_embedding_client(mock_embedding_client):
 async def test_get_enhanced_rag_context_no_embedding_client(mock_db, mock_ai_client):
     """Test that RAG returns empty list when no embedding client configured."""
     service = RagService(embedding_client=None)
-    
+
     result = await service.get_enhanced_rag_context(
         db=mock_db,
         user_id=1,
         query="test query",
         conversation_type="insight",
-        ai_client=mock_ai_client
+        ai_client=mock_ai_client,
     )
-    
+
     assert result == []
 
 
@@ -103,7 +105,7 @@ def test_format_enhanced_rag_context_with_data(rag_service):
         messages_before=[mock_message_before],
         messages_between=[],  # Empty for single match
         messages_after=[mock_message_after],
-        conversation_date=datetime(2024, 3, 15, 14, 20)
+        conversation_date=datetime(2024, 3, 15, 14, 20),
     )
 
     result = rag_service.format_enhanced_rag_context([context])
@@ -124,21 +126,21 @@ async def test_get_conversation_date(rag_service, mock_db):
     # Mock first message
     mock_message = Mock()
     mock_message.created_at = datetime(2024, 3, 15, 10, 0)
-    
+
     # Mock database query
     mock_query = Mock()
     mock_query.filter.return_value = mock_query
     mock_query.order_by.return_value = mock_query
     mock_query.first.return_value = mock_message
     mock_db.query.return_value = mock_query
-    
+
     result = await rag_service._get_conversation_date(
         db=mock_db,
         model_class=ChatMessage,
         conversation_id=1,
-        conversation_id_field="insight_id"
+        conversation_id_field="insight_id",
     )
-    
+
     assert result == datetime(2024, 3, 15, 10, 0)
 
 
@@ -148,9 +150,9 @@ def test_conversation_summary_model():
         conversation_type="insight",
         conversation_id=1,
         summary_text="Test summary",
-        message_count=5
+        message_count=5,
     )
-    
+
     assert summary.conversation_type == "insight"
     assert summary.conversation_id == 1
     assert summary.summary_text == "Test summary"
@@ -178,7 +180,7 @@ def test_group_by_conversation(rag_service):
 
     messages = [msg1_conv1, msg2_conv1, msg1_conv2, msg1_conv3]
 
-    grouped = rag_service._group_by_conversation(messages, 'insight_id')
+    grouped = rag_service._group_by_conversation(messages, "insight_id")
 
     # Verify grouping
     assert len(grouped) == 3  # 3 unique conversations
@@ -226,7 +228,7 @@ def test_format_with_multiple_matches(rag_service):
         messages_before=[mock_message_before],
         messages_between=[mock_message_between],
         messages_after=[mock_message_after],
-        conversation_date=datetime(2024, 3, 15, 14, 20)
+        conversation_date=datetime(2024, 3, 15, 14, 20),
     )
 
     result = rag_service.format_enhanced_rag_context([context])

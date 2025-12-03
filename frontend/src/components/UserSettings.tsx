@@ -1,18 +1,27 @@
 import { useState } from "react";
-import { Download, Upload, Trash2, Info } from "lucide-react";
+import { Download, Upload, Trash2, Info, Link2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { bibleService } from "../services/api";
 
 interface UserSettingsProps {
   onError: (message: string) => void;
   onSuccess: (message: string) => void;
+  onOpenDeviceLinking?: () => void;
 }
 
-export default function UserSettings({ onError, onSuccess }: UserSettingsProps) {
+export default function UserSettings({
+  onError,
+  onSuccess,
+  onOpenDeviceLinking,
+}: UserSettingsProps) {
   const [loading, setLoading] = useState(false);
 
   const handleClearData = async () => {
-    if (!confirm("Are you sure you want to clear all your data? This action cannot be undone.")) {
+    if (
+      !confirm(
+        "Are you sure you want to clear all your data? This action cannot be undone.",
+      )
+    ) {
       return;
     }
 
@@ -20,7 +29,9 @@ export default function UserSettings({ onError, onSuccess }: UserSettingsProps) 
     try {
       const result = await bibleService.clearUserData();
       if (result.deleted) {
-        onSuccess(`Cleared ${result.deleted.insights} insights, ${result.deleted.chat_messages} chat messages, and ${result.deleted.standalone_chats} chats.`);
+        onSuccess(
+          `Cleared ${result.deleted.insights} insights, ${result.deleted.chat_messages} chat messages, and ${result.deleted.standalone_chats} chats.`,
+        );
       } else {
         onSuccess("Data cleared successfully!");
       }
@@ -36,18 +47,20 @@ export default function UserSettings({ onError, onSuccess }: UserSettingsProps) 
     setLoading(true);
     try {
       const data = await bibleService.exportUserData();
-      
+
       // Create a blob and download it
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: "application/json",
+      });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `verse-data-${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `verse-data-${new Date().toISOString().split("T")[0]}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      
+
       onSuccess("Data exported successfully!");
     } catch (err) {
       console.error("Failed to export data:", err);
@@ -72,23 +85,29 @@ export default function UserSettings({ onError, onSuccess }: UserSettingsProps) 
         try {
           data = JSON.parse(text);
         } catch {
-          onError("Invalid JSON file. Please select a valid Verse export file.");
+          onError(
+            "Invalid JSON file. Please select a valid Verse export file.",
+          );
           setLoading(false);
           return;
         }
-        
+
         const result = await bibleService.importUserData(data);
         if (result.imported) {
-          onSuccess(`Imported ${result.imported.insights} insights, ${result.imported.chat_messages} chat messages, and ${result.imported.standalone_chats} chats.`);
+          onSuccess(
+            `Imported ${result.imported.insights} insights, ${result.imported.chat_messages} chat messages, and ${result.imported.standalone_chats} chats.`,
+          );
         } else {
           onSuccess("Data imported successfully!");
         }
-        
+
         // Reload the page to show imported data after user has time to read message
         setTimeout(() => window.location.reload(), 2500);
       } catch (err) {
         console.error("Failed to import data:", err);
-        onError("Failed to import data. Please check the file format and try again.");
+        onError(
+          "Failed to import data. Please check the file format and try again.",
+        );
       } finally {
         setLoading(false);
       }
@@ -101,7 +120,8 @@ export default function UserSettings({ onError, onSuccess }: UserSettingsProps) 
       <div className="space-y-2">
         <h3 className="text-sm font-medium">Data Management</h3>
         <p className="text-xs text-muted-foreground">
-          Export, import, or clear your personal data. Your data is stored locally on your device via cookies.
+          Export, import, or clear your personal data. Your data is stored
+          locally on your device via cookies.
         </p>
       </div>
 
@@ -128,6 +148,19 @@ export default function UserSettings({ onError, onSuccess }: UserSettingsProps) 
           Import Data
         </Button>
 
+        {onOpenDeviceLinking && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onOpenDeviceLinking}
+            disabled={loading}
+            className="w-full justify-start"
+          >
+            <Link2 className="mr-2 h-4 w-4" />
+            Link Devices
+          </Button>
+        )}
+
         <Button
           variant="outline"
           size="sm"
@@ -145,11 +178,10 @@ export default function UserSettings({ onError, onSuccess }: UserSettingsProps) 
           <Info className="h-4 w-4 mt-0.5 flex-shrink-0 text-muted-foreground" />
           <div className="space-y-1 text-muted-foreground">
             <p>
-              Your data is stored anonymously and linked to your device via a secure cookie.
+              Your data is stored anonymously and linked to your device via a
+              secure cookie.
             </p>
-            <p>
-              Export your data to back it up or transfer to another device.
-            </p>
+            <p>Export your data to back it up or transfer to another device.</p>
           </div>
         </div>
       </div>

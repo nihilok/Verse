@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS conversation_summaries (
 );
 
 -- Create unique composite index for lookup
-CREATE UNIQUE INDEX IF NOT EXISTS idx_conversation_lookup 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_conversation_lookup
 ON conversation_summaries(conversation_type, conversation_id);
 
 -- Add comment for documentation

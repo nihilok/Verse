@@ -194,7 +194,7 @@ For Message ID 101:
 ```
 RELEVANT CONTEXT FROM PAST CONVERSATIONS:
 
-[Summary of conversation from 2024-11-24 10:30: Discussion about 
+[Summary of conversation from 2024-11-24 10:30: Discussion about
 prayer practices and scripture]
 ---excerpt---
 You (2024-11-24 10:45): Prayer in scripture has multiple dimensions.
@@ -203,7 +203,7 @@ You (2024-11-24 10:50): Intercessory prayer means praying on behalf of others.
 You (2024-11-24 10:52): This practice is seen throughout the Bible.
 ---end excerpt---
 
-[Summary of conversation from 2024-11-20 14:15: Questions about 
+[Summary of conversation from 2024-11-20 14:15: Questions about
 daily prayer routines]
 ---excerpt---
 ...
@@ -255,7 +255,7 @@ Call Haiku API: "Summarize this conversation..."
 Receive summary: "Discussion about prayer..."
               ↓
 Save to cache: INSERT INTO conversation_summaries
-               (conversation_type, conversation_id, 
+               (conversation_type, conversation_id,
                 summary_text, message_count)
                VALUES ('insight', 10, '...', 52)
               ↓
@@ -342,14 +342,14 @@ Critical indexes for performance:
 
 ```sql
 -- Existing indexes (already present)
-CREATE INDEX idx_chat_messages_embedding_user 
+CREATE INDEX idx_chat_messages_embedding_user
 ON chat_messages USING hnsw (embedding vector_cosine_ops);
 
-CREATE INDEX idx_chat_messages_user_created 
+CREATE INDEX idx_chat_messages_user_created
 ON chat_messages(user_id, created_at);
 
 -- New index (from migration)
-CREATE UNIQUE INDEX idx_conversation_lookup 
+CREATE UNIQUE INDEX idx_conversation_lookup
 ON conversation_summaries(conversation_type, conversation_id);
 ```
 

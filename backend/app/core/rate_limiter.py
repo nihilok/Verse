@@ -1,8 +1,8 @@
 """Rate limiting configuration for API endpoints."""
 
+from fastapi import Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-from fastapi import Request
 
 
 def get_user_identifier(request: Request) -> str:
@@ -18,7 +18,7 @@ def get_user_identifier(request: Request) -> str:
     - Falls back gracefully to IP for unauthenticated requests
     """
     # Try to get anonymous_id from request state (set by AnonymousUserMiddleware)
-    anonymous_id = getattr(request.state, 'anonymous_id', None)
+    anonymous_id = getattr(request.state, "anonymous_id", None)
     if anonymous_id:
         return f"user:{anonymous_id}"
 

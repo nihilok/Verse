@@ -41,20 +41,20 @@ jobs:
 
   frontend-lint:
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Setup Bun
       uses: oven-sh/setup-bun@v1
       with:
         bun-version: latest
-    
+
     - name: Install dependencies
       run: |
         cd frontend
         bun install
-    
+
     - name: Lint
       run: |
         cd frontend
@@ -62,10 +62,10 @@ jobs:
 
   docker-build:
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Build Docker images
       run: |
         docker compose build

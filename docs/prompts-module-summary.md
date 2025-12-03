@@ -12,7 +12,7 @@ app/prompts/
 ├── __init__.py               # Public API
 ├── base_prompts.py           # Reusable components
 ├── insight_prompts.py        # Initial passage insights
-├── definition_prompts.py     # Word definitions  
+├── definition_prompts.py     # Word definitions
 └── chat_prompts.py           # Conversation prompts
 ```
 
@@ -52,26 +52,26 @@ Each contained 20-50 lines of prompt text. Any update required changing all 6 pl
 ### Before (Duplicated)
 ```python
 async def generate_chat_response(...):
-    system_prompt = f"""You are a study companion in Verse, 
-    an interactive Bible reading app. The user is actively 
+    system_prompt = f"""You are a study companion in Verse,
+    an interactive Bible reading app. The user is actively
     reading Scripture and has highlighted this passage...
-    
+
     Context About Your Role:
     - Users are actively reading passages...
     - They might be encountering this text...
     - Your job is to illuminate...
-    
+
     The Passage They're Studying:
     Reference: {truncated_reference}
     Text: {truncated_passage}
-    
+
     Your Initial Insights:
     - Historical Context: {insight_context.get('historical_context')}
     - Theological Significance: {insight_context.get('theological')}
     - Practical Application: {insight_context.get('practical')}
-    
+
     {rag_context_text}
-    
+
     Continue this conversation thoughtfully:
     - Answer their questions with depth...
     - Help them see connections...
@@ -201,7 +201,7 @@ prompt = build_standalone_chat_system_prompt(
 ### Change Core Context
 Edit `app/prompts/base_prompts.py`:
 ```python
-VERSE_APP_CONTEXT = """You are a study companion in Verse, 
+VERSE_APP_CONTEXT = """You are a study companion in Verse,
 an interactive Bible reading and study app."""  # Updated
 ```
 
@@ -243,7 +243,7 @@ print(build_insights_prompt("John 3:16", "For God so loved..."))
 def test_passage_context():
     result = build_passage_context("John 3:16", "text")
     assert "John 3:16" in result
-    
+
 def test_add_rag_context_empty():
     result = add_rag_context("base", "")
     assert result == "base"

@@ -112,7 +112,7 @@ class ChatService:
     def __init__(self, embedding_client=None):
         self.embedding_client = embedding_client
         self.rag_service = RagService(embedding_client=embedding_client)
-    
+
     async def send_message(self, db, insight_id, user_id, user_message, ...):
         # Get enhanced RAG context
         enhanced_contexts = await self.rag_service.get_enhanced_rag_context(
@@ -123,10 +123,10 @@ class ChatService:
             ai_client=self.client,
             current_conversation_id=insight_id
         )
-        
+
         # Format for prompt
         rag_context_text = self.rag_service.format_enhanced_rag_context(enhanced_contexts)
-        
+
         # Pass to AI
         response = await self.client.generate_chat_response(
             user_message=user_message,
@@ -178,7 +178,7 @@ RAG_SURROUNDING_MESSAGES = 1  # Instead of 2
 ### 3. Monitor Cache Hit Rate
 ```sql
 -- Check summary cache usage
-SELECT 
+SELECT
     conversation_type,
     COUNT(*) as total_summaries,
     AVG(message_count) as avg_conversation_length
@@ -244,7 +244,7 @@ async def test_summary_generation():
     ai_client.generate_conversation_summary = AsyncMock(
         return_value="Discussion about prayer"
     )
-    
+
     # Generate summary
     summary = await rag_service._generate_summary(
         db=db,
@@ -253,7 +253,7 @@ async def test_summary_generation():
         conversation_id_field="insight_id",
         ai_client=ai_client
     )
-    
+
     assert "prayer" in summary
 ```
 
@@ -261,7 +261,7 @@ async def test_summary_generation():
 
 ### Issue: No RAG context retrieved
 **Cause:** No embedding client configured or no embeddings in database
-**Solution:** 
+**Solution:**
 ```python
 # Check embedding client
 if not chat_service.embedding_client:
