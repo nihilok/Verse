@@ -1,8 +1,10 @@
 """Security headers middleware for application hardening."""
 
-from typing import Callable
+from collections.abc import Callable
+
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
+
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -58,9 +60,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # includeSubDomains: Apply to all subdomains
         # preload: Allow inclusion in browser preload lists
         if settings.environment == "production":
-            response.headers["Strict-Transport-Security"] = (
-                "max-age=31536000; includeSubDomains; preload"
-            )
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
 
         # Referrer-Policy - Control referrer information
         # strict-origin-when-cross-origin: Send full URL for same-origin,

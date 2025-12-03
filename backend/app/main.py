@@ -1,23 +1,25 @@
 import logging
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from app.core.config import get_settings
-from app.core.database import engine, Base
-from app.core.middleware import AnonymousUserMiddleware
-from app.core.security_headers import SecurityHeadersMiddleware
-from app.core.rate_limiter import limiter
+
 from app.api.routes import router
+from app.core.config import get_settings
+from app.core.database import Base, engine
+from app.core.middleware import AnonymousUserMiddleware
+from app.core.rate_limiter import limiter
+from app.core.security_headers import SecurityHeadersMiddleware
 
 # Configure logging for the application
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
         logging.StreamHandler()  # Output to console (captured by Docker/systemd in production)
-    ]
+    ],
 )
 
 # Set specific log levels for noisy libraries
@@ -41,7 +43,7 @@ app = FastAPI(
     description="Interactive Bible reader with AI-powered insights",
     version="1.0.0",
     debug=settings.debug,
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # Add rate limiter to app state
@@ -72,7 +74,7 @@ async def root():
     """Root endpoint."""
     return {
         "message": "Verse API - Interactive Bible Reader with AI Insights",
-        "version": "1.0.0"
+        "version": "1.0.0",
     }
 
 

@@ -1,6 +1,7 @@
-from pydantic_settings import BaseSettings
-from pydantic import Field
 from functools import lru_cache
+
+from pydantic import Field
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -27,13 +28,13 @@ class Settings(BaseSettings):
     def cookie_secure(self) -> bool:
         """Cookies are secure in production, insecure in development."""
         return self.environment == "production"
-    
+
     class Config:
         env_file = ".env"
         case_sensitive = False
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
     """Get cached settings instance."""
     return Settings()

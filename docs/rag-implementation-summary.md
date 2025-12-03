@@ -38,7 +38,7 @@ CREATE TABLE conversation_summaries (
     created_at TIMESTAMP WITH TIME ZONE,
     updated_at TIMESTAMP WITH TIME ZONE
 );
-CREATE UNIQUE INDEX idx_conversation_lookup 
+CREATE UNIQUE INDEX idx_conversation_lookup
 ON conversation_summaries(conversation_type, conversation_id);
 ```
 

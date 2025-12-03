@@ -1,7 +1,13 @@
 """Tests for rate limiting functionality."""
 
 from unittest.mock import Mock
-from app.core.rate_limiter import get_user_identifier, limiter, AI_ENDPOINT_LIMIT, CHAT_ENDPOINT_LIMIT
+
+from app.core.rate_limiter import (
+    AI_ENDPOINT_LIMIT,
+    CHAT_ENDPOINT_LIMIT,
+    get_user_identifier,
+    limiter,
+)
 
 
 def test_get_user_identifier_with_anonymous_id():
@@ -51,9 +57,9 @@ def test_rate_limiting_decorator_applied():
     from app.api import routes
 
     # Verify the limiter and rate limit constants are imported in routes module
-    assert hasattr(routes, 'limiter')
-    assert hasattr(routes, 'AI_ENDPOINT_LIMIT')
-    assert hasattr(routes, 'CHAT_ENDPOINT_LIMIT')
+    assert hasattr(routes, "limiter")
+    assert hasattr(routes, "AI_ENDPOINT_LIMIT")
+    assert hasattr(routes, "CHAT_ENDPOINT_LIMIT")
 
     # Verify the rate limit values are correct
     assert routes.AI_ENDPOINT_LIMIT == "10/minute"

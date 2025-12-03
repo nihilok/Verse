@@ -24,11 +24,21 @@ import ChatModal from "./components/ChatModal";
 import InsightsHistoryComponent from "./components/InsightsHistory";
 import ChatHistory from "./components/ChatHistory";
 import UserSettings from "./components/UserSettings";
+import DeviceLinkModal from "./components/DeviceLinkModal";
 import InstallPrompt from "./components/InstallPrompt";
 import LoadingOverlay from "./components/LoadingOverlay";
 import { ModeToggle } from "./components/mode-toggle";
 import { bibleService } from "./services/api";
-import { BiblePassage, Insight, Definition, InsightHistory, ChatMessage, StandaloneChat, StandaloneChatMessage } from "./types";
+import {
+  BiblePassage,
+  Insight,
+  Definition,
+  InsightHistory,
+  ChatMessage,
+  StandaloneChat,
+  StandaloneChatMessage,
+  UserDevice,
+} from "./types";
 import {
   Sidebar,
   SidebarHeader,
@@ -70,14 +80,27 @@ function App() {
   // Standalone chat state
   const [chatHistory, setChatHistory] = useState<StandaloneChat[]>([]);
   const [currentChatId, setCurrentChatId] = useState<number | null>(null);
-  const [currentChatPassage, setCurrentChatPassage] = useState<{ text: string; reference: string } | null>(null);
-  const [standaloneChatMessages, setStandaloneChatMessages] = useState<StandaloneChatMessage[]>([]);
+  const [currentChatPassage, setCurrentChatPassage] = useState<{
+    text: string;
+    reference: string;
+  } | null>(null);
+  const [standaloneChatMessages, setStandaloneChatMessages] = useState<
+    StandaloneChatMessage[]
+  >([]);
   const [standaloneChatLoading, setStandaloneChatLoading] = useState(false);
-  const [standaloneChatStreamingMessage, setStandaloneChatStreamingMessage] = useState<string>("");
+  const [standaloneChatStreamingMessage, setStandaloneChatStreamingMessage] =
+    useState<string>("");
   const [chatModalOpen, setChatModalOpen] = useState(false);
   const [insightChatModalOpen, setInsightChatModalOpen] = useState(false);
-  const [pendingChatPassage, setPendingChatPassage] = useState<{ text: string; reference: string } | null>(null);
+  const [pendingChatPassage, setPendingChatPassage] = useState<{
+    text: string;
+    reference: string;
+  } | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Device linking state
+  const [deviceLinkModalOpen, setDeviceLinkModalOpen] = useState(false);
+  const [linkedDevices, setLinkedDevices] = useState<UserDevice[]>([]);
 
   // Check if we're on desktop (lg breakpoint)
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
@@ -112,7 +135,7 @@ function App() {
         const history =
           await bibleService.getInsightsHistory(MAX_HISTORY_ITEMS);
         setInsightsHistory(history);
-        
+
         const chats = await bibleService.getStandaloneChats(MAX_HISTORY_ITEMS);
         setChatHistory(chats);
       } catch (e) {
@@ -136,6 +159,20 @@ function App() {
       );
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Load linked devices on mount
+  useEffect(() => {
+    const loadDevices = async () => {
+      try {
+        const devices = await bibleService.getUserDevices();
+        setLinkedDevices(devices);
+      } catch (err) {
+        // Silent fail - devices endpoint might not exist yet
+        console.error("Failed to load devices:", err);
+      }
+    };
+    loadDevices();
+  }, []);
 
   const handleSearch = async (
     book: string,
@@ -234,12 +271,19 @@ function App() {
     return text.replace(/\s+/g, " ").trim();
   };
 
-  const handleTextSelected = async (text: string, reference: string, isSingleWord: boolean, verseText?: string) => {
+  const handleTextSelected = async (
+    text: string,
+    reference: string,
+    isSingleWord: boolean,
+    verseText?: string,
+  ) => {
     // Strip whitespace from text for consistent caching
     const normalizedText = text.trim();
-    
+
     if (isSingleWord && !verseText) {
-      setError("Unable to find the verse containing this word. Please try selecting the full verse.");
+      setError(
+        "Unable to find the verse containing this word. Please try selecting the full verse.",
+      );
       return;
     }
     if (isSingleWord && verseText) {
@@ -250,7 +294,11 @@ function App() {
       setError(null);
 
       try {
-        const result = await bibleService.getDefinition(normalizedText, verseText, reference);
+        const result = await bibleService.getDefinition(
+          normalizedText,
+          verseText,
+          reference,
+        );
         setDefinition(result);
         setDefinitionModalOpen(true);
       } catch (err) {
@@ -267,7 +315,10 @@ function App() {
       setError(null);
 
       try {
-        const result = await bibleService.getInsights(normalizedText, reference);
+        const result = await bibleService.getInsights(
+          normalizedText,
+          reference,
+        );
         setInsight(result);
         setInsightsModalOpen(true);
 
@@ -280,7 +331,8 @@ function App() {
           // Get the insight ID from the history (it should be the most recent one)
           const matchingInsight = history.find(
             (item) =>
-              normaliseWhitespace(item.text) === normaliseWhitespace(normalizedText) &&
+              normaliseWhitespace(item.text) ===
+                normaliseWhitespace(normalizedText) &&
               item.reference === reference,
           );
           if (matchingInsight) {
@@ -355,7 +407,10 @@ function App() {
       setPendingChatPassage(null); // Clear any pending passage
       // Set passage from the chat object
       if (chat.passage_text && chat.passage_reference) {
-        setCurrentChatPassage({ text: chat.passage_text, reference: chat.passage_reference });
+        setCurrentChatPassage({
+          text: chat.passage_text,
+          reference: chat.passage_reference,
+        });
       } else {
         setCurrentChatPassage(null);
       }
@@ -364,7 +419,7 @@ function App() {
       console.error("Failed to load chat messages:", err);
       setError("Failed to load chat. Please try again.");
     }
-    
+
     // Close sidebar on mobile after selecting chat
     if (!isDesktop) {
       setSidebarOpen(false);
@@ -396,7 +451,7 @@ function App() {
             setStandaloneChatStreamingMessage((prev) => prev + token);
           },
           pendingChatPassage?.text,
-          pendingChatPassage?.reference
+          pendingChatPassage?.reference,
         );
 
         setCurrentChatId(chatId);
@@ -419,11 +474,12 @@ function App() {
           (token: string) => {
             // Accumulate tokens as they arrive
             setStandaloneChatStreamingMessage((prev) => prev + token);
-          }
+          },
         );
 
         // After successful send, reload authoritative messages from server
-        const messages = await bibleService.getStandaloneChatMessages(currentChatId);
+        const messages =
+          await bibleService.getStandaloneChatMessages(currentChatId);
         setStandaloneChatMessages(messages);
         setStandaloneChatStreamingMessage("");
 
@@ -447,7 +503,7 @@ function App() {
     try {
       await bibleService.deleteStandaloneChat(chatId);
       setChatHistory((prev) => prev.filter((c) => c.id !== chatId));
-      
+
       // Close modal if the deleted chat is currently open
       if (currentChatId === chatId) {
         setChatModalOpen(false);
@@ -494,7 +550,7 @@ function App() {
         (token: string) => {
           // Accumulate tokens as they arrive
           setChatStreamingMessage((prev) => prev + token);
-        }
+        },
       );
 
       // After successful send, reload authoritative messages from server
@@ -618,7 +674,10 @@ function App() {
                 className="w-full h-full flex flex-col"
               >
                 <TabsList className="grid w-full grid-cols-4 flex-shrink-0">
-                  <TabsTrigger value="search" className="flex items-center gap-1">
+                  <TabsTrigger
+                    value="search"
+                    className="flex items-center gap-1"
+                  >
                     <SearchIcon size={16} className="sm:hidden" />
                     <span className="hidden sm:inline">Search</span>
                   </TabsTrigger>
@@ -677,6 +736,7 @@ function App() {
                   <UserSettings
                     onError={(msg) => setError(msg)}
                     onSuccess={(msg) => setSuccessMessage(msg)}
+                    onOpenDeviceLinking={() => setDeviceLinkModalOpen(true)}
                   />
                 </TabsContent>
               </Tabs>
@@ -782,10 +842,24 @@ function App() {
         streamingMessage={chatStreamingMessage}
       />
 
+      {/* Device Link Modal */}
+      <DeviceLinkModal
+        open={deviceLinkModalOpen}
+        onOpenChange={setDeviceLinkModalOpen}
+        devices={linkedDevices}
+        onDevicesChange={setLinkedDevices}
+        onSuccess={(msg) => setSuccessMessage(msg)}
+        onError={(msg) => setError(msg)}
+      />
+
       {/* Loading overlays */}
       {insightLoading && <LoadingOverlay message="Generating insights..." />}
-      {definitionLoading && <LoadingOverlay message="Generating definition..." />}
-      {standaloneChatLoading && !chatModalOpen && <LoadingOverlay message="Starting chat..." />}
+      {definitionLoading && (
+        <LoadingOverlay message="Generating definition..." />
+      )}
+      {standaloneChatLoading && !chatModalOpen && (
+        <LoadingOverlay message="Starting chat..." />
+      )}
 
       {/* PWA Install Prompt */}
       <InstallPrompt />

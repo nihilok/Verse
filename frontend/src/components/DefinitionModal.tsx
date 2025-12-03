@@ -1,12 +1,7 @@
 import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import {
-  BookOpen,
-  BookMarked,
-  Languages,
-  CheckCircle,
-} from "lucide-react";
+import { BookOpen, BookMarked, Languages, CheckCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -31,10 +26,10 @@ const DefinitionModal: React.FC<DefinitionModalProps> = ({
   word,
   reference,
 }) => {
-  const [tab, setTab] = React.useState<
-    "definition" | "biblical" | "original"
-  >("definition");
-  
+  const [tab, setTab] = React.useState<"definition" | "biblical" | "original">(
+    "definition",
+  );
+
   if (!definition) return null;
 
   return (
@@ -73,10 +68,7 @@ const DefinitionModal: React.FC<DefinitionModalProps> = ({
               <BookOpen size={16} />
               Definition
             </TabsTrigger>
-            <TabsTrigger
-              value="biblical"
-              className="flex items-center gap-2"
-            >
+            <TabsTrigger value="biblical" className="flex items-center gap-2">
               <BookMarked size={16} />
               Biblical Usage
             </TabsTrigger>

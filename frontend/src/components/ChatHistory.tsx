@@ -51,7 +51,10 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
           onClick={() => onSelect(chat)}
         >
           <div className="flex items-start gap-2">
-            <MessageCircle size={16} className="mt-0.5 text-primary flex-shrink-0" />
+            <MessageCircle
+              size={16}
+              className="mt-0.5 text-primary flex-shrink-0"
+            />
             <div className="flex-1 min-w-0">
               <h4 className="text-sm font-medium truncate mb-1">
                 {chat.title || "Untitled Chat"}

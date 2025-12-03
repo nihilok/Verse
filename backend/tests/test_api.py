@@ -1,4 +1,5 @@
 """Tests for Bible API routes."""
+
 import pytest
 
 

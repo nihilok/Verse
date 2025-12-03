@@ -482,4 +482,3 @@ If you discover a security vulnerability:
 
 - [Configuration Reference](../reference/configuration.md) - Security settings
 - [Architecture Overview](./) - System design
-

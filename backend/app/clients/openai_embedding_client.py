@@ -1,7 +1,7 @@
 """OpenAI implementation of the EmbeddingClient."""
 
-from typing import List
 from openai import AsyncOpenAI
+
 from app.clients.embedding_client import EmbeddingClient
 
 
@@ -21,7 +21,7 @@ class OpenAIEmbeddingClient(EmbeddingClient):
         self.client = AsyncOpenAI(api_key=api_key)
         self.model = "text-embedding-3-small"
 
-    async def get_embedding(self, text: str) -> List[float]:
+    async def get_embedding(self, text: str) -> list[float]:
         """
         Convert text string into a vector embedding.
 
@@ -34,14 +34,11 @@ class OpenAIEmbeddingClient(EmbeddingClient):
         # Strip newlines to improve embedding performance as recommended by OpenAI
         clean_text = text.replace("\n", " ")
 
-        response = await self.client.embeddings.create(
-            input=[clean_text],
-            model=self.model
-        )
+        response = await self.client.embeddings.create(input=[clean_text], model=self.model)
 
         return response.data[0].embedding
 
-    async def get_embeddings_batch(self, texts: List[str]) -> List[List[float]]:
+    async def get_embeddings_batch(self, texts: list[str]) -> list[list[float]]:
         """
         Convert multiple text strings into vector embeddings.
 
@@ -54,10 +51,7 @@ class OpenAIEmbeddingClient(EmbeddingClient):
         # Strip newlines from all texts
         clean_texts = [text.replace("\n", " ") for text in texts]
 
-        response = await self.client.embeddings.create(
-            input=clean_texts,
-            model=self.model
-        )
+        response = await self.client.embeddings.create(input=clean_texts, model=self.model)
 
         # Return embeddings in the same order as input texts
         return [item.embedding for item in response.data]

@@ -12,6 +12,10 @@ import {
   UserSession,
   UserDataExport,
   DataOperationResult,
+  UserDevice,
+  LinkCodeResponse,
+  LinkDeviceResponse,
+  UnlinkDeviceResponse,
 } from "../types";
 
 const API_BASE_URL = "/api";
@@ -342,6 +346,46 @@ export const bibleService = {
     const response = await axios.post<DataOperationResult>(
       `${API_BASE_URL}/user/import`,
       { data },
+    );
+    return response.data;
+  },
+
+  async generateLinkCode(): Promise<LinkCodeResponse> {
+    const response = await axios.post<LinkCodeResponse>(
+      `${API_BASE_URL}/user/link/generate`,
+    );
+    return response.data;
+  },
+
+  async acceptLinkCode(
+    code: string,
+    deviceName?: string,
+    deviceType?: string,
+  ): Promise<LinkDeviceResponse> {
+    const response = await axios.post<LinkDeviceResponse>(
+      `${API_BASE_URL}/user/link/accept`,
+      { code, device_name: deviceName, device_type: deviceType },
+    );
+    return response.data;
+  },
+
+  async getUserDevices(): Promise<UserDevice[]> {
+    const response = await axios.get<UserDevice[]>(
+      `${API_BASE_URL}/user/devices`,
+    );
+    return response.data;
+  },
+
+  async unlinkDevice(deviceId: number): Promise<UnlinkDeviceResponse> {
+    const response = await axios.delete<UnlinkDeviceResponse>(
+      `${API_BASE_URL}/user/devices/${deviceId}`,
+    );
+    return response.data;
+  },
+
+  async revokeLinkCodes(): Promise<{ message: string; count: number }> {
+    const response = await axios.delete<{ message: string; count: number }>(
+      `${API_BASE_URL}/user/link/codes`,
     );
     return response.data;
   },

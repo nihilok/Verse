@@ -4,7 +4,6 @@ Base Prompt Components
 Reusable prompt snippets that define core context and role for the AI.
 """
 
-
 # Core app context that appears in all prompts
 VERSE_APP_CONTEXT = """You are a study companion in Verse, an interactive Bible reading app."""
 
@@ -42,7 +41,9 @@ def build_passage_context(passage_reference: str, passage_text: str) -> str:
 Reference: {passage_reference}
 Text: {passage_text}
 
-Note: The user has the ability to switch between multiple Bible translations. The passage text provided may come from one or more translations, but there may be a translation specified with the passage reference, in which case focus on that translation only."""
+Note: The user has the ability to switch between multiple Bible translations. The passage text provided
+may come from one or more translations, but there may be a translation specified with the passage reference,
+in which case focus on that translation only."""
 
 
 def build_passage_context_exploration(passage_reference: str, passage_text: str) -> str:
@@ -60,24 +61,26 @@ def build_passage_context_exploration(passage_reference: str, passage_text: str)
 Reference: {passage_reference}
 Text: {passage_text}
 
-Note: The user has the ability to switch between multiple Bible translations. The passage text provided may come from one or more translations, but there may be a translation specified with the passage reference, in which case focus on that translation only."""
+Note: The user has the ability to switch between multiple Bible translations. The passage text provided
+may come from one or more translations, but there may be a translation specified with the passage reference,
+in which case focus on that translation only."""
 
 
 def build_insights_context(
     historical_context: str,
     theological_significance: str,
     practical_application: str,
-    max_length: int = 1000
+    max_length: int = 1000,
 ) -> str:
     """
     Build formatted insights context section.
-    
+
     Args:
         historical_context: Historical context insight
         theological_significance: Theological significance insight
         practical_application: Practical application insight
         max_length: Maximum length for each insight field
-        
+
     Returns:
         Formatted insights context string
     """
@@ -90,10 +93,10 @@ def build_insights_context(
 def build_engagement_guidelines(for_passage: bool = True) -> str:
     """
     Build engagement guidelines section.
-    
+
     Args:
         for_passage: If True, includes passage-specific guidance
-        
+
     Returns:
         Formatted engagement guidelines
     """
@@ -130,17 +133,19 @@ def build_definition_context(word: str, passage_reference: str, verse_text: str)
 Verse Reference: {passage_reference}
 Full Verse: {verse_text}
 
-Note: The user has the ability to switch between multiple Bible translations. The passage text provided may come from one or more translations, but there may be a translation specified with the passage reference, in which case focus on that translation only."""
+Note: The user has the ability to switch between multiple Bible translations. The passage text provided
+may come from one or more translations, but there may be a translation specified with the passage reference,
+in which case focus on that translation only."""
 
 
 def add_rag_context(base_prompt: str, rag_context: str) -> str:
     """
     Add RAG context to a prompt if available.
-    
+
     Args:
         base_prompt: The base system prompt
         rag_context: Formatted RAG context from RagService (or empty string)
-        
+
     Returns:
         Prompt with RAG context appended
     """
@@ -152,23 +157,27 @@ def add_rag_context(base_prompt: str, rag_context: str) -> str:
 def build_initial_study_prompt() -> str:
     """
     Build prompt for when user first encounters a passage (insights generation).
-    
+
     Returns:
         Formatted prompt explaining first encounter context
     """
-    return f"""{VERSE_APP_CONTEXT} Users have just highlighted a passage they're actively reading and want to understand it better.
+    return f"""{VERSE_APP_CONTEXT} Users have just highlighted a passage they're actively reading and want
+to understand it better.
 
-Your role is to illuminate the text they've chosen, meeting them where they are—whether they're encountering this passage for the first time or returning to deepen their understanding."""
+Your role is to illuminate the text they've chosen, meeting them where they are—whether they're
+encountering this passage for the first time or returning to deepen their understanding."""
 
 
 def build_continued_study_prompt() -> str:
     """
     Build prompt for continued conversation about a passage.
-    
+
     Returns:
         Formatted prompt explaining continued study context
     """
-    return f"""{VERSE_APP_CONTEXT} The user is actively reading Scripture and has highlighted this passage to explore it more deeply. They've already received initial insights and are now asking follow-up questions as they process the text.
+    return f"""{VERSE_APP_CONTEXT} The user is actively reading Scripture and has highlighted this passage
+to explore it more deeply. They've already received initial insights and are now asking follow-up
+questions as they process the text.
 
 {STUDY_COMPANION_ROLE}"""
 
@@ -176,22 +185,25 @@ def build_continued_study_prompt() -> str:
 def build_word_study_prompt() -> str:
     """
     Build prompt for word definition/study requests.
-    
+
     Returns:
         Formatted prompt explaining word study context
     """
-    return f"""{VERSE_APP_CONTEXT} A user is actively reading Scripture and has selected a specific word they want to understand better.
+    return f"""{VERSE_APP_CONTEXT} A user is actively reading Scripture and has selected a specific word
+they want to understand better.
 
-Help them grasp this word's meaning in context, connecting it to the broader biblical narrative while remaining accessible. They're learning, so balance scholarly depth with clarity."""
+Help them grasp this word's meaning in context, connecting it to the broader biblical narrative while
+remaining accessible. They're learning, so balance scholarly depth with clarity."""
 
 
 def build_general_conversation_prompt() -> str:
     """
     Build prompt for general biblical conversations without a specific passage.
-    
+
     Returns:
         Formatted prompt explaining general conversation context
     """
-    return f"""{VERSE_APP_CONTEXT} Users come here to ask questions about Scripture, theology, and faith as they explore the Bible.
+    return f"""{VERSE_APP_CONTEXT} Users come here to ask questions about Scripture, theology, and faith
+as they explore the Bible.
 
 {STUDY_COMPANION_ROLE_GENERAL}"""

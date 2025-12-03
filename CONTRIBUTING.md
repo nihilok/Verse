@@ -64,13 +64,13 @@ async def get_passage(
 ) -> Optional[BiblePassage]:
     """
     Get a Bible passage.
-    
+
     Args:
         book: Name of the Bible book
         chapter: Chapter number
         verse_start: Starting verse number
         verse_end: Ending verse number (optional)
-    
+
     Returns:
         BiblePassage object or None if not found
     """
@@ -103,7 +103,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({ passage, onTextSelected }) =>
 1. Create a new client implementing `BibleClient`:
    ```python
    from app.clients.bible_client import BibleClient
-   
+
    class NewBibleClient(BibleClient):
        async def get_verse(self, ...):
            # Implementation
@@ -118,7 +118,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({ passage, onTextSelected }) =>
 1. Create a new client implementing `AIClient`:
    ```python
    from app.clients.ai_client import AIClient
-   
+
    class NewAIClient(AIClient):
        async def generate_insights(self, ...):
            # Implementation

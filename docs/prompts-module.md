@@ -177,10 +177,10 @@ prompt = build_standalone_chat_system_prompt(
 ```python
 async def generate_insights(self, request):
     prompt = f"""You are a biblical scholar and theologian serving as a study companion in Verse, an interactive Bible reading app. Users have just highlighted a passage...
-    
+
     Passage Reference: {request.passage_reference}
     Passage Text: {request.passage_text}
-    
+
     Please provide insights in three categories:
     1. Historical Context...
     2. Theological Significance...
@@ -244,7 +244,7 @@ New developers can see exactly what components make up each prompt type.
 
 Edit `base_prompts.py`:
 ```python
-VERSE_APP_CONTEXT = """You are a study companion in Verse, 
+VERSE_APP_CONTEXT = """You are a study companion in Verse,
 an interactive Bible reading and study app."""  # Updated
 ```
 
@@ -270,11 +270,11 @@ STUDY_COMPANION_ROLE = """Context About Your Role:
 from app.prompts.base_prompts import VERSE_APP_CONTEXT
 
 def build_new_feature_prompt(param1, param2):
-    return f"""{VERSE_APP_CONTEXT} 
-    
+    return f"""{VERSE_APP_CONTEXT}
+
     {param1}
     {param2}
-    
+
     Instructions..."""
 ```
 4. Export in `__init__.py`
@@ -287,10 +287,10 @@ Edit the relevant file (`insight_prompts.py`, `definition_prompts.py`, etc.):
 def build_insights_prompt(passage_reference, passage_text):
     intro = build_initial_study_prompt()
     passage = build_passage_context(passage_reference, passage_text)
-    
+
     # Change instructions here
     instructions = """New instructions format..."""
-    
+
     return f"{intro}\n\n{passage}\n\n{instructions}"
 ```
 
@@ -317,7 +317,7 @@ Build complex prompts from simple components:
 ```python
 def build_new_prompt():
     return f"""{VERSE_APP_CONTEXT}
-    
+
 {STUDY_COMPANION_ROLE}
 
 {build_passage_context(...)}

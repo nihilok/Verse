@@ -1,22 +1,22 @@
 """Test configuration and fixtures."""
+
 import os
+
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from fastapi.testclient import TestClient
 
 # Set a test database URL before importing the app
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 
-from app.main import app
 from app.core.database import Base, get_db
+from app.main import app
 from app.services.user_service import UserService
 
 # Create test database
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-)
+engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Create tables once

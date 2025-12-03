@@ -1,9 +1,17 @@
 """Tests for streaming chat functionality."""
-import pytest
+
 from unittest.mock import Mock, patch
-from app.services.chat_service import ChatService, CHAT_ID_MARKER
+
+import pytest
+
 from app.clients.claude_client import ClaudeAIClient
-from app.models.models import SavedInsight, ChatMessage, StandaloneChat, StandaloneChatMessage
+from app.models.models import (
+    ChatMessage,
+    SavedInsight,
+    StandaloneChat,
+    StandaloneChatMessage,
+)
+from app.services.chat_service import CHAT_ID_MARKER, ChatService
 
 
 class MockStreamResponse:
@@ -32,13 +40,13 @@ async def test_claude_client_generate_chat_response_stream():
     client = ClaudeAIClient()
     mock_tokens = ["Hello", " ", "world", "!"]
 
-    with patch.object(client.client.messages, 'stream') as mock_stream:
+    with patch.object(client.client.messages, "stream") as mock_stream:
         mock_stream.return_value = MockStreamResponse(mock_tokens)
 
         # Create a mock chat history
         mock_history = [
             Mock(role="user", content="Previous question"),
-            Mock(role="assistant", content="Previous answer")
+            Mock(role="assistant", content="Previous answer"),
         ]
 
         # Collect streamed tokens and stop_reason
@@ -51,9 +59,9 @@ async def test_claude_client_generate_chat_response_stream():
             insight_context={
                 "historical_context": "History",
                 "theological_significance": "Theology",
-                "practical_application": "Practice"
+                "practical_application": "Practice",
             },
-            chat_history=mock_history
+            chat_history=mock_history,
         ):
             if chunk:
                 tokens.append(chunk)
@@ -72,17 +80,20 @@ async def test_claude_client_generate_standalone_chat_response_stream():
     client = ClaudeAIClient()
     mock_tokens = ["Streaming", " ", "response"]
 
-    with patch.object(client.client.messages, 'stream') as mock_stream:
+    with patch.object(client.client.messages, "stream") as mock_stream:
         mock_stream.return_value = MockStreamResponse(mock_tokens)
 
         # Collect streamed tokens and stop_reason
         tokens = []
         stop_reason = None
-        async for chunk, chunk_stop_reason in client.generate_standalone_chat_response_stream(
+        async for (
+            chunk,
+            chunk_stop_reason,
+        ) in client.generate_standalone_chat_response_stream(
             user_message="Test question",
             passage_text="Test passage",
             passage_reference="Test 1:1",
-            chat_history=[]
+            chat_history=[],
         ):
             if chunk:
                 tokens.append(chunk)
@@ -104,7 +115,7 @@ async def test_chat_service_send_message_stream(db, test_user):
         passage_text="For God so loved the world...",
         historical_context="Historical context...",
         theological_significance="Theological significance...",
-        practical_application="Practical application..."
+        practical_application="Practical application...",
     )
     db.add(insight)
     db.commit()
@@ -114,7 +125,7 @@ async def test_chat_service_send_message_stream(db, test_user):
     mock_tokens = ["Test", " ", "streaming", " ", "response"]
 
     # Mock the AI client streaming method
-    with patch.object(service.client, 'generate_chat_response_stream') as mock_stream:
+    with patch.object(service.client, "generate_chat_response_stream") as mock_stream:
         # Make it an async generator that yields tuples
         async def async_gen():
             for token in mock_tokens:
@@ -125,7 +136,7 @@ async def test_chat_service_send_message_stream(db, test_user):
 
         # Collect streamed tokens
         tokens = []
-        async for chunk, stop_reason in service.send_message_stream(
+        async for chunk, _stop_reason in service.send_message_stream(
             db=db,
             insight_id=insight.id,
             user_id=test_user.id,
@@ -135,8 +146,8 @@ async def test_chat_service_send_message_stream(db, test_user):
             insight_context={
                 "historical_context": "History",
                 "theological_significance": "Theology",
-                "practical_application": "Practice"
-            }
+                "practical_application": "Practice",
+            },
         ):
             if chunk:
                 tokens.append(chunk)
@@ -145,10 +156,14 @@ async def test_chat_service_send_message_stream(db, test_user):
         assert tokens == mock_tokens
 
         # Verify messages were saved to database
-        messages = db.query(ChatMessage).filter(
-            ChatMessage.insight_id == insight.id,
-            ChatMessage.user_id == test_user.id
-        ).all()
+        messages = (
+            db.query(ChatMessage)
+            .filter(
+                ChatMessage.insight_id == insight.id,
+                ChatMessage.user_id == test_user.id,
+            )
+            .all()
+        )
 
         assert len(messages) == 2  # User message + AI response
         assert messages[0].role == "user"
@@ -165,7 +180,7 @@ async def test_chat_service_send_standalone_message_stream(db, test_user):
         user_id=test_user.id,
         title="Test Chat",
         passage_text="Test passage",
-        passage_reference="Test 1:1"
+        passage_reference="Test 1:1",
     )
     db.add(chat)
     db.commit()
@@ -175,7 +190,8 @@ async def test_chat_service_send_standalone_message_stream(db, test_user):
     mock_tokens = ["Standalone", " ", "response"]
 
     # Mock the AI client streaming method
-    with patch.object(service.client, 'generate_standalone_chat_response_stream') as mock_stream:
+    with patch.object(service.client, "generate_standalone_chat_response_stream") as mock_stream:
+
         async def async_gen():
             for token in mock_tokens:
                 yield (token, None)
@@ -185,11 +201,8 @@ async def test_chat_service_send_standalone_message_stream(db, test_user):
 
         # Collect streamed tokens
         tokens = []
-        async for chunk, stop_reason in service.send_standalone_message_stream(
-            db=db,
-            chat_id=chat.id,
-            user_id=test_user.id,
-            user_message="Test message"
+        async for chunk, _stop_reason in service.send_standalone_message_stream(
+            db=db, chat_id=chat.id, user_id=test_user.id, user_message="Test message"
         ):
             if chunk:
                 tokens.append(chunk)
@@ -198,9 +211,7 @@ async def test_chat_service_send_standalone_message_stream(db, test_user):
         assert tokens == mock_tokens
 
         # Verify messages were saved to database
-        messages = db.query(StandaloneChatMessage).filter(
-            StandaloneChatMessage.chat_id == chat.id
-        ).all()
+        messages = db.query(StandaloneChatMessage).filter(StandaloneChatMessage.chat_id == chat.id).all()
 
         assert len(messages) == 2
         assert messages[0].role == "user"
@@ -216,7 +227,8 @@ async def test_chat_service_create_standalone_chat_stream(db, test_user):
     mock_tokens = ["First", " ", "message"]
 
     # Mock the AI client streaming method
-    with patch.object(service.client, 'generate_standalone_chat_response_stream') as mock_stream:
+    with patch.object(service.client, "generate_standalone_chat_response_stream") as mock_stream:
+
         async def async_gen():
             for token in mock_tokens:
                 yield (token, None)
@@ -227,12 +239,12 @@ async def test_chat_service_create_standalone_chat_stream(db, test_user):
         # Collect streamed tokens and chat_id
         tokens = []
         chat_id = None
-        async for chunk, stop_reason in service.create_standalone_chat_stream(
+        async for chunk, _stop_reason in service.create_standalone_chat_stream(
             db=db,
             user_id=test_user.id,
             user_message="First message",
             passage_text="Test passage",
-            passage_reference="Test 1:1"
+            passage_reference="Test 1:1",
         ):
             if chunk.startswith(CHAT_ID_MARKER):
                 chat_id = int(chunk.split(":", 1)[1])
@@ -244,9 +256,7 @@ async def test_chat_service_create_standalone_chat_stream(db, test_user):
         assert chat_id is not None
 
         # Verify chat was created
-        chat = db.query(StandaloneChat).filter(
-            StandaloneChat.id == chat_id
-        ).first()
+        chat = db.query(StandaloneChat).filter(StandaloneChat.id == chat_id).first()
 
         assert chat is not None
         assert chat.user_id == test_user.id
@@ -255,9 +265,7 @@ async def test_chat_service_create_standalone_chat_stream(db, test_user):
         assert chat.title == "First message"
 
         # Verify messages were saved
-        messages = db.query(StandaloneChatMessage).filter(
-            StandaloneChatMessage.chat_id == chat_id
-        ).all()
+        messages = db.query(StandaloneChatMessage).filter(StandaloneChatMessage.chat_id == chat_id).all()
 
         assert len(messages) == 2
         assert messages[0].role == "user"
@@ -275,7 +283,7 @@ async def test_streaming_atomic_db_save_on_error(db, test_user):
         passage_text="Test passage",
         historical_context="History",
         theological_significance="Theology",
-        practical_application="Practice"
+        practical_application="Practice",
     )
     db.add(insight)
     db.commit()
@@ -284,7 +292,8 @@ async def test_streaming_atomic_db_save_on_error(db, test_user):
     service = ChatService()
 
     # Mock the AI client to raise an error during streaming
-    with patch.object(service.client, 'generate_chat_response_stream') as mock_stream:
+    with patch.object(service.client, "generate_chat_response_stream") as mock_stream:
+
         async def async_gen():
             yield ("Test", None)
             yield (" ", None)
@@ -295,23 +304,27 @@ async def test_streaming_atomic_db_save_on_error(db, test_user):
         # Try to stream (should fail)
         with pytest.raises(Exception, match="Streaming error"):
             tokens = []
-            async for chunk, stop_reason in service.send_message_stream(
+            async for chunk, _stop_reason in service.send_message_stream(
                 db=db,
                 insight_id=insight.id,
                 user_id=test_user.id,
                 user_message="Test message",
                 passage_text="Test passage",
                 passage_reference="Test 1:1",
-                insight_context={}
+                insight_context={},
             ):
                 if chunk:
                     tokens.append(chunk)
 
         # Verify no messages were saved (atomic rollback)
-        messages = db.query(ChatMessage).filter(
-            ChatMessage.insight_id == insight.id,
-            ChatMessage.user_id == test_user.id
-        ).all()
+        messages = (
+            db.query(ChatMessage)
+            .filter(
+                ChatMessage.insight_id == insight.id,
+                ChatMessage.user_id == test_user.id,
+            )
+            .all()
+        )
 
         assert len(messages) == 0
 
@@ -320,13 +333,15 @@ async def test_streaming_atomic_db_save_on_error(db, test_user):
 async def test_sse_event_format():
     """Test that SSE events are formatted correctly."""
     import json
+
     from app.services.chat_service import ChatService
 
     # Create a test service instance
     service = ChatService()
 
     # Mock the streaming method to return tuples
-    with patch.object(service, 'send_message_stream') as mock_stream:
+    with patch.object(service, "send_message_stream") as mock_stream:
+
         async def async_gen():
             yield ("Hello", None)
             yield (" ", None)
@@ -346,7 +361,8 @@ async def test_sse_event_format():
                         stop_reason = chunk_stop_reason
 
                 # Send completion event with stop_reason
-                yield f"event: done\ndata: {json.dumps({'status': 'complete', 'stop_reason': stop_reason})}\n\n"
+                data = {"status": "complete", "stop_reason": stop_reason}
+                yield f"event: done\ndata: {json.dumps(data)}\n\n"
             except Exception as e:
                 yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
 
@@ -371,6 +387,7 @@ async def test_sse_event_format():
 async def test_sse_chat_id_marker_event():
     """Test that chat_id marker is properly converted to SSE event."""
     import json
+
     from app.services.chat_service import CHAT_ID_MARKER
 
     # Simulate what the endpoint does with the chat_id marker (returns tuples)
@@ -381,7 +398,7 @@ async def test_sse_chat_id_marker_event():
             (" ", None),
             ("message", None),
             (f"{CHAT_ID_MARKER}123", None),
-            ("", "end_turn")
+            ("", "end_turn"),
         ]
 
         stop_reason = None
@@ -410,12 +427,12 @@ async def test_sse_chat_id_marker_event():
     assert len(events) == 5
 
     # Check for chat_id event
-    chat_id_events = [e for e in events if 'event: chat_id' in e]
+    chat_id_events = [e for e in events if "event: chat_id" in e]
     assert len(chat_id_events) == 1
     assert '"chat_id": 123' in chat_id_events[0]
 
     # Check for done event with stop_reason
-    done_events = [e for e in events if 'event: done' in e]
+    done_events = [e for e in events if "event: done" in e]
     assert len(done_events) == 1
     assert '"stop_reason": "end_turn"' in done_events[0]
 
@@ -429,7 +446,7 @@ async def test_was_truncated_field_when_max_tokens(db, test_user):
         passage_text="Test passage",
         historical_context="History",
         theological_significance="Theology",
-        practical_application="Practice"
+        practical_application="Practice",
     )
     db.add(insight)
     db.commit()
@@ -439,7 +456,8 @@ async def test_was_truncated_field_when_max_tokens(db, test_user):
     mock_tokens = ["This", " ", "was", " ", "truncated"]
 
     # Mock the AI client to return max_tokens as stop_reason
-    with patch.object(service.client, 'generate_chat_response_stream') as mock_stream:
+    with patch.object(service.client, "generate_chat_response_stream") as mock_stream:
+
         async def async_gen():
             for token in mock_tokens:
                 yield (token, None)
@@ -449,24 +467,28 @@ async def test_was_truncated_field_when_max_tokens(db, test_user):
 
         # Stream the message
         tokens = []
-        async for chunk, stop_reason in service.send_message_stream(
+        async for chunk, _stop_reason in service.send_message_stream(
             db=db,
             insight_id=insight.id,
             user_id=test_user.id,
             user_message="Test message",
             passage_text="Test passage",
             passage_reference="Test 1:1",
-            insight_context={}
+            insight_context={},
         ):
             if chunk:
                 tokens.append(chunk)
 
         # Verify message was saved with was_truncated=True
-        messages = db.query(ChatMessage).filter(
-            ChatMessage.insight_id == insight.id,
-            ChatMessage.user_id == test_user.id,
-            ChatMessage.role == "assistant"
-        ).all()
+        messages = (
+            db.query(ChatMessage)
+            .filter(
+                ChatMessage.insight_id == insight.id,
+                ChatMessage.user_id == test_user.id,
+                ChatMessage.role == "assistant",
+            )
+            .all()
+        )
 
         assert len(messages) == 1
         assert messages[0].was_truncated is True
@@ -482,7 +504,7 @@ async def test_was_truncated_field_when_end_turn(db, test_user):
         passage_text="Test passage",
         historical_context="History",
         theological_significance="Theology",
-        practical_application="Practice"
+        practical_application="Practice",
     )
     db.add(insight)
     db.commit()
@@ -492,7 +514,8 @@ async def test_was_truncated_field_when_end_turn(db, test_user):
     mock_tokens = ["Complete", " ", "response"]
 
     # Mock the AI client to return end_turn as stop_reason
-    with patch.object(service.client, 'generate_chat_response_stream') as mock_stream:
+    with patch.object(service.client, "generate_chat_response_stream") as mock_stream:
+
         async def async_gen():
             for token in mock_tokens:
                 yield (token, None)
@@ -502,24 +525,28 @@ async def test_was_truncated_field_when_end_turn(db, test_user):
 
         # Stream the message
         tokens = []
-        async for chunk, stop_reason in service.send_message_stream(
+        async for chunk, _stop_reason in service.send_message_stream(
             db=db,
             insight_id=insight.id,
             user_id=test_user.id,
             user_message="Test message",
             passage_text="Test passage",
             passage_reference="Test 1:1",
-            insight_context={}
+            insight_context={},
         ):
             if chunk:
                 tokens.append(chunk)
 
         # Verify message was saved with was_truncated=False
-        messages = db.query(ChatMessage).filter(
-            ChatMessage.insight_id == insight.id,
-            ChatMessage.user_id == test_user.id,
-            ChatMessage.role == "assistant"
-        ).all()
+        messages = (
+            db.query(ChatMessage)
+            .filter(
+                ChatMessage.insight_id == insight.id,
+                ChatMessage.user_id == test_user.id,
+                ChatMessage.role == "assistant",
+            )
+            .all()
+        )
 
         assert len(messages) == 1
         assert messages[0].was_truncated is False
@@ -534,7 +561,7 @@ async def test_was_truncated_field_standalone_chat_max_tokens(db, test_user):
         user_id=test_user.id,
         title="Test Chat",
         passage_text="Test passage",
-        passage_reference="Test 1:1"
+        passage_reference="Test 1:1",
     )
     db.add(chat)
     db.commit()
@@ -544,7 +571,8 @@ async def test_was_truncated_field_standalone_chat_max_tokens(db, test_user):
     mock_tokens = ["Truncated", " ", "standalone"]
 
     # Mock the AI client to return max_tokens as stop_reason
-    with patch.object(service.client, 'generate_standalone_chat_response_stream') as mock_stream:
+    with patch.object(service.client, "generate_standalone_chat_response_stream") as mock_stream:
+
         async def async_gen():
             for token in mock_tokens:
                 yield (token, None)
@@ -554,20 +582,21 @@ async def test_was_truncated_field_standalone_chat_max_tokens(db, test_user):
 
         # Stream the message
         tokens = []
-        async for chunk, stop_reason in service.send_standalone_message_stream(
-            db=db,
-            chat_id=chat.id,
-            user_id=test_user.id,
-            user_message="Test message"
+        async for chunk, _stop_reason in service.send_standalone_message_stream(
+            db=db, chat_id=chat.id, user_id=test_user.id, user_message="Test message"
         ):
             if chunk:
                 tokens.append(chunk)
 
         # Verify message was saved with was_truncated=True
-        messages = db.query(StandaloneChatMessage).filter(
-            StandaloneChatMessage.chat_id == chat.id,
-            StandaloneChatMessage.role == "assistant"
-        ).all()
+        messages = (
+            db.query(StandaloneChatMessage)
+            .filter(
+                StandaloneChatMessage.chat_id == chat.id,
+                StandaloneChatMessage.role == "assistant",
+            )
+            .all()
+        )
 
         assert len(messages) == 1
         assert messages[0].was_truncated is True
@@ -582,7 +611,7 @@ async def test_was_truncated_field_standalone_chat_complete(db, test_user):
         user_id=test_user.id,
         title="Test Chat",
         passage_text="Test passage",
-        passage_reference="Test 1:1"
+        passage_reference="Test 1:1",
     )
     db.add(chat)
     db.commit()
@@ -592,7 +621,8 @@ async def test_was_truncated_field_standalone_chat_complete(db, test_user):
     mock_tokens = ["Complete", " ", "standalone"]
 
     # Mock the AI client to return end_turn as stop_reason
-    with patch.object(service.client, 'generate_standalone_chat_response_stream') as mock_stream:
+    with patch.object(service.client, "generate_standalone_chat_response_stream") as mock_stream:
+
         async def async_gen():
             for token in mock_tokens:
                 yield (token, None)
@@ -602,20 +632,21 @@ async def test_was_truncated_field_standalone_chat_complete(db, test_user):
 
         # Stream the message
         tokens = []
-        async for chunk, stop_reason in service.send_standalone_message_stream(
-            db=db,
-            chat_id=chat.id,
-            user_id=test_user.id,
-            user_message="Test message"
+        async for chunk, _stop_reason in service.send_standalone_message_stream(
+            db=db, chat_id=chat.id, user_id=test_user.id, user_message="Test message"
         ):
             if chunk:
                 tokens.append(chunk)
 
         # Verify message was saved with was_truncated=False
-        messages = db.query(StandaloneChatMessage).filter(
-            StandaloneChatMessage.chat_id == chat.id,
-            StandaloneChatMessage.role == "assistant"
-        ).all()
+        messages = (
+            db.query(StandaloneChatMessage)
+            .filter(
+                StandaloneChatMessage.chat_id == chat.id,
+                StandaloneChatMessage.role == "assistant",
+            )
+            .all()
+        )
 
         assert len(messages) == 1
         assert messages[0].was_truncated is False

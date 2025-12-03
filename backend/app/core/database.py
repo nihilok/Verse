@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -10,7 +11,7 @@ settings = get_settings()
 if settings.database_url.startswith("sqlite"):
     engine = create_engine(
         settings.database_url,
-        connect_args={"check_same_thread": False}  # SQLite-specific
+        connect_args={"check_same_thread": False},  # SQLite-specific
     )
 else:
     # PostgreSQL with connection pooling
