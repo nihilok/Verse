@@ -20,6 +20,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   streamingMessage,
 }) => {
   const [inputValue, setInputValue] = useState("");
+  const [isMobile, setIsMobile] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -43,6 +44,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     const newHeight = Math.min(textarea.scrollHeight, maxHeight);
     textarea.style.height = `${newHeight}px`;
   };
+
+  useEffect(() => {
+    // Check if device is mobile (screen width < 768px)
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
@@ -69,9 +82,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit(e);
+    if (e.key === "Enter") {
+      // Mobile: Enter adds newline, Shift+Enter sends
+      // Desktop: Enter sends, Shift+Enter adds newline
+      const shouldSend = isMobile ? e.shiftKey : !e.shiftKey;
+
+      if (shouldSend) {
+        e.preventDefault();
+        handleSubmit(e);
+      }
     }
   };
 
