@@ -1,15 +1,25 @@
 from sqlalchemy.orm import Session
 
-from app.clients.bible_client import BiblePassage
+from app.clients.bible_client import BibleClient, BiblePassage
 from app.clients.helloao_client import HelloAOBibleClient
+from app.clients.sqlite_bible_client import SQLiteBibleClient
+from app.core.config import get_settings
 from app.models.models import SavedPassage
 
 
 class BibleService:
     """Service for Bible-related operations."""
 
-    def __init__(self):
-        self.client = HelloAOBibleClient()
+    def __init__(self, client: BibleClient | None = None):
+        if client:
+            self.client = client
+        else:
+            # Use configured client type
+            settings = get_settings()
+            if settings.bible_client_type == "sqlite":
+                self.client = SQLiteBibleClient()
+            else:
+                self.client = HelloAOBibleClient()
 
     async def get_passage(
         self,
@@ -61,4 +71,5 @@ class BibleService:
 
     async def close(self):
         """Close the client."""
-        await self.client.close()
+        if hasattr(self.client, "close"):
+            await self.client.close()

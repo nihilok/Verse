@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     openai_api_key: str = ""
 
+    # Bible Provider
+    bible_client_type: str = "sqlite"  # Options: "sqlite", "api"
+
     # AI Token Limits
     max_tokens_insights: int = Field(default=2000, ge=500, le=16000)
     max_tokens_definition: int = Field(default=1000, ge=500, le=16000)

@@ -23,13 +23,24 @@ class HelloAOBibleClient(BibleClient):
         "BST": "eng_bre",  # Brenton English Septuagint
         "GLW": "eng_glw",  # God's Living Word
         "LXXSB": "eng_lxu",  # British English Septuagint 2012
-        "TOJB": "eng_ojb",  # The Orthodox Jewish Bible
+        "LXXSA": "eng_lxx",  # American English Septuagint 2012
+        "UBES": "eng_boy",  # Updated Brenton English Septuagint
+        "TOJBT": "eng_ojb",  # The Orthodox Jewish Bible
         "PEV": "eng_pev",  # Plain English Version
-        "RVA": "eng_rv5",  # Revised Version
+        "RV": "eng_rv5",  # Revised Version
         "MSB": "eng_msb",  # Majority Standard Bible
         "YLT": "eng_ylt",  # Young's Literal Translation
         "BBE": "eng_bbe",  # Bible in Basic English
         "EMTV": "eng_emtv",  # English Majority Text Version
+        # Jewish/Hebrew-focused translations
+        "JPSTN": "eng_jps",  # JPS TaNaKH 1917
+        "ILT": "eng_lee",  # Isaac Leeser Tanakh
+        "TOE": "eng_oke",  # Targum Onkelos Etheridge
+        "WMB": "eng_wmb",  # World Messianic Bible
+        # Scholarly translations
+        "NETB": "eng_net",  # NET Bible
+        "DBY": "eng_dby",  # Darby Translation
+        # Spanish translations
         "SRV": "spa_r09",  # Spanish Reina-Valera 1909
         "BES": "spa_bes",  # Spanish Biblia en Español Sencillo
     }
@@ -137,13 +148,17 @@ class HelloAOBibleClient(BibleClient):
             if isinstance(item, str):
                 text_parts.append(item)
             elif isinstance(item, dict):
-                # Handle footnotes and other non-text dictionaries by adding a space
-                # to prevent words from being concatenated together
+                # Handle various metadata types in the content
                 if "text" in item:
+                    # Direct text content (e.g., words of Jesus markers)
                     text_parts.append(item["text"])
                 elif "noteId" in item:
                     # Footnote marker - add a space to separate surrounding words
                     text_parts.append(" ")
+                elif "lineBreak" in item:
+                    # Line break marker - add a space to separate lines
+                    text_parts.append(" ")
+                # If there are other metadata types, they'll be skipped (e.g., chapter headings)
         return "".join(text_parts).strip()
 
     async def get_verse(
