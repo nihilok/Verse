@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { ChatMessage } from "../types";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -21,9 +21,27 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 }) => {
   const [inputValue, setInputValue] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const adjustTextareaHeight = () => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    // Reset height to get accurate scrollHeight
+    textarea.style.height = "auto";
+
+    // Calculate the line height (approximately 24px for text-base)
+    const lineHeight = 24;
+    const maxRows = 6;
+    const maxHeight = lineHeight * maxRows;
+
+    // Set height based on content, but cap at max height
+    const newHeight = Math.min(textarea.scrollHeight, maxHeight);
+    textarea.style.height = `${newHeight}px`;
   };
 
   useEffect(() => {
@@ -36,7 +54,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
     const message = inputValue;
     setInputValue("");
+
+    // Reset textarea height after sending
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+    }
+
     await onSendMessage(message);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInputValue(e.target.value);
+    adjustTextareaHeight();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -104,16 +133,17 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
       {/* Input area */}
       <div className="border-t p-4 flex-shrink-0">
-        <form onSubmit={handleSubmit} className="flex gap-2">
-          <Input
-            type="text"
+        <form onSubmit={handleSubmit} className="flex gap-2 items-end">
+          <Textarea
+            ref={textareaRef}
             value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
+            onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             placeholder="Ask a question..."
             aria-label="Ask a question about the passage"
             disabled={loading}
-            className="flex-1"
+            rows={1}
+            className="flex-1 min-h-0 resize-none"
           />
           <Button
             type="submit"
