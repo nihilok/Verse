@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { BiblePassage } from "../types";
 import { formatReferenceWithTranslation } from "../types";
 import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import SelectionButtons from "./SelectionButtons";
 
 // Selection timing constants
@@ -313,9 +314,16 @@ const BibleReader: React.FC<BibleReaderProps> = ({
           className="relative max-w-2xl min-h-full mx-auto"
         >
           {loading ? (
-            <div className="flex flex-col items-center justify-center min-h-[400px] text-muted-foreground fade-in-loading">
-              <Loader2 size={48} className="animate-spin mb-4 text-primary" />
-              <p>Loading passage...</p>
+            <div className="space-y-3 mt-2">
+              {Array.from({ length: 12 }).map((_, index) => (
+                <div key={index} className="flex items-start gap-2">
+                  <Skeleton className="h-6 w-[28px] min-w-[28px]" />
+                  <Skeleton
+                    className="h-6 flex-1"
+                    style={{ width: `${Math.random() * 30 + 70}%` }}
+                  />
+                </div>
+              ))}
             </div>
           ) : passage ? (
             passage.verses.map((verse, index) => (
