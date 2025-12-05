@@ -275,6 +275,30 @@
   font-size: 0.95em;
 }
 
+/* Handle code blocks (pre + code) with horizontal scroll */
+.chat-message .prose pre {
+  overflow-x: auto;
+  max-width: 100%;
+  margin: 0.5rem 0;
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 0.375rem;
+  line-height: 1.5;
+}
+
+.dark .chat-message .prose pre {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.chat-message .prose pre code {
+  background: transparent;
+  padding: 0;
+  font-size: 0.85em;
+  white-space: pre;
+  word-wrap: normal;
+  overflow-wrap: normal;
+}
+
 /* Ensure chat bubbles can position pseudo elements */
 .chat-message {
   position: relative;
