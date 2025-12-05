@@ -22,11 +22,10 @@ class SQLiteBibleClient(BibleClient):
         "ASV": "eng_asv",  # American Standard Version (1901)
         "LSV": "eng_lsv",  # Literal Standard Version
         "BST": "eng_bre",  # Brenton English Septuagint
-        "GLW": "eng_glw",  # God's Living Word
         "LXXSB": "eng_lxu",  # British English Septuagint 2012
         "LXXSA": "eng_lxx",  # American English Septuagint 2012
         "UBES": "eng_boy",  # Updated Brenton English Septuagint
-        "TOJBT": "eng_ojb",  # The Orthodox Jewish Bible
+        "TOJBT": "eng_ojb",  # The Orthodox Jewish Bible Translation
         "PEV": "eng_pev",  # Plain English Version
         "RV": "eng_rv5",  # Revised Version
         "MSB": "eng_msb",  # Majority Standard Bible

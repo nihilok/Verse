@@ -84,7 +84,6 @@ async def test_invalid_reference(sqlite_client):
         ("BSB", "John", 3, 16, "God"),
         ("ASV", "John", 3, 16, "God"),
         ("LSV", "John", 3, 16, "God"),
-        ("GLW", "John", 3, 16, "God"),
         ("PEV", "John", 3, 16, "God"),
         ("RV", "John", 3, 16, "God"),
         ("MSB", "John", 3, 16, "God"),
@@ -97,7 +96,7 @@ async def test_invalid_reference(sqlite_client):
         ("LXXSA", "Genesis", 1, 1, "God"),  # LXX American English
         ("UBES", "Genesis", 1, 1, "God"),  # Updated Brenton Septuagint
         # Jewish/Hebrew-focused translations
-        ("TOJBT", "John", 3, 16, "Hashem"),  # Orthodox Jewish Bible - uses Hebrew names
+        ("TOJBT", "John", 3, 16, "Hashem"),  # Orthodox Jewish Bible Translation - uses Hebrew names
         ("JPSTN", "Genesis", 1, 1, "God"),  # JPS TaNaKH - Old Testament only
         ("ILT", "Genesis", 1, 1, "God"),  # Isaac Leeser Tanakh - Old Testament only
         ("TOE", "Genesis", 1, 1, "Lord"),  # Targum Onkelos - Torah only
