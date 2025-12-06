@@ -1,5 +1,6 @@
 import React from "react";
 import { MessageCircle } from "lucide-react";
+import { Link } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -8,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import ChatInterface from "./ChatInterface";
 import type { ChatMessage, StandaloneChatMessage } from "../types";
+import { generatePassageURL } from "@/lib/urlParser";
 
 interface ChatModalProps {
   open: boolean;
@@ -16,6 +18,13 @@ interface ChatModalProps {
   subtitle?: string;
   passageText?: string;
   passageReference?: string;
+  passageParams?: {
+    book: string;
+    chapter: number;
+    verseStart?: number;
+    verseEnd?: number;
+    translation?: string;
+  };
   messages: ChatMessage[] | StandaloneChatMessage[];
   onSendMessage: (message: string) => Promise<void>;
   loading: boolean;
@@ -29,11 +38,42 @@ const ChatModal: React.FC<ChatModalProps> = ({
   subtitle,
   passageText,
   passageReference,
+  passageParams,
   messages,
   onSendMessage,
   loading,
   streamingMessage,
 }) => {
+  // Format reference with verse range if available
+  const formattedReference = React.useMemo(() => {
+    if (!passageParams) return passageReference;
+
+    const { book, chapter, verseStart, verseEnd, translation } = passageParams;
+    let ref = `${book} ${chapter}`;
+
+    if (verseStart && verseEnd && verseStart !== verseEnd) {
+      ref += `:${verseStart}-${verseEnd}`;
+    } else if (verseStart) {
+      ref += `:${verseStart}`;
+    }
+
+    if (translation) {
+      ref += ` (${translation})`;
+    }
+
+    return ref;
+  }, [passageParams, passageReference]);
+
+  // Generate passage URL if we have params
+  const passageUrl = React.useMemo(() => {
+    if (!passageParams) return null;
+    return generatePassageURL(passageParams);
+  }, [passageParams]);
+
+  const handleReferenceClick = () => {
+    onOpenChange(false);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col gap-2">
@@ -48,11 +88,21 @@ const ChatModal: React.FC<ChatModalProps> = ({
         </DialogHeader>
 
         {/* Passage quote - shown at top if provided */}
-        {passageText && passageReference && (
+        {passageText && (formattedReference || passageReference) && (
           <div className="p-4 rounded-lg bg-muted/50 border border-border">
-            <h3 className="font-semibold text-sm mb-2 text-primary">
-              {passageReference}
-            </h3>
+            {passageUrl ? (
+              <Link
+                to={passageUrl}
+                onClick={handleReferenceClick}
+                className="font-semibold text-sm mb-2 text-primary hover:underline block"
+              >
+                {formattedReference}
+              </Link>
+            ) : (
+              <h3 className="font-semibold text-sm mb-2 text-primary">
+                {formattedReference}
+              </h3>
+            )}
             <p className="italic text-sm leading-relaxed">"{passageText}"</p>
           </div>
         )}
