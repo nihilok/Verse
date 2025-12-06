@@ -351,6 +351,17 @@ function App() {
     );
   };
 
+  const handleTranslationChange = async (newTranslation: string) => {
+    // Reload the current passage with the new translation
+    await handleSearch(
+      currentBook,
+      currentChapter,
+      highlightVerseStart,
+      highlightVerseEnd,
+      newTranslation,
+    );
+  };
+
   const normaliseWhitespace = (text: string) => {
     return text.replace(/\s+/g, " ").trim();
   };
@@ -962,6 +973,7 @@ function App() {
                 onTextSelected={handleTextSelected}
                 onAskQuestion={handleAskQuestion}
                 onNavigate={handleNavigate}
+                onTranslationChange={handleTranslationChange}
                 loading={loading}
                 highlightVerseStart={highlightVerseStart}
                 highlightVerseEnd={highlightVerseEnd}

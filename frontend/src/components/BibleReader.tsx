@@ -5,6 +5,7 @@ import { formatReferenceWithTranslation } from "../types";
 import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import SelectionButtons from "./SelectionButtons";
+import TranslationDropdown from "./TranslationDropdown";
 import { isVerseHighlighted } from "@/lib/urlParser";
 
 // Selection timing constants
@@ -33,6 +34,7 @@ interface BibleReaderProps {
     verseEnd?: number,
   ) => void;
   onNavigate?: (direction: "prev" | "next") => void;
+  onTranslationChange?: (translation: string) => void;
   loading?: boolean;
   highlightVerseStart?: number;
   highlightVerseEnd?: number;
@@ -43,6 +45,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({
   onTextSelected,
   onAskQuestion,
   onNavigate,
+  onTranslationChange,
   loading = false,
   highlightVerseStart,
   highlightVerseEnd,
@@ -418,9 +421,19 @@ const BibleReader: React.FC<BibleReaderProps> = ({
             <span className="opacity-60">Loading...</span>
           )}
         </CardTitle>
-        <span className="ml-auto bg-accent/80 text-accent-foreground px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide">
-          {passage ? passage.translation : null}
-        </span>
+        <div className="ml-auto">
+          {passage && onTranslationChange ? (
+            <TranslationDropdown
+              value={passage.translation}
+              onChange={onTranslationChange}
+              disabled={loading}
+            />
+          ) : passage ? (
+            <span className="bg-accent/80 text-accent-foreground px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide">
+              {passage.translation}
+            </span>
+          ) : null}
+        </div>
       </CardHeader>
       <CardContent
         ref={contentRef}
