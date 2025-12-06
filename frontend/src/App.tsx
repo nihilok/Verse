@@ -302,7 +302,36 @@ function App() {
         setDefinition(result);
         setDefinitionModalOpen(true);
       } catch (err) {
-        setError("Failed to generate definition. Please try again.");
+        // Check if this is a usage limit error (429 status)
+        if (
+          err &&
+          typeof err === "object" &&
+          "response" in err &&
+          err.response &&
+          typeof err.response === "object" &&
+          "status" in err.response &&
+          err.response.status === 429
+        ) {
+          const detail =
+            "data" in err.response &&
+            err.response.data &&
+            typeof err.response.data === "object" &&
+            "detail" in err.response.data
+              ? err.response.data.detail
+              : null;
+          if (detail && typeof detail === "object" && "message" in detail) {
+            setError(
+              detail.message ||
+                "Daily limit reached. Please try again tomorrow or upgrade to pro.",
+            );
+          } else {
+            setError(
+              "Daily limit reached. Please try again tomorrow or upgrade to pro.",
+            );
+          }
+        } else {
+          setError("Failed to generate definition. Please try again.");
+        }
         console.error("Error generating definition:", err);
       } finally {
         setDefinitionLoading(false);
@@ -350,7 +379,36 @@ function App() {
           console.error("Failed to reload insights history:", historyErr);
         }
       } catch (err) {
-        setError("Failed to generate insights. Please try again.");
+        // Check if this is a usage limit error (429 status)
+        if (
+          err &&
+          typeof err === "object" &&
+          "response" in err &&
+          err.response &&
+          typeof err.response === "object" &&
+          "status" in err.response &&
+          err.response.status === 429
+        ) {
+          const detail =
+            "data" in err.response &&
+            err.response.data &&
+            typeof err.response.data === "object" &&
+            "detail" in err.response.data
+              ? err.response.data.detail
+              : null;
+          if (detail && typeof detail === "object" && "message" in detail) {
+            setError(
+              detail.message ||
+                "Daily limit reached. Please try again tomorrow or upgrade to pro.",
+            );
+          } else {
+            setError(
+              "Daily limit reached. Please try again tomorrow or upgrade to pro.",
+            );
+          }
+        } else {
+          setError("Failed to generate insights. Please try again.");
+        }
         console.error("Error generating insights:", err);
       } finally {
         setInsightLoading(false);
@@ -489,7 +547,37 @@ function App() {
       }
     } catch (err) {
       console.error("Failed to send chat message:", err);
-      setError("Failed to send message. Please try again.");
+
+      // Check if this is a usage limit error (429 status)
+      if (
+        err &&
+        typeof err === "object" &&
+        "response" in err &&
+        err.response &&
+        typeof err.response === "object" &&
+        "status" in err.response &&
+        err.response.status === 429
+      ) {
+        const detail =
+          "data" in err.response &&
+          err.response.data &&
+          typeof err.response.data === "object" &&
+          "detail" in err.response.data
+            ? err.response.data.detail
+            : null;
+        if (detail && typeof detail === "object" && "message" in detail) {
+          setError(
+            detail.message ||
+              "Daily limit reached. Please try again tomorrow or upgrade to pro.",
+          );
+        } else {
+          setError(
+            "Daily limit reached. Please try again tomorrow or upgrade to pro.",
+          );
+        }
+      } else {
+        setError("Failed to send message. Please try again.");
+      }
 
       // Remove the optimistic temp message on failure
       setStandaloneChatMessages((prev) => prev.filter((m) => m.id !== tempId));
@@ -559,7 +647,37 @@ function App() {
       setChatStreamingMessage("");
     } catch (err) {
       console.error("Failed to send chat message:", err);
-      setError("Failed to send message. Please try again.");
+
+      // Check if this is a usage limit error (429 status)
+      if (
+        err &&
+        typeof err === "object" &&
+        "response" in err &&
+        err.response &&
+        typeof err.response === "object" &&
+        "status" in err.response &&
+        err.response.status === 429
+      ) {
+        const detail =
+          "data" in err.response &&
+          err.response.data &&
+          typeof err.response.data === "object" &&
+          "detail" in err.response.data
+            ? err.response.data.detail
+            : null;
+        if (detail && typeof detail === "object" && "message" in detail) {
+          setError(
+            detail.message ||
+              "Daily limit reached. Please try again tomorrow or upgrade to pro.",
+          );
+        } else {
+          setError(
+            "Daily limit reached. Please try again tomorrow or upgrade to pro.",
+          );
+        }
+      } else {
+        setError("Failed to send message. Please try again.");
+      }
 
       // Remove the optimistic temp message on failure
       setChatMessages((prev) => prev.filter((m) => m.id !== tempId));

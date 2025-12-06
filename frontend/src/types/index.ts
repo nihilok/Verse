@@ -104,9 +104,24 @@ export interface StandaloneChatMessage {
   timestamp: number;
 }
 
+export interface UsageInfo {
+  is_pro: boolean;
+  daily_limit: number;
+  calls_today: number;
+  remaining: number;
+}
+
 export interface UserSession {
   anonymous_id: string;
   created_at: number | null;
+  usage?: UsageInfo;
+}
+
+export interface UsageLimitError {
+  message: string;
+  current_usage: number;
+  limit: number;
+  is_pro: boolean;
 }
 
 export interface UserDataExport {
