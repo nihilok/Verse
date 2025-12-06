@@ -19,10 +19,14 @@ const TranslationDropdown: React.FC<TranslationDropdownProps> = ({
   onChange,
   disabled = false,
 }) => {
+  const selectedTranslation = TRANSLATIONS.find((t) => t.code === value);
+
   return (
     <Select value={value} onValueChange={onChange} disabled={disabled}>
       <SelectTrigger className="h-auto bg-accent/80 text-accent-foreground px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide border-0 focus:ring-0 focus:ring-offset-0 w-auto min-w-[80px]">
-        <SelectValue placeholder="Select translation" />
+        <SelectValue placeholder="Select translation">
+          {selectedTranslation?.code}
+        </SelectValue>
       </SelectTrigger>
       <SelectContent>
         {TRANSLATIONS.map((trans) => (
