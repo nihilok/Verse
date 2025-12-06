@@ -74,7 +74,7 @@ class ChatService:
             The AI's response message
         """
         # Get previous chat history for this user
-        chat_history = self.get_chat_messages(db, insight_id, user_id)
+        chat_history = await self.get_chat_messages(db, insight_id, user_id)
 
         # Get enhanced RAG context from past conversations
         rag_context_text = ""
@@ -147,15 +147,14 @@ class ChatService:
             )
             db.add(ai_msg)
 
-            db.commit()
+            # No commit needed - handled by get_db() dependency
         except Exception as e:
-            db.rollback()
             logger.error(
                 f"Error saving chat messages for insight {insight_id}, user {user_id}: {e}",
                 exc_info=True,
             )
-            # Return None to indicate failure even though we got an AI response
-            return None
+            # Re-raise to trigger automatic rollback
+            raise
 
         return ai_response
 
@@ -203,7 +202,7 @@ class ChatService:
             passage_reference=passage_reference,
         )
         db.add(chat)
-        db.flush()  # Flush to get the chat ID
+        await db.flush()  # Flush to get the chat ID
 
         # Generate AI response (no RAG context for first message, no history to search)
         ai_response = await self.client.generate_standalone_chat_response(
@@ -215,8 +214,7 @@ class ChatService:
         )
 
         if not ai_response:
-            db.rollback()
-            return None
+            raise ValueError("Failed to generate AI response")
 
         # Generate title from the first message
         title = user_message[: self.MAX_CHAT_TITLE_LENGTH] + (
@@ -258,12 +256,11 @@ class ChatService:
             )
             db.add(ai_msg)
 
-            db.commit()
+            # No commit needed - handled by get_db() dependency
             return chat.id
         except Exception as e:
-            db.rollback()
             logger.error(f"Error creating standalone chat for user {user_id}: {e}", exc_info=True)
-            return None
+            raise
 
     async def create_standalone_chat_stream(
         self,
@@ -295,7 +292,7 @@ class ChatService:
             passage_reference=passage_reference,
         )
         db.add(chat)
-        db.flush()  # Flush to get the chat ID
+        await db.flush()  # Flush to get the chat ID
 
         # Generate title from the first message
         title = user_message[: self.MAX_CHAT_TITLE_LENGTH] + (
@@ -363,7 +360,7 @@ class ChatService:
             )
             db.add(ai_msg)
 
-            db.commit()
+            # No commit needed - handled by get_db() dependency
 
             # Yield the chat_id as a special marker (maintaining backward compatibility)
             yield (f"{CHAT_ID_MARKER}{chat.id}", None)
@@ -371,7 +368,6 @@ class ChatService:
             # Yield final chunk with stop_reason
             yield ("", stop_reason)
         except Exception as e:
-            db.rollback()
             logger.error(
                 f"Error creating standalone chat stream for user {user_id}: {e}",
                 exc_info=True,
@@ -394,16 +390,17 @@ class ChatService:
             The AI's response message
         """
         # Get the chat session and verify it belongs to the user
-        chat = (
-            db.query(StandaloneChat)
-            .filter(StandaloneChat.id == chat_id, StandaloneChat.user_id == user_id)
-            .first()
+        result = await db.execute(
+            select(StandaloneChat).where(
+                StandaloneChat.id == chat_id, StandaloneChat.user_id == user_id
+            )
         )
+        chat = result.scalar_one_or_none()
         if not chat:
             return None
 
         # Get previous chat history
-        chat_history = self.get_standalone_chat_messages(db, chat_id, user_id)
+        chat_history = await self.get_standalone_chat_messages(db, chat_id, user_id)
 
         # Get enhanced RAG context from past conversations
         rag_context_text = ""
@@ -477,37 +474,37 @@ class ChatService:
             # Update chat's updated_at timestamp
             chat.updated_at = func.now()
 
-            db.commit()
+            # No commit needed - handled by get_db() dependency
         except Exception as e:
-            db.rollback()
             logger.error(
                 f"Error sending standalone chat message for chat {chat_id}, user {user_id}: {e}",
                 exc_info=True,
             )
-            return None
+            raise
 
         return ai_response
 
-    def get_standalone_chat_messages(
+    async def get_standalone_chat_messages(
         self, db: AsyncSession, chat_id: int, user_id: int
     ) -> list[StandaloneChatMessage]:
         """Get all messages for a standalone chat for a specific user."""
         # Verify the chat belongs to the user
-        chat = (
-            db.query(StandaloneChat)
-            .filter(StandaloneChat.id == chat_id, StandaloneChat.user_id == user_id)
-            .first()
+        result = await db.execute(
+            select(StandaloneChat).where(
+                StandaloneChat.id == chat_id, StandaloneChat.user_id == user_id
+            )
         )
+        chat = result.scalar_one_or_none()
 
         if not chat:
             return []
 
-        return (
-            db.query(StandaloneChatMessage)
-            .filter(StandaloneChatMessage.chat_id == chat_id)
+        result = await db.execute(
+            select(StandaloneChatMessage)
+            .where(StandaloneChatMessage.chat_id == chat_id)
             .order_by(StandaloneChatMessage.created_at)
-            .all()
         )
+        return list(result.scalars().all())
 
     async def get_standalone_chats(
         self, db: AsyncSession, user_id: int, limit: int = 50
@@ -524,13 +521,9 @@ class ChatService:
     async def delete_standalone_chat(self, db: AsyncSession, chat_id: int, user_id: int) -> bool:
         """Delete a standalone chat session for a specific user."""
         result = await db.execute(
-            select(StandaloneChat).where(StandaloneChat.id == chat_id, StandaloneChat.user_id == user_id)
+            delete(StandaloneChat).where(StandaloneChat.id == chat_id, StandaloneChat.user_id == user_id)
         )
-        chat = result.scalar_one_or_none()
-        if chat:
-            await db.delete(chat)
-            return True
-        return False
+        return result.rowcount > 0
 
     async def send_message_stream(
         self,
@@ -560,7 +553,7 @@ class ChatService:
                 - stop_reason: None for intermediate chunks, set to stop reason on final chunk
         """
         # Get previous chat history for this user
-        chat_history = self.get_chat_messages(db, insight_id, user_id)
+        chat_history = await self.get_chat_messages(db, insight_id, user_id)
 
         # Get enhanced RAG context from past conversations
         rag_context_text = ""
@@ -648,12 +641,11 @@ class ChatService:
             )
             db.add(ai_msg)
 
-            db.commit()
+            # No commit needed - handled by get_db() dependency
 
             # Yield final chunk with stop_reason
             yield ("", stop_reason)
         except Exception as e:
-            db.rollback()
             logger.error(
                 f"Error streaming chat messages for insight {insight_id}, user {user_id}: {e}",
                 exc_info=True,
@@ -678,16 +670,17 @@ class ChatService:
                 - stop_reason: None for intermediate chunks, set to stop reason on final chunk
         """
         # Get the chat session and verify it belongs to the user
-        chat = (
-            db.query(StandaloneChat)
-            .filter(StandaloneChat.id == chat_id, StandaloneChat.user_id == user_id)
-            .first()
+        result = await db.execute(
+            select(StandaloneChat).where(
+                StandaloneChat.id == chat_id, StandaloneChat.user_id == user_id
+            )
         )
+        chat = result.scalar_one_or_none()
         if not chat:
             raise ValueError(f"Chat {chat_id} not found for user {user_id}")
 
         # Get previous chat history
-        chat_history = self.get_standalone_chat_messages(db, chat_id, user_id)
+        chat_history = await self.get_standalone_chat_messages(db, chat_id, user_id)
 
         # Get enhanced RAG context from past conversations
         rag_context_text = ""
@@ -776,12 +769,11 @@ class ChatService:
             # Update chat's updated_at timestamp
             chat.updated_at = func.now()
 
-            db.commit()
+            # No commit needed - handled by get_db() dependency
 
             # Yield final chunk with stop_reason
             yield ("", stop_reason)
         except Exception as e:
-            db.rollback()
             logger.error(
                 f"Error streaming standalone chat message for chat {chat_id}, user {user_id}: {e}",
                 exc_info=True,
