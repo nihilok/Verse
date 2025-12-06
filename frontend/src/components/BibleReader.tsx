@@ -145,7 +145,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({
       const highlightedElement = document.getElementById(
         `verse-${highlightVerseStart}`
       );
-      if (highlightedElement && contentRef.current) {
+      if (highlightedElement) {
         // Scroll the element into view with smooth behavior
         highlightedElement.scrollIntoView({
           behavior: "smooth",
