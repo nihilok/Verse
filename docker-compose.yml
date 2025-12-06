@@ -16,6 +16,19 @@ services:
       timeout: 5s
       retries: 5
 
+  migrate:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.migrate
+    container_name: verse-migrate
+    environment:
+      DATABASE_URL: postgresql://verse_user:verse_password@db:5432/verse_db
+      ENVIRONMENT: development
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
   backend:
     build:
       context: ./backend
@@ -32,6 +45,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     volumes:
       - ./backend:/app
     #    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload

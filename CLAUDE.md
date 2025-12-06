@@ -22,6 +22,23 @@ uv sync --group dev        # Includes pytest and dev dependencies
 uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
+**Database Migrations:**
+```bash
+# Start DB for autogenerate
+docker compose up -d db
+
+# Create migration (auto-formatted/linted with ruff)
+DATABASE_URL=postgresql://verse_user:verse_password@localhost:5432/verse_db \
+  uv run alembic revision --autogenerate -m "description"
+
+# Other commands
+uv run alembic upgrade head                  # Apply migrations
+uv run alembic current                       # Check current version
+uv run alembic history                       # View migration history
+```
+
+**Note**: Migrations are automatically formatted and linted via ruff post-write hooks.
+
 **Testing:**
 ```bash
 uv run pytest                    # Run all tests

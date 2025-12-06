@@ -8,7 +8,7 @@ from slowapi.errors import RateLimitExceeded
 
 from app.api.routes import router
 from app.core.config import get_settings
-from app.core.database import Base, async_engine, sync_engine
+from app.core.database import async_engine
 from app.core.middleware import AnonymousUserMiddleware
 from app.core.rate_limiter import limiter
 from app.core.security_headers import SecurityHeadersMiddleware
@@ -30,9 +30,8 @@ logging.getLogger("anthropic").setLevel(logging.WARNING)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifespan events."""
-    # Startup: Initialize database tables using sync engine
-    # (Table creation is a one-time operation at startup)
-    Base.metadata.create_all(bind=sync_engine)
+    # Database tables are created by Alembic migrations
+    # See backend/MIGRATIONS.md for details
     yield
     # Shutdown: Dispose of async engine
     await async_engine.dispose()
