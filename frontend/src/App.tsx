@@ -490,11 +490,27 @@ function App() {
     }
   };
 
-  const handleAskQuestion = (text: string, reference: string) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleAskQuestion = (text: string, _reference: string) => {
+    // Reconstruct reference with verse numbers using current context
+    let fullReference = `${currentBook} ${currentChapter}`;
+    if (
+      highlightVerseStart &&
+      highlightVerseEnd &&
+      highlightVerseStart !== highlightVerseEnd
+    ) {
+      fullReference += `:${highlightVerseStart}-${highlightVerseEnd}`;
+    } else if (highlightVerseStart) {
+      fullReference += `:${highlightVerseStart}`;
+    }
+    if (currentTranslation) {
+      fullReference += ` (${currentTranslation})`;
+    }
+
     // Store passage info and open chat modal without creating the chat yet
     const passageInfo = {
       text,
-      reference,
+      reference: fullReference,
       params: {
         book: currentBook,
         chapter: currentChapter,
