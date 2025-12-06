@@ -52,19 +52,23 @@ Migrate to SQLAlchemy's async session support (`AsyncSession`) to allow non-bloc
 ### 1. Update Database Configuration (`app/core/database.py`)
 - Add `AsyncEngine` using `create_async_engine`
 - Create `async_sessionmaker` for async sessions
-- Update `get_db()` to async generator yielding `AsyncSession`
+- Update `get_db()` to async generator with automatic transaction management:
+  - Yields `AsyncSession`
+  - Automatically commits on success
+  - Automatically rolls back on exception
 - Keep sync engine for migration scripts (Alembic)
 
 ### 2. Update Service Methods
 Convert all synchronous database methods to async:
 - Change `def` → `async def`
 - Change `Session` → `AsyncSession`
-- Add `await` to all database queries:
+- Replace `.query()` style with SQLAlchemy 2.0 async style:
   - `db.query()` → `await db.execute(select(...))`
   - `db.add()` → `db.add()` (still sync)
-  - `db.commit()` → `await db.commit()`
+  - **Remove `db.commit()` calls** - automatic via `get_db()` dependency
   - `db.refresh()` → `await db.refresh()`
-  - `db.delete()` → followed by `await db.commit()`
+  - `db.flush()` → `await db.flush()` (when you need generated IDs before commit)
+  - `db.delete()` → followed by transaction auto-commit
 
 ### 3. Update API Routes (`app/api/routes.py`)
 - Update all route handlers to use `async def`

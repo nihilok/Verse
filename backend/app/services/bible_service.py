@@ -65,7 +65,7 @@ class BibleService:
             text=text,
         )
         db.add(db_passage)
-        await db.commit()
+        await db.flush()  # Flush to get ID without committing (commit handled by dependency)
         await db.refresh(db_passage)
         return db_passage
 
