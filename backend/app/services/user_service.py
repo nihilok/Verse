@@ -2,7 +2,6 @@ import uuid
 from typing import Any
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
 
 from app.models.models import (
     ChatMessage,
@@ -25,7 +24,7 @@ class UserService:
     MAX_REFERENCE_LENGTH = 100  # Maximum passage reference length (matches DB schema String(100))
     MAX_TITLE_LENGTH = 200  # Maximum title length (matches DB schema String(200))
 
-    def get_or_create_user(self, db: Session, anonymous_id: str | None = None) -> User:
+    async def get_or_create_user(self, db, anonymous_id: str | None = None) -> User:
         """
         Get an existing user by anonymous_id or create a new one.
 
@@ -37,15 +36,16 @@ class UserService:
             User instance
         """
         if anonymous_id:
-            user = db.query(User).filter(User.anonymous_id == anonymous_id).first()
+            result = await db.execute(select(User).where(User.anonymous_id == anonymous_id))
+            user = result.scalar_one_or_none()
             if user:
                 return user
 
         # Create new user with unique anonymous_id
         new_user = User(anonymous_id=str(uuid.uuid4()))
         db.add(new_user)
-        db.commit()
-        db.refresh(new_user)
+        await db.flush()
+        await db.refresh(new_user)
         return new_user
 
     async def get_user_by_anonymous_id(self, db, anonymous_id: str) -> User | None:

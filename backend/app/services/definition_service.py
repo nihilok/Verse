@@ -47,48 +47,46 @@ class DefinitionService:
         db.refresh(db_definition)
         return db_definition
 
-    def link_definition_to_user(self, db: Session, definition_id: int, user_id: int) -> bool:
+    async def link_definition_to_user(self, db, definition_id: int, user_id: int) -> bool:
         """Link an existing definition to a user if not already linked."""
         # Check if already linked
         stmt = select(user_definitions).where(
             user_definitions.c.user_id == user_id,
             user_definitions.c.definition_id == definition_id,
         )
-        result = db.execute(stmt).first()
+        result = await db.execute(stmt)
+        existing = result.first()
 
-        if not result:
-            db.execute(user_definitions.insert().values(user_id=user_id, definition_id=definition_id))
-            db.commit()
+        if not existing:
+            await db.execute(user_definitions.insert().values(user_id=user_id, definition_id=definition_id))
             return True
         return False
 
-    def get_saved_definition(
-        self, db: Session, word: str, passage_reference: str, verse_text: str
+    async def get_saved_definition(
+        self, db, word: str, passage_reference: str, verse_text: str
     ) -> SavedDefinition | None:
         """Get a saved definition from the database."""
-        return (
-            db.query(SavedDefinition)
-            .filter(
+        result = await db.execute(
+            select(SavedDefinition).where(
                 SavedDefinition.word == word,
                 SavedDefinition.passage_reference == passage_reference,
                 SavedDefinition.verse_text == verse_text,
             )
-            .first()
         )
+        return result.scalar_one_or_none()
 
-    def get_user_definitions(self, db: Session, user_id: int, limit: int = 50) -> list[SavedDefinition]:
+    async def get_user_definitions(self, db, user_id: int, limit: int = 50) -> list[SavedDefinition]:
         """Get all saved definitions for a user ordered by creation date."""
-        return (
-            db.query(SavedDefinition)
+        result = await db.execute(
+            select(SavedDefinition)
             .join(user_definitions, SavedDefinition.id == user_definitions.c.definition_id)
-            .filter(user_definitions.c.user_id == user_id)
+            .where(user_definitions.c.user_id == user_id)
             .order_by(SavedDefinition.created_at.desc())
             .limit(limit)
-            .all()
         )
+        return list(result.scalars().all())
 
-    def clear_user_definitions(self, db: Session, user_id: int) -> int:
+    async def clear_user_definitions(self, db, user_id: int) -> int:
         """Clear all definition associations for a user."""
-        count = db.execute(user_definitions.delete().where(user_definitions.c.user_id == user_id)).rowcount
-        db.commit()
-        return count
+        result = await db.execute(user_definitions.delete().where(user_definitions.c.user_id == user_id))
+        return result.rowcount

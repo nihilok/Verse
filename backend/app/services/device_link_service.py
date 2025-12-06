@@ -4,7 +4,6 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
 
 from app.models.models import ChatMessage, DeviceLinkCode, StandaloneChat, User, UserDevice, user_insights
 from app.services.user_service import UserService
@@ -270,7 +269,7 @@ class DeviceLinkService:
 
         return kept_user_id
 
-    def get_user_devices(self, db: Session, user_id: int) -> list[dict[str, Any]]:
+    async def get_user_devices(self, db, user_id: int) -> list[dict[str, Any]]:
         """
         Get all devices for a user.
 
@@ -281,12 +280,10 @@ class DeviceLinkService:
         Returns:
             List of device dictionaries
         """
-        devices = (
-            db.query(UserDevice)
-            .filter(UserDevice.user_id == user_id)
-            .order_by(UserDevice.last_active.desc())
-            .all()
+        result = await db.execute(
+            select(UserDevice).where(UserDevice.user_id == user_id).order_by(UserDevice.last_active.desc())
         )
+        devices = result.scalars().all()
 
         return [
             {
@@ -300,7 +297,7 @@ class DeviceLinkService:
             for device in devices
         ]
 
-    def unlink_device(self, db: Session, device_id: int, user_id: int) -> dict[str, Any]:
+    async def unlink_device(self, db, device_id: int, user_id: int) -> dict[str, Any]:
         """
         Unlink a specific device from user account.
 
@@ -316,15 +313,17 @@ class DeviceLinkService:
             ValueError: If device doesn't belong to user
         """
         # Verify device belongs to user
-        device = (
-            db.query(UserDevice).filter(UserDevice.id == device_id, UserDevice.user_id == user_id).first()
+        result = await db.execute(
+            select(UserDevice).where(UserDevice.id == device_id, UserDevice.user_id == user_id)
         )
+        device = result.scalar_one_or_none()
 
         if not device:
             raise ValueError("Device not found or doesn't belong to user")
 
         # Get user
-        user = db.query(User).filter(User.id == user_id).first()
+        result = await db.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
         if not user:
             raise ValueError("User not found")
 
@@ -332,18 +331,16 @@ class DeviceLinkService:
         user.device_count -= 1
 
         # Delete device record
-        db.delete(device)
+        await db.delete(device)
 
         # If this was the last device, delete all user data
         data_deleted = False
         if user.device_count == 0:
             # Delete all user data
-            self.user_service.clear_user_data(db, user_id)
+            await self.user_service.clear_user_data(db, user_id)
             # Delete user record
-            db.delete(user)
+            await db.delete(user)
             data_deleted = True
-
-        db.commit()
 
         return {
             "device_count": user.device_count if not data_deleted else 0,
@@ -356,9 +353,9 @@ class DeviceLinkService:
             ),
         }
 
-    def create_or_update_device(
+    async def create_or_update_device(
         self,
-        db: Session,
+        db,
         user_id: int,
         device_name: str | None = None,
         device_type: str | None = None,
@@ -380,11 +377,10 @@ class DeviceLinkService:
         # Try to find existing device by user_agent
         device = None
         if user_agent:
-            device = (
-                db.query(UserDevice)
-                .filter(UserDevice.user_id == user_id, UserDevice.user_agent == user_agent)
-                .first()
+            result = await db.execute(
+                select(UserDevice).where(UserDevice.user_id == user_id, UserDevice.user_agent == user_agent)
             )
+            device = result.scalar_one_or_none()
 
         if device:
             # Update last_active
@@ -403,12 +399,12 @@ class DeviceLinkService:
             )
             db.add(device)
 
-        db.flush()
-        db.refresh(device)
+        await db.flush()
+        await db.refresh(device)
 
         return device
 
-    def cleanup_expired_codes(self, db: Session) -> int:
+    async def cleanup_expired_codes(self, db) -> int:
         """
         Mark expired codes as expired (can be run as background task).
 
@@ -418,19 +414,19 @@ class DeviceLinkService:
         Returns:
             Number of codes marked as expired
         """
+        from sqlalchemy import update
+
         now = datetime.now(UTC)
 
-        count = (
-            db.query(DeviceLinkCode)
-            .filter(DeviceLinkCode.status == "pending", DeviceLinkCode.expires_at <= now)
-            .update({DeviceLinkCode.status: "expired"})
+        result = await db.execute(
+            update(DeviceLinkCode)
+            .where(DeviceLinkCode.status == "pending", DeviceLinkCode.expires_at <= now)
+            .values(status="expired")
         )
 
-        db.commit()
+        return result.rowcount
 
-        return count
-
-    def revoke_user_codes(self, db: Session, user_id: int) -> int:
+    async def revoke_user_codes(self, db, user_id: int) -> int:
         """
         Revoke all pending link codes for a user.
 
@@ -441,12 +437,12 @@ class DeviceLinkService:
         Returns:
             Number of codes revoked
         """
-        count = (
-            db.query(DeviceLinkCode)
-            .filter(DeviceLinkCode.source_user_id == user_id, DeviceLinkCode.status == "pending")
-            .update({DeviceLinkCode.status: "revoked"})
+        from sqlalchemy import update
+
+        result = await db.execute(
+            update(DeviceLinkCode)
+            .where(DeviceLinkCode.source_user_id == user_id, DeviceLinkCode.status == "pending")
+            .values(status="revoked")
         )
 
-        db.commit()
-
-        return count
+        return result.rowcount
