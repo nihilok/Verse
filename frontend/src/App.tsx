@@ -53,6 +53,39 @@ import "./App.css";
 // Maximum number of insights to keep in history
 const MAX_HISTORY_ITEMS = 50;
 
+/**
+ * Helper function to extract error message from usage limit errors (429 status).
+ * @param err - The error object from axios
+ * @returns User-friendly error message
+ */
+function getUsageLimitErrorMessage(err: unknown): string | null {
+  if (
+    err &&
+    typeof err === "object" &&
+    "response" in err &&
+    err.response &&
+    typeof err.response === "object" &&
+    "status" in err.response &&
+    err.response.status === 429
+  ) {
+    const detail =
+      "data" in err.response &&
+      err.response.data &&
+      typeof err.response.data === "object" &&
+      "detail" in err.response.data
+        ? err.response.data.detail
+        : null;
+    if (detail && typeof detail === "object" && "message" in detail) {
+      return (
+        (detail.message as string) ||
+        "Daily limit reached. Please try again tomorrow or upgrade to pro."
+      );
+    }
+    return "Daily limit reached. Please try again tomorrow or upgrade to pro.";
+  }
+  return null;
+}
+
 function App() {
   const [passage, setPassage] = useState<BiblePassage | null>(null);
   const [insight, setInsight] = useState<Insight | null>(null);
@@ -302,33 +335,9 @@ function App() {
         setDefinition(result);
         setDefinitionModalOpen(true);
       } catch (err) {
-        // Check if this is a usage limit error (429 status)
-        if (
-          err &&
-          typeof err === "object" &&
-          "response" in err &&
-          err.response &&
-          typeof err.response === "object" &&
-          "status" in err.response &&
-          err.response.status === 429
-        ) {
-          const detail =
-            "data" in err.response &&
-            err.response.data &&
-            typeof err.response.data === "object" &&
-            "detail" in err.response.data
-              ? err.response.data.detail
-              : null;
-          if (detail && typeof detail === "object" && "message" in detail) {
-            setError(
-              detail.message ||
-                "Daily limit reached. Please try again tomorrow or upgrade to pro.",
-            );
-          } else {
-            setError(
-              "Daily limit reached. Please try again tomorrow or upgrade to pro.",
-            );
-          }
+        const usageLimitError = getUsageLimitErrorMessage(err);
+        if (usageLimitError) {
+          setError(usageLimitError);
         } else {
           setError("Failed to generate definition. Please try again.");
         }
@@ -379,33 +388,9 @@ function App() {
           console.error("Failed to reload insights history:", historyErr);
         }
       } catch (err) {
-        // Check if this is a usage limit error (429 status)
-        if (
-          err &&
-          typeof err === "object" &&
-          "response" in err &&
-          err.response &&
-          typeof err.response === "object" &&
-          "status" in err.response &&
-          err.response.status === 429
-        ) {
-          const detail =
-            "data" in err.response &&
-            err.response.data &&
-            typeof err.response.data === "object" &&
-            "detail" in err.response.data
-              ? err.response.data.detail
-              : null;
-          if (detail && typeof detail === "object" && "message" in detail) {
-            setError(
-              detail.message ||
-                "Daily limit reached. Please try again tomorrow or upgrade to pro.",
-            );
-          } else {
-            setError(
-              "Daily limit reached. Please try again tomorrow or upgrade to pro.",
-            );
-          }
+        const usageLimitError = getUsageLimitErrorMessage(err);
+        if (usageLimitError) {
+          setError(usageLimitError);
         } else {
           setError("Failed to generate insights. Please try again.");
         }
@@ -548,33 +533,9 @@ function App() {
     } catch (err) {
       console.error("Failed to send chat message:", err);
 
-      // Check if this is a usage limit error (429 status)
-      if (
-        err &&
-        typeof err === "object" &&
-        "response" in err &&
-        err.response &&
-        typeof err.response === "object" &&
-        "status" in err.response &&
-        err.response.status === 429
-      ) {
-        const detail =
-          "data" in err.response &&
-          err.response.data &&
-          typeof err.response.data === "object" &&
-          "detail" in err.response.data
-            ? err.response.data.detail
-            : null;
-        if (detail && typeof detail === "object" && "message" in detail) {
-          setError(
-            detail.message ||
-              "Daily limit reached. Please try again tomorrow or upgrade to pro.",
-          );
-        } else {
-          setError(
-            "Daily limit reached. Please try again tomorrow or upgrade to pro.",
-          );
-        }
+      const usageLimitError = getUsageLimitErrorMessage(err);
+      if (usageLimitError) {
+        setError(usageLimitError);
       } else {
         setError("Failed to send message. Please try again.");
       }
@@ -648,33 +609,9 @@ function App() {
     } catch (err) {
       console.error("Failed to send chat message:", err);
 
-      // Check if this is a usage limit error (429 status)
-      if (
-        err &&
-        typeof err === "object" &&
-        "response" in err &&
-        err.response &&
-        typeof err.response === "object" &&
-        "status" in err.response &&
-        err.response.status === 429
-      ) {
-        const detail =
-          "data" in err.response &&
-          err.response.data &&
-          typeof err.response.data === "object" &&
-          "detail" in err.response.data
-            ? err.response.data.detail
-            : null;
-        if (detail && typeof detail === "object" && "message" in detail) {
-          setError(
-            detail.message ||
-              "Daily limit reached. Please try again tomorrow or upgrade to pro.",
-          );
-        } else {
-          setError(
-            "Daily limit reached. Please try again tomorrow or upgrade to pro.",
-          );
-        }
+      const usageLimitError = getUsageLimitErrorMessage(err);
+      if (usageLimitError) {
+        setError(usageLimitError);
       } else {
         setError("Failed to send message. Please try again.");
       }
