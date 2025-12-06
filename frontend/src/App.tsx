@@ -360,6 +360,8 @@ function App() {
     reference: string,
     isSingleWord: boolean,
     verseText?: string,
+    verseStart?: number,
+    verseEnd?: number,
   ) => {
     // Strip whitespace from text for consistent caching
     const normalizedText = text.trim();
@@ -404,8 +406,8 @@ function App() {
       setSelectedPassageParams({
         book: currentBook,
         chapter: currentChapter,
-        verseStart: highlightVerseStart,
-        verseEnd: highlightVerseEnd,
+        verseStart: verseStart || highlightVerseStart,
+        verseEnd: verseEnd || highlightVerseEnd,
         translation: currentTranslation,
       });
       setError(null);
@@ -490,18 +492,21 @@ function App() {
     }
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleAskQuestion = (text: string, _reference: string) => {
-    // Reconstruct reference with verse numbers using current context
+  const handleAskQuestion = (
+    text: string,
+    _reference: string,
+    verseStart?: number,
+    verseEnd?: number,
+  ) => {
+    // Reconstruct reference with verse numbers from selection or current context
+    const start = verseStart || highlightVerseStart;
+    const end = verseEnd || highlightVerseEnd;
+
     let fullReference = `${currentBook} ${currentChapter}`;
-    if (
-      highlightVerseStart &&
-      highlightVerseEnd &&
-      highlightVerseStart !== highlightVerseEnd
-    ) {
-      fullReference += `:${highlightVerseStart}-${highlightVerseEnd}`;
-    } else if (highlightVerseStart) {
-      fullReference += `:${highlightVerseStart}`;
+    if (start && end && start !== end) {
+      fullReference += `:${start}-${end}`;
+    } else if (start) {
+      fullReference += `:${start}`;
     }
     if (currentTranslation) {
       fullReference += ` (${currentTranslation})`;
@@ -514,8 +519,8 @@ function App() {
       params: {
         book: currentBook,
         chapter: currentChapter,
-        verseStart: highlightVerseStart,
-        verseEnd: highlightVerseEnd,
+        verseStart: start,
+        verseEnd: end,
         translation: currentTranslation,
       },
     };
