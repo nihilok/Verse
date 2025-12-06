@@ -33,7 +33,7 @@ class DeviceLinkService:
         """Hash a code using SHA256"""
         return hashlib.sha256(code.encode()).hexdigest()
 
-    def generate_link_code(self, db: Session, user_id: int, device_id: int | None = None) -> dict[str, Any]:
+    async def generate_link_code(self, db, user_id: int, device_id: int | None = None) -> dict[str, Any]:
         """
         Generate a new linking code for a user.
 
@@ -49,15 +49,18 @@ class DeviceLinkService:
             ValueError: If rate limit exceeded
         """
         # Check rate limiting - count active codes
-        active_codes = (
-            db.query(DeviceLinkCode)
-            .filter(
+        from sqlalchemy import func
+
+        result = await db.execute(
+            select(func.count())
+            .select_from(DeviceLinkCode)
+            .where(
                 DeviceLinkCode.source_user_id == user_id,
                 DeviceLinkCode.status == "pending",
                 DeviceLinkCode.expires_at > datetime.now(UTC),
             )
-            .count()
         )
+        active_codes = result.scalar()
 
         if active_codes >= self.MAX_ACTIVE_CODES_PER_USER:
             raise ValueError(f"Too many active link codes. Maximum {self.MAX_ACTIVE_CODES_PER_USER} allowed.")
@@ -72,7 +75,10 @@ class DeviceLinkService:
         # Ensure display code is unique
         max_attempts = 10
         for _ in range(max_attempts):
-            existing = db.query(DeviceLinkCode).filter(DeviceLinkCode.display_code == display_code).first()
+            result = await db.execute(
+                select(DeviceLinkCode).where(DeviceLinkCode.display_code == display_code)
+            )
+            existing = result.scalar_one_or_none()
             if not existing:
                 break
             display_code = self._generate_display_code()
@@ -91,8 +97,8 @@ class DeviceLinkService:
         )
 
         db.add(link_code)
-        db.commit()
-        db.refresh(link_code)
+        await db.flush()
+        await db.refresh(link_code)
 
         return {
             "display_code": display_code,
@@ -100,8 +106,8 @@ class DeviceLinkService:
             "qr_data": display_code,  # QR code will encode the display code
         }
 
-    def validate_and_use_code(
-        self, db: Session, display_code: str, target_user_id: int, target_device_id: int | None = None
+    async def validate_and_use_code(
+        self, db, display_code: str, target_user_id: int, target_device_id: int | None = None
     ) -> dict[str, Any]:
         """
         Validate a linking code and perform device linking.
@@ -119,11 +125,10 @@ class DeviceLinkService:
             ValueError: If code is invalid, expired, or already used
         """
         # Find code by display_code
-        link_code = (
-            db.query(DeviceLinkCode)
-            .filter(DeviceLinkCode.display_code == display_code.upper().strip())
-            .first()
+        result = await db.execute(
+            select(DeviceLinkCode).where(DeviceLinkCode.display_code == display_code.upper().strip())
         )
+        link_code = result.scalar_one_or_none()
 
         if not link_code:
             raise ValueError("Invalid link code")
@@ -141,7 +146,7 @@ class DeviceLinkService:
         if expires_at <= now:
             # Mark as expired
             link_code.status = "expired"
-            db.commit()
+            await db.flush()
             raise ValueError("This code has expired. Please generate a new one.")
 
         # Check status
@@ -162,12 +167,11 @@ class DeviceLinkService:
         link_code.target_device_id = target_device_id
 
         # Merge users
-        kept_user_id = self.merge_users(db, link_code.source_user_id, target_user_id)
+        kept_user_id = await self.merge_users(db, link_code.source_user_id, target_user_id)
 
         # Get the kept user's anonymous_id
-        kept_user = db.query(User).filter(User.id == kept_user_id).first()
-
-        db.commit()
+        result = await db.execute(select(User).where(User.id == kept_user_id))
+        kept_user = result.scalar_one_or_none()
 
         return {
             "success": True,
@@ -175,7 +179,7 @@ class DeviceLinkService:
             "message": "Devices linked successfully",
         }
 
-    def merge_users(self, db: Session, source_user_id: int, target_user_id: int) -> int:
+    async def merge_users(self, db, source_user_id: int, target_user_id: int) -> int:
         """
         Merge two users' data (union merge).
 
@@ -187,9 +191,13 @@ class DeviceLinkService:
         Returns:
             ID of the kept user
         """
+        from sqlalchemy import update
+
         # Get both users
-        source_user = db.query(User).filter(User.id == source_user_id).first()
-        target_user = db.query(User).filter(User.id == target_user_id).first()
+        result = await db.execute(select(User).where(User.id == source_user_id))
+        source_user = result.scalar_one_or_none()
+        result = await db.execute(select(User).where(User.id == target_user_id))
+        target_user = result.scalar_one_or_none()
 
         if not source_user or not target_user:
             raise ValueError("User not found")
@@ -215,46 +223,50 @@ class DeviceLinkService:
 
         # Merge insights (many-to-many) - transfer user_insights links
         stmt = select(user_insights).where(user_insights.c.user_id == deleted_user_id)
-        deleted_user_insights = db.execute(stmt).all()
+        result = await db.execute(stmt)
+        deleted_user_insights = result.all()
 
         for insight_link in deleted_user_insights:
             insight_id = insight_link.insight_id
             # Check if kept user already has this insight linked
-            existing = db.execute(
+            result = await db.execute(
                 select(user_insights).where(
                     user_insights.c.user_id == kept_user_id, user_insights.c.insight_id == insight_id
                 )
-            ).first()
+            )
+            existing = result.first()
 
             if not existing:
                 # Create new link for kept user
-                db.execute(user_insights.insert().values(user_id=kept_user_id, insight_id=insight_id))
+                await db.execute(user_insights.insert().values(user_id=kept_user_id, insight_id=insight_id))
 
         # Merge chat messages (one-to-many) - update user_id
-        db.query(ChatMessage).filter(ChatMessage.user_id == deleted_user_id).update(
-            {ChatMessage.user_id: kept_user_id}
+        await db.execute(
+            update(ChatMessage).where(ChatMessage.user_id == deleted_user_id).values(user_id=kept_user_id)
         )
 
         # Merge standalone chats (one-to-many) - update user_id
-        db.query(StandaloneChat).filter(StandaloneChat.user_id == deleted_user_id).update(
-            {StandaloneChat.user_id: kept_user_id}
+        await db.execute(
+            update(StandaloneChat)
+            .where(StandaloneChat.user_id == deleted_user_id)
+            .values(user_id=kept_user_id)
         )
 
         # Transfer devices - update user_id
-        db.query(UserDevice).filter(UserDevice.user_id == deleted_user_id).update(
-            {UserDevice.user_id: kept_user_id}
+        await db.execute(
+            update(UserDevice).where(UserDevice.user_id == deleted_user_id).values(user_id=kept_user_id)
         )
 
         # Update device count
         kept_user.device_count = source_user.device_count + target_user.device_count
 
         # Delete old user_insights links for deleted user (already transferred)
-        db.execute(user_insights.delete().where(user_insights.c.user_id == deleted_user_id))
+        await db.execute(user_insights.delete().where(user_insights.c.user_id == deleted_user_id))
 
         # Delete the deleted user (CASCADE will handle relationships)
-        db.delete(deleted_user)
+        await db.delete(deleted_user)
 
-        db.flush()
+        await db.flush()
 
         return kept_user_id
 

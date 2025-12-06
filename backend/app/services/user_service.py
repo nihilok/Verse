@@ -2,7 +2,7 @@ import uuid
 from typing import Any
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 from app.models.models import (
     ChatMessage,
@@ -48,11 +48,12 @@ class UserService:
         db.refresh(new_user)
         return new_user
 
-    def get_user_by_anonymous_id(self, db: Session, anonymous_id: str) -> User | None:
+    async def get_user_by_anonymous_id(self, db, anonymous_id: str) -> User | None:
         """Get a user by their anonymous ID."""
-        return db.query(User).filter(User.anonymous_id == anonymous_id).first()
+        result = await db.execute(select(User).where(User.anonymous_id == anonymous_id))
+        return result.scalar_one_or_none()
 
-    def _link_insight_to_user(self, db: Session, user_id: int, insight_id: int) -> bool:
+    async def _link_insight_to_user(self, db, user_id: int, insight_id: int) -> bool:
         """
         Helper method to link an insight to a user if not already linked.
 
@@ -68,14 +69,15 @@ class UserService:
         stmt = select(user_insights).where(
             user_insights.c.user_id == user_id, user_insights.c.insight_id == insight_id
         )
-        result = db.execute(stmt).first()
+        result = await db.execute(stmt)
+        existing = result.first()
 
-        if not result:
-            db.execute(user_insights.insert().values(user_id=user_id, insight_id=insight_id))
+        if not existing:
+            await db.execute(user_insights.insert().values(user_id=user_id, insight_id=insight_id))
             return True
         return False
 
-    def clear_user_data(self, db: Session, user_id: int) -> dict[str, int]:
+    async def clear_user_data(self, db, user_id: int) -> dict[str, int]:
         """
         Clear all data for a user.
 
@@ -86,16 +88,19 @@ class UserService:
         Returns:
             Dictionary with counts of deleted items
         """
+        from sqlalchemy import delete
+
         # Delete user-insight associations
-        insight_count = db.execute(user_insights.delete().where(user_insights.c.user_id == user_id)).rowcount
+        result = await db.execute(user_insights.delete().where(user_insights.c.user_id == user_id))
+        insight_count = result.rowcount
 
         # Delete chat messages (cascades from user relationship)
-        chat_message_count = db.query(ChatMessage).filter(ChatMessage.user_id == user_id).delete()
+        result = await db.execute(delete(ChatMessage).where(ChatMessage.user_id == user_id))
+        chat_message_count = result.rowcount
 
         # Delete standalone chats (cascades will delete messages)
-        standalone_chat_count = db.query(StandaloneChat).filter(StandaloneChat.user_id == user_id).delete()
-
-        db.commit()
+        result = await db.execute(delete(StandaloneChat).where(StandaloneChat.user_id == user_id))
+        standalone_chat_count = result.rowcount
 
         return {
             "insights": insight_count,
@@ -103,7 +108,7 @@ class UserService:
             "standalone_chats": standalone_chat_count,
         }
 
-    def export_user_data(self, db: Session, user_id: int) -> dict[str, Any]:
+    async def export_user_data(self, db, user_id: int) -> dict[str, Any]:
         """
         Export all data for a user as JSON.
 
@@ -114,17 +119,19 @@ class UserService:
         Returns:
             Dictionary containing all user data
         """
+        from sqlalchemy.orm import selectinload
+
         # Use eager loading to load all relationships at once
-        user = (
-            db.query(User)
+        result = await db.execute(
+            select(User)
             .options(
-                joinedload(User.insights),
-                joinedload(User.chat_messages),
-                joinedload(User.standalone_chats).joinedload(StandaloneChat.messages),
+                selectinload(User.insights),
+                selectinload(User.chat_messages),
+                selectinload(User.standalone_chats).selectinload(StandaloneChat.messages),
             )
-            .filter(User.id == user_id)
-            .first()
+            .where(User.id == user_id)
         )
+        user = result.scalar_one_or_none()
 
         if not user:
             return {}
@@ -205,7 +212,7 @@ class UserService:
         if len(actual_value) > max_length:
             raise ValueError(f"{field_name} too long (max {max_length} characters)")
 
-    def import_user_data(self, db: Session, user_id: int, data: dict[str, Any]) -> dict[str, int]:
+    async def import_user_data(self, db, user_id: int, data: dict[str, Any]) -> dict[str, int]:
         """
         Import user data from JSON.
 
@@ -286,18 +293,17 @@ class UserService:
                 )
 
                 # Check if insight already exists (by reference and text)
-                existing_insight = (
-                    db.query(SavedInsight)
-                    .filter(
+                result = await db.execute(
+                    select(SavedInsight).where(
                         SavedInsight.passage_reference == insight_data["passage_reference"],
                         SavedInsight.passage_text == insight_data["passage_text"],
                     )
-                    .first()
                 )
+                existing_insight = result.scalar_one_or_none()
 
                 if existing_insight:
                     # Link existing insight to user if not already linked
-                    if self._link_insight_to_user(db, user_id, existing_insight.id):
+                    if await self._link_insight_to_user(db, user_id, existing_insight.id):
                         counts["insights"] += 1
                     insight_id = existing_insight.id
                 else:
@@ -310,10 +316,10 @@ class UserService:
                         practical_application=insight_data["practical_application"],
                     )
                     db.add(new_insight)
-                    db.flush()
+                    await db.flush()
 
                     # Link to user
-                    self._link_insight_to_user(db, user_id, new_insight.id)
+                    await self._link_insight_to_user(db, user_id, new_insight.id)
                     counts["insights"] += 1
                     insight_id = new_insight.id
 
@@ -360,7 +366,7 @@ class UserService:
                     passage_text=passage_text,
                 )
                 db.add(new_chat)
-                db.flush()
+                await db.flush()
 
                 # Import messages for this chat
                 for msg_data in chat_data.get("messages", []):
@@ -383,10 +389,8 @@ class UserService:
 
                 counts["standalone_chats"] += 1
 
-            db.commit()
-
         except Exception as e:
-            db.rollback()
+            await db.rollback()
             raise ValueError(f"Failed to import data: {str(e)}") from e
 
         return counts
