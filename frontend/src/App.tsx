@@ -132,6 +132,13 @@ function App() {
   const [currentChatPassage, setCurrentChatPassage] = useState<{
     text: string;
     reference: string;
+    params?: {
+      book: string;
+      chapter: number;
+      verseStart?: number;
+      verseEnd?: number;
+      translation?: string;
+    };
   } | null>(null);
   const [standaloneChatMessages, setStandaloneChatMessages] = useState<
     StandaloneChatMessage[]
@@ -144,6 +151,13 @@ function App() {
   const [pendingChatPassage, setPendingChatPassage] = useState<{
     text: string;
     reference: string;
+    params?: {
+      book: string;
+      chapter: number;
+      verseStart?: number;
+      verseEnd?: number;
+      translation?: string;
+    };
   } | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -478,7 +492,17 @@ function App() {
 
   const handleAskQuestion = (text: string, reference: string) => {
     // Store passage info and open chat modal without creating the chat yet
-    const passageInfo = { text, reference };
+    const passageInfo = {
+      text,
+      reference,
+      params: {
+        book: currentBook,
+        chapter: currentChapter,
+        verseStart: highlightVerseStart,
+        verseEnd: highlightVerseEnd,
+        translation: currentTranslation,
+      },
+    };
     setPendingChatPassage(passageInfo);
     setCurrentChatPassage(passageInfo);
     setCurrentChatId(null);
@@ -925,6 +949,7 @@ function App() {
         title="Chat"
         passageText={currentChatPassage?.text}
         passageReference={currentChatPassage?.reference}
+        passageParams={currentChatPassage?.params}
         messages={standaloneChatMessages}
         onSendMessage={handleSendStandaloneChatMessage}
         loading={standaloneChatLoading}
