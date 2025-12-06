@@ -91,10 +91,12 @@ Verse is an interactive Bible reader with AI-powered insights. Users can highlig
 - **Unused variables**: Remove or properly handle catch block variables (use `catch { }` if not needed)
 
 #### Database Design
+- **Use Alembic for schema changes**: Never modify database schema manually - always create migrations
 - **Many-to-many relationships**: Use proper linking tables with appropriate columns
 - **Foreign key constraints**: Always specify `ondelete='CASCADE'` for proper cleanup
 - **Index frequently queried fields**: Add indexes to foreign keys and commonly filtered columns
 - **Avoid N+1 queries**: Consider batch operations for imports/exports with multiple items
+- **Migration best practices**: Test migrations locally before committing, handle both upgrade and downgrade
 
 #### Error Handling
 - **Specific error messages**: Provide context-specific error messages rather than generic ones
@@ -141,6 +143,38 @@ Verse is an interactive Bible reader with AI-powered insights. Users can highlig
 - **CI environment**: Tests run with SQLite database using `DATABASE_URL=sqlite:///./test.db`
 - **Note**: Backend uses `pyproject.toml` for dependency management, not `requirements.txt`
 
+### Database Migrations
+
+The project uses Alembic for database schema management. Migrations run automatically on startup via Docker Compose.
+
+**Creating Migrations:**
+```bash
+# Start database for autogenerate
+docker compose up -d db
+
+# Generate migration (automatically formatted and linted with ruff)
+DATABASE_URL=postgresql://verse_user:verse_password@localhost:5432/verse_db \
+  uv run alembic revision --autogenerate -m "description"
+
+# Review generated file in backend/alembic/versions/
+# Migrations are auto-formatted with ruff post-write hooks
+```
+
+**Common Commands:**
+```bash
+cd backend
+uv run alembic upgrade head     # Apply all pending migrations
+uv run alembic current          # Show current migration version
+uv run alembic history          # View migration history
+uv run alembic downgrade -1     # Rollback one migration
+```
+
+**Important Notes:**
+- Migrations run automatically in Docker via the `migrate` service before backend starts
+- Always review auto-generated migrations before committing
+- Replace `pgvector.sqlalchemy.vector.VECTOR(dim=1536)` with `Vector(1536)` if needed
+- See `backend/MIGRATIONS.md` for comprehensive documentation
+
 ### Docker Development
 
 - **Build and start all services**: `docker compose up --build`
@@ -182,6 +216,7 @@ The application follows a modular, layered architecture:
 - **Dependencies**: Backend uses `backend/pyproject.toml`, frontend uses `frontend/package.json`
 - **Tests**: Backend tests in `backend/tests/`, frontend tests co-located with components
 - **Docker**: `Dockerfile` in each service directory, `docker-compose.yml` at root
+- **Migrations**: Database migrations in `backend/alembic/versions/`, see `backend/MIGRATIONS.md`
 
 ## Working with Tests
 
@@ -226,9 +261,11 @@ uv run pytest --cov=app                    # Run tests with coverage
 
 ### Docker
 ```bash
-docker compose up --build    # Build and start all services
+docker compose up --build    # Build and start all services (includes migrations)
 docker compose down          # Stop all services
+docker compose down -v       # Stop and remove volumes (resets database)
 docker compose logs -f       # Follow logs from all services
+docker logs verse-migrate    # View migration logs
 ```
 
 ## CI/CD

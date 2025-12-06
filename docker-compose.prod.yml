@@ -17,6 +17,19 @@ services:
       timeout: 5s
       retries: 5
 
+  migrate:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.migrate
+    container_name: verse-migrate-prod
+    environment:
+      DATABASE_URL: postgresql://verse_user:${POSTGRES_PASSWORD}@db:5432/verse_db
+      ENVIRONMENT: production
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
   backend:
     build:
       context: ./backend
@@ -30,6 +43,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     restart: unless-stopped
     ports:
       - "${VERSE_BACKEND_PORT:-7776}:8000"
