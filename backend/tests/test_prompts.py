@@ -91,6 +91,19 @@ def test_build_engagement_guidelines_general():
     assert "surrounding verses" not in result
 
 
+def test_build_engagement_guidelines_includes_linking_guidance():
+    """Test that engagement guidelines include Bible passage linking instructions."""
+    for for_passage in [True, False]:
+        result = build_engagement_guidelines(for_passage=for_passage)
+        
+        assert "When referencing Bible passages:" in result
+        assert "Create clickable links using Markdown format:" in result
+        assert "[Genesis 1:14-17](/?book=Genesis&chapter=1&verseStart=14&verseEnd=17)" in result
+        assert "[John 3:16](/?book=John&chapter=3&verse=16)" in result
+        assert "[Genesis 1](/?book=Genesis&chapter=1)" in result
+        assert "[Genesis](/?book=Genesis&chapter=1)" in result
+
+
 def test_add_rag_context_empty():
     """Test adding empty RAG context."""
     base = "This is a base prompt"
