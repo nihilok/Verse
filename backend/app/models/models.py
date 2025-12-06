@@ -34,6 +34,7 @@ class User(Base):
     )
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     device_count = Column(Integer, default=1, nullable=False)
+    pro_subscription = Column(Boolean, default=False, nullable=False)
 
     # Relationships
     insights = relationship("SavedInsight", secondary="user_insights", back_populates="users")
@@ -41,6 +42,7 @@ class User(Base):
     chat_messages = relationship("ChatMessage", back_populates="user", cascade="all, delete-orphan")
     standalone_chats = relationship("StandaloneChat", back_populates="user", cascade="all, delete-orphan")
     devices = relationship("UserDevice", back_populates="user", cascade="all, delete-orphan")
+    usage_tracking = relationship("UsageTracking", back_populates="user", cascade="all, delete-orphan")
 
 
 # Linking table for many-to-many relationship between users and insights
@@ -306,3 +308,25 @@ class DeviceLinkCode(Base):
     target_user = relationship("User", foreign_keys=[target_user_id])
     source_device = relationship("UserDevice", foreign_keys=[source_device_id])
     target_device = relationship("UserDevice", foreign_keys=[target_device_id])
+
+
+class UsageTracking(Base):
+    """Model for tracking daily LLM usage per user."""
+
+    __tablename__ = "usage_tracking"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    date = Column(DateTime(timezone=True), nullable=False, index=True)
+    llm_calls = Column(Integer, default=0, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    # Relationship
+    user = relationship("User", back_populates="usage_tracking")
+
+    __table_args__ = (
+        # Ensure one record per user per date
+        UniqueConstraint("user_id", "date", name="uix_user_date"),
+        Index("idx_usage_tracking_user_date", "user_id", "date"),
+    )
