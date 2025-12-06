@@ -574,6 +574,22 @@ function App() {
     try {
       // If no chat exists yet, create it with the first message (now with streaming!)
       if (!currentChatId) {
+        // Construct full reference including verse numbers if available
+        let fullReference = pendingChatPassage?.reference;
+        if (pendingChatPassage?.params) {
+          const { book, chapter, verseStart, verseEnd, translation } =
+            pendingChatPassage.params;
+          fullReference = `${book} ${chapter}`;
+          if (verseStart && verseEnd && verseStart !== verseEnd) {
+            fullReference += `:${verseStart}-${verseEnd}`;
+          } else if (verseStart) {
+            fullReference += `:${verseStart}`;
+          }
+          if (translation) {
+            fullReference += ` (${translation})`;
+          }
+        }
+
         const chatId = await bibleService.createStandaloneChat(
           message,
           (token: string) => {
@@ -581,7 +597,7 @@ function App() {
             setStandaloneChatStreamingMessage((prev) => prev + token);
           },
           pendingChatPassage?.text,
-          pendingChatPassage?.reference,
+          fullReference,
         );
 
         setCurrentChatId(chatId);
