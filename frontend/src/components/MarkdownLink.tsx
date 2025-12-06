@@ -28,3 +28,36 @@ export default function MarkdownLink({
     </a>
   );
 }
+
+/**
+ * Creates a MarkdownLink component with a callback that fires on navigation.
+ * Useful for closing modals when a link is clicked.
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export function createMarkdownLinkWithCallback(onNavigate: () => void) {
+  return function MarkdownLinkWithCallback({
+    href,
+    children,
+    ...props
+  }: AnchorHTMLAttributes<HTMLAnchorElement>) {
+    const isInternal = href && (href.startsWith("/") || href.startsWith("?"));
+
+    const handleClick = () => {
+      onNavigate();
+    };
+
+    if (isInternal) {
+      return (
+        <Link to={href} onClick={handleClick} {...props}>
+          {children}
+        </Link>
+      );
+    }
+
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
+        {children}
+      </a>
+    );
+  };
+}

@@ -2,7 +2,7 @@ import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { BookOpen, BookMarked, Languages, CheckCircle } from "lucide-react";
-import MarkdownLink from "./MarkdownLink";
+import { createMarkdownLinkWithCallback } from "./MarkdownLink";
 import {
   Dialog,
   DialogContent,
@@ -29,6 +29,12 @@ const DefinitionModal: React.FC<DefinitionModalProps> = ({
 }) => {
   const [tab, setTab] = React.useState<"definition" | "biblical" | "original">(
     "definition",
+  );
+
+  // Create link component that closes modal on navigation
+  const MarkdownLinkWithClose = React.useMemo(
+    () => createMarkdownLinkWithCallback(() => onOpenChange(false)),
+    [onOpenChange],
   );
 
   if (!definition) return null;
@@ -91,7 +97,7 @@ const DefinitionModal: React.FC<DefinitionModalProps> = ({
             >
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
-                components={{ a: MarkdownLink }}
+                components={{ a: MarkdownLinkWithClose }}
               >
                 {definition.definition}
               </ReactMarkdown>
@@ -105,7 +111,7 @@ const DefinitionModal: React.FC<DefinitionModalProps> = ({
             >
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
-                components={{ a: MarkdownLink }}
+                components={{ a: MarkdownLinkWithClose }}
               >
                 {definition.biblical_usage}
               </ReactMarkdown>
@@ -119,7 +125,7 @@ const DefinitionModal: React.FC<DefinitionModalProps> = ({
             >
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
-                components={{ a: MarkdownLink }}
+                components={{ a: MarkdownLinkWithClose }}
               >
                 {definition.original_language}
               </ReactMarkdown>
