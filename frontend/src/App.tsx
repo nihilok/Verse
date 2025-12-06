@@ -98,6 +98,13 @@ function App() {
   const [definitionLoading, setDefinitionLoading] = useState(false);
   const [selectedText, setSelectedText] = useState("");
   const [selectedReference, setSelectedReference] = useState("");
+  const [selectedPassageParams, setSelectedPassageParams] = useState<{
+    book: string;
+    chapter: number;
+    verseStart?: number;
+    verseEnd?: number;
+    translation?: string;
+  } | null>(null);
   const [selectedWord, setSelectedWord] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [currentBook, setCurrentBook] = useState("John");
@@ -380,6 +387,13 @@ function App() {
       setInsightLoading(true);
       setSelectedText(normalizedText);
       setSelectedReference(reference);
+      setSelectedPassageParams({
+        book: currentBook,
+        chapter: currentChapter,
+        verseStart: highlightVerseStart,
+        verseEnd: highlightVerseEnd,
+        translation: currentTranslation,
+      });
       setError(null);
 
       try {
@@ -923,6 +937,9 @@ function App() {
         onOpenChange={setInsightChatModalOpen}
         title="Continue Chat"
         subtitle={selectedReference}
+        passageText={selectedText}
+        passageReference={selectedReference}
+        passageParams={selectedPassageParams || undefined}
         messages={chatMessages}
         onSendMessage={handleSendInsightChatMessage}
         loading={chatLoading}
