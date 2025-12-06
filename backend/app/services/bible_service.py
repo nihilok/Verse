@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.clients.bible_client import BibleClient, BiblePassage
 from app.clients.helloao_client import HelloAOBibleClient
@@ -46,7 +46,7 @@ class BibleService:
         """Get an entire chapter."""
         return await self.client.get_chapter(book, chapter, translation)
 
-    def save_passage(self, db: Session, passage: BiblePassage) -> SavedPassage:
+    async def save_passage(self, db: AsyncSession, passage: BiblePassage) -> SavedPassage:
         """Save a passage to the database."""
         # Extract verse range
         verse_start = passage.verses[0].verse if passage.verses else 0
@@ -65,8 +65,8 @@ class BibleService:
             text=text,
         )
         db.add(db_passage)
-        db.commit()
-        db.refresh(db_passage)
+        await db.commit()
+        await db.refresh(db_passage)
         return db_passage
 
     async def close(self):

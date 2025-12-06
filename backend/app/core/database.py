@@ -1,43 +1,68 @@
 from sqlalchemy import create_engine
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
 
 from app.core.config import get_settings
 
 settings = get_settings()
 
-# Configure engine with appropriate parameters based on database type
-# SQLite doesn't support connection pooling parameters
+# Configure async engine for application use
+# Convert database URL to async format
 if settings.database_url.startswith("sqlite"):
-    engine = create_engine(
-        settings.database_url,
-        connect_args={"check_same_thread": False},  # SQLite-specific
+    # SQLite: sqlite:///path -> sqlite+aiosqlite:///path
+    async_database_url = settings.database_url.replace("sqlite://", "sqlite+aiosqlite://")
+    async_engine = create_async_engine(
+        async_database_url,
+        connect_args={"check_same_thread": False},
+        echo=False,
+    )
+elif settings.database_url.startswith("postgresql"):
+    # PostgreSQL: postgresql:// -> postgresql+asyncpg://
+    async_database_url = settings.database_url.replace("postgresql://", "postgresql+asyncpg://")
+    async_engine = create_async_engine(
+        async_database_url,
+        pool_size=10,
+        max_overflow=20,
+        pool_pre_ping=True,
+        pool_recycle=3600,
+        echo=False,
     )
 else:
-    # PostgreSQL with connection pooling
-    # These values support typical FastAPI deployments with up to 10 concurrent worker
-    # processes/threads and occasional bursts up to 30 total connections.
-    # Adjust pool_size and max_overflow based on:
-    # - Expected concurrent requests (pool_size ≈ number of workers)
-    # - Peak load bursts (max_overflow for temporary spikes)
-    # - Database connection limits (ensure total doesn't exceed server max_connections)
-    engine = create_engine(
+    raise ValueError(f"Unsupported database URL: {settings.database_url}")
+
+# Create async session maker
+AsyncSessionLocal = async_sessionmaker(
+    async_engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+    autocommit=False,
+    autoflush=False,
+)
+
+# Keep sync engine for Alembic migrations
+if settings.database_url.startswith("sqlite"):
+    sync_engine = create_engine(
         settings.database_url,
-        pool_size=10,  # Maximum number of permanent connections
-        max_overflow=20,  # Maximum number of connections that can be created beyond pool_size
-        pool_pre_ping=True,  # Verify connections before using them
-        pool_recycle=3600,  # Recycle connections after 1 hour
+        connect_args={"check_same_thread": False},
+    )
+else:
+    sync_engine = create_engine(
+        settings.database_url,
+        pool_size=10,
+        max_overflow=20,
+        pool_pre_ping=True,
+        pool_recycle=3600,
     )
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
+# Use sync engine for Base (migrations)
 Base = declarative_base()
+engine = sync_engine  # For backwards compatibility with migrations
 
 
-def get_db():
-    """Dependency for database session."""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+async def get_db():
+    """Async dependency for database session."""
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        finally:
+            await session.close()
