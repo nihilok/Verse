@@ -16,6 +16,7 @@ def test_get_chapter_missing_params(client):
 
 
 @pytest.mark.asyncio
+@pytest.mark.sqlite
 async def test_get_passage_valid_params(client):
     """Test passage endpoint with valid parameters."""
     response = client.get("/api/passage?book=John&chapter=3&verse_start=16")

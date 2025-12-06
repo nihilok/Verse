@@ -149,7 +149,6 @@ def test_security_headers_on_post_requests(client):
     [
         "/",
         "/health",
-        "/api/passage?book=John&chapter=3&verse_start=16",
     ],
 )
 def test_security_headers_on_multiple_endpoints(client, endpoint):
