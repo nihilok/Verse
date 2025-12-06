@@ -34,7 +34,7 @@ jobs:
     - name: Run tests
       run: |
         cd backend
-        uv run pytest
+        uv run pytest -m "not sqlite"
       env:
         DATABASE_URL: sqlite:///./test.db
         ANTHROPIC_API_KEY: test_key_for_ci

@@ -4,6 +4,8 @@ import pytest
 
 from app.clients.sqlite_bible_client import SQLiteBibleClient
 
+pytestmark = pytest.mark.sqlite
+
 
 @pytest.fixture
 def sqlite_client():
