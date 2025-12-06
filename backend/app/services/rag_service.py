@@ -11,7 +11,8 @@ from datetime import datetime
 from typing import Any
 
 from sqlalchemy import and_, select
-from sqlalchemy.orm import Session
+from sqlalchemy import func as sql_func
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.clients.ai_client import AIClient
 from app.clients.embedding_client import EmbeddingClient
@@ -72,7 +73,7 @@ class RagService:
 
     async def get_enhanced_rag_context(
         self,
-        db: Session,
+        db: AsyncSession,
         user_id: int,
         query: str,
         conversation_type: str,  # "insight" or "standalone"
@@ -215,7 +216,7 @@ class RagService:
 
     async def _get_merged_surrounding_messages(
         self,
-        db: Session,
+        db: AsyncSession,
         model_class: type,
         messages: list[Any],
         conversation_id_field: str,
@@ -261,7 +262,7 @@ class RagService:
                 .order_by(model_class.created_at.desc())
                 .limit(before)
             )
-            result_before = db.execute(stmt_before)
+            result_before = await db.execute(stmt_before)
             messages_before = list(reversed(result_before.scalars().all()))  # Oldest first
 
             # Get messages after latest match
@@ -274,7 +275,7 @@ class RagService:
                 .order_by(model_class.created_at.asc())
                 .limit(after)
             )
-            result_after = db.execute(stmt_after)
+            result_after = await db.execute(stmt_after)
             messages_after = list(result_after.scalars().all())
 
             # Get any messages BETWEEN matches (if there are gaps)
@@ -290,7 +291,7 @@ class RagService:
                     )
                     .order_by(model_class.created_at.asc())
                 )
-                result_between = db.execute(stmt_between)
+                result_between = await db.execute(stmt_between)
                 messages_between = list(result_between.scalars().all())
 
             return {
@@ -312,7 +313,7 @@ class RagService:
 
     async def _get_relevant_messages(
         self,
-        db: Session,
+        db: AsyncSession,
         model_class: type,
         user_id: int,
         query: str,
@@ -360,7 +361,7 @@ class RagService:
             # Order by semantic similarity
             stmt = stmt.order_by(model_class.embedding.cosine_distance(query_vector)).limit(limit)
 
-            result = db.execute(stmt)
+            result = await db.execute(stmt)
             messages = result.scalars().all()
 
             logger.info(
@@ -379,7 +380,7 @@ class RagService:
 
     async def _get_surrounding_messages(
         self,
-        db: Session,
+        db: AsyncSession,
         model_class: type,
         message: Any,
         conversation_id_field: str,
@@ -414,7 +415,7 @@ class RagService:
                 .order_by(model_class.created_at.desc())
                 .limit(before)
             )
-            result_before = db.execute(stmt_before)
+            result_before = await db.execute(stmt_before)
             messages_before = list(reversed(result_before.scalars().all()))  # Oldest first
 
             # Get messages after (newer)
@@ -427,7 +428,7 @@ class RagService:
                 .order_by(model_class.created_at.asc())
                 .limit(after)
             )
-            result_after = db.execute(stmt_after)
+            result_after = await db.execute(stmt_after)
             messages_after = result_after.scalars().all()
 
             return {"before": messages_before, "after": messages_after}
@@ -438,7 +439,7 @@ class RagService:
 
     async def _get_or_create_conversation_summary(
         self,
-        db: Session,
+        db: AsyncSession,
         conversation_type: str,
         conversation_id: int,
         ai_client: AIClient,
@@ -461,23 +462,23 @@ class RagService:
         """
         try:
             # Get current message count for this conversation
-            current_count = (
-                db.query(model_class)
+            count_stmt = (
+                select(sql_func.count())
+                .select_from(model_class)
                 .filter(getattr(model_class, conversation_id_field) == conversation_id)
-                .count()
             )
+            count_result = await db.execute(count_stmt)
+            current_count = count_result.scalar_one()
 
             # Check cache
-            cached = (
-                db.query(ConversationSummary)
-                .filter(
-                    and_(
-                        ConversationSummary.conversation_type == conversation_type,
-                        ConversationSummary.conversation_id == conversation_id,
-                    )
+            cache_stmt = select(ConversationSummary).filter(
+                and_(
+                    ConversationSummary.conversation_type == conversation_type,
+                    ConversationSummary.conversation_id == conversation_id,
                 )
-                .first()
             )
+            cache_result = await db.execute(cache_stmt)
+            cached = cache_result.scalar_one_or_none()
 
             # Return cached if valid (message count matches)
             if cached and cached.message_count == current_count:
@@ -508,7 +509,7 @@ class RagService:
                 )
                 db.add(cached)
 
-            db.commit()
+            await db.commit()
 
             return summary
 
@@ -518,7 +519,7 @@ class RagService:
 
     async def _generate_summary(
         self,
-        db: Session,
+        db: AsyncSession,
         model_class: type,
         conversation_id: int,
         conversation_id_field: str,
@@ -539,15 +540,14 @@ class RagService:
         """
         try:
             # Fetch last N messages from conversation
-            messages = (
-                db.query(model_class)
+            stmt = (
+                select(model_class)
                 .filter(getattr(model_class, conversation_id_field) == conversation_id)
                 .order_by(model_class.created_at.desc())
                 .limit(RAG_SUMMARY_MAX_MESSAGES)
-                .all()
             )
-
-            messages = list(reversed(messages))  # Chronological order
+            result = await db.execute(stmt)
+            messages = list(reversed(result.scalars().all()))  # Chronological order
 
             if not messages:
                 return "Empty conversation"
@@ -571,7 +571,7 @@ class RagService:
 
     async def _get_conversation_date(
         self,
-        db: Session,
+        db: AsyncSession,
         model_class: type,
         conversation_id: int,
         conversation_id_field: str,
@@ -589,12 +589,14 @@ class RagService:
             Datetime of first message
         """
         try:
-            first_message = (
-                db.query(model_class)
+            stmt = (
+                select(model_class)
                 .filter(getattr(model_class, conversation_id_field) == conversation_id)
                 .order_by(model_class.created_at.asc())
-                .first()
+                .limit(1)
             )
+            result = await db.execute(stmt)
+            first_message = result.scalar_one_or_none()
 
             if first_message:
                 return first_message.created_at
