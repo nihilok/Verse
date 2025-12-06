@@ -9,6 +9,7 @@ import {
   CheckCircle,
   MessageCircle,
 } from "lucide-react";
+import MarkdownLink from "./MarkdownLink";
 import {
   Dialog,
   DialogContent,
@@ -109,7 +110,10 @@ const InsightsModal: React.FC<InsightsModalProps> = ({
               role="tabpanel"
               aria-label="Historical context insights"
             >
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{ a: MarkdownLink }}
+              >
                 {insight.historical_context}
               </ReactMarkdown>
             </TabsContent>
@@ -120,7 +124,10 @@ const InsightsModal: React.FC<InsightsModalProps> = ({
               role="tabpanel"
               aria-label="Theological significance insights"
             >
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{ a: MarkdownLink }}
+              >
                 {insight.theological_significance}
               </ReactMarkdown>
             </TabsContent>
@@ -131,7 +138,10 @@ const InsightsModal: React.FC<InsightsModalProps> = ({
               role="tabpanel"
               aria-label="Practical application insights"
             >
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{ a: MarkdownLink }}
+              >
                 {insight.practical_application}
               </ReactMarkdown>
             </TabsContent>

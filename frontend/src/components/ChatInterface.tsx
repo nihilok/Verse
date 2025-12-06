@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ChatMessage } from "../types";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import MarkdownLink from "./MarkdownLink";
 
 interface ChatInterfaceProps {
   messages: ChatMessage[];
@@ -117,7 +118,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               >
                 {msg.role === "assistant" ? (
                   <div className="prose prose-sm llm-response dark:prose-invert max-w-none">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{ a: MarkdownLink }}
+                    >
                       {msg.content}
                     </ReactMarkdown>
                   </div>
@@ -132,7 +136,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           <div className="flex justify-start">
             <div className="max-w-[95%] md:max-w-[85%] rounded-lg px-4 py-2 bg-muted">
               <div className="prose prose-sm llm-response dark:prose-invert max-w-none">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{ a: MarkdownLink }}
+                >
                   {streamingMessage}
                 </ReactMarkdown>
               </div>

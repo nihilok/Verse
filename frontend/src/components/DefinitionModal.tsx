@@ -2,6 +2,7 @@ import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { BookOpen, BookMarked, Languages, CheckCircle } from "lucide-react";
+import MarkdownLink from "./MarkdownLink";
 import {
   Dialog,
   DialogContent,
@@ -88,7 +89,10 @@ const DefinitionModal: React.FC<DefinitionModalProps> = ({
               role="tabpanel"
               aria-label="Word definition"
             >
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{ a: MarkdownLink }}
+              >
                 {definition.definition}
               </ReactMarkdown>
             </TabsContent>
@@ -99,7 +103,10 @@ const DefinitionModal: React.FC<DefinitionModalProps> = ({
               role="tabpanel"
               aria-label="Biblical usage"
             >
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{ a: MarkdownLink }}
+              >
                 {definition.biblical_usage}
               </ReactMarkdown>
             </TabsContent>
@@ -110,7 +117,10 @@ const DefinitionModal: React.FC<DefinitionModalProps> = ({
               role="tabpanel"
               aria-label="Original language information"
             >
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{ a: MarkdownLink }}
+              >
                 {definition.original_language}
               </ReactMarkdown>
             </TabsContent>
