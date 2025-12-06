@@ -1,5 +1,7 @@
 """Tests for user functionality."""
 
+import pytest
+
 from app.models.models import StandaloneChat
 from app.services.chat_service import ChatService
 from app.services.insight_service import InsightService
@@ -31,7 +33,8 @@ def test_get_existing_user(db):
     assert user1.anonymous_id == user2.anonymous_id
 
 
-def test_clear_user_data(db, test_user):
+@pytest.mark.asyncio
+async def test_clear_user_data(async_db, async_test_user):
     """Test clearing all data for a user."""
     insight_service = InsightService()
     user_service = UserService()
@@ -43,33 +46,34 @@ def test_clear_user_data(db, test_user):
         practical_application = "Practical application"
 
     # Add some insights for the user
-    insight_service.save_insight(
-        db,
+    await insight_service.save_insight(
+        async_db,
         passage_reference="John 3:16",
         passage_text="For God so loved the world",
         insights=MockInsight(),
-        user_id=test_user.id,
+        user_id=async_test_user.id,
     )
 
-    insight_service.save_insight(
-        db,
+    await insight_service.save_insight(
+        async_db,
         passage_reference="John 3:17",
         passage_text="For God did not send his Son",
         insights=MockInsight(),
-        user_id=test_user.id,
+        user_id=async_test_user.id,
     )
 
     # Clear user data
-    counts = user_service.clear_user_data(db, test_user.id)
+    counts = await user_service.clear_user_data(async_db, async_test_user.id)
 
     assert counts["insights"] == 2
 
     # Verify insights are cleared for the user
-    user_insights = insight_service.get_user_insights(db, test_user.id)
+    user_insights = await insight_service.get_user_insights(async_db, async_test_user.id)
     assert len(user_insights) == 0
 
 
-def test_export_user_data(db, test_user):
+@pytest.mark.asyncio
+async def test_export_user_data(async_db, async_test_user):
     """Test exporting user data as JSON."""
     insight_service = InsightService()
     user_service = UserService()
@@ -81,22 +85,22 @@ def test_export_user_data(db, test_user):
         practical_application = "Practical application"
 
     # Add some insights for the user
-    insight_service.save_insight(
-        db,
+    await insight_service.save_insight(
+        async_db,
         passage_reference="John 3:16",
         passage_text="For God so loved the world",
         insights=MockInsight(),
-        user_id=test_user.id,
+        user_id=async_test_user.id,
     )
 
     # Export user data
-    data = user_service.export_user_data(db, test_user.id)
+    data = await user_service.export_user_data(async_db, async_test_user.id)
 
     assert "user" in data
     assert "insights" in data
     assert "standalone_chats" in data
 
-    assert data["user"]["anonymous_id"] == test_user.anonymous_id
+    assert data["user"]["anonymous_id"] == async_test_user.anonymous_id
     assert len(data["insights"]) == 1
     assert data["insights"][0]["passage_reference"] == "John 3:16"
     assert "chat_messages" in data["insights"][0]
