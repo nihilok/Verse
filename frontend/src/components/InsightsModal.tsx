@@ -9,7 +9,7 @@ import {
   CheckCircle,
   MessageCircle,
 } from "lucide-react";
-import MarkdownLink from "./MarkdownLink";
+import { createMarkdownLinkWithCallback } from "./MarkdownLink";
 import {
   Dialog,
   DialogContent,
@@ -46,6 +46,12 @@ const InsightsModal: React.FC<InsightsModalProps> = ({
   >("historical");
 
   const hasChatMessages = chatMessages && chatMessages.length > 0;
+
+  // Create link component that closes modal on navigation
+  const MarkdownLinkWithClose = React.useMemo(
+    () => createMarkdownLinkWithCallback(() => onOpenChange(false)),
+    [onOpenChange],
+  );
 
   if (!insight) return null;
 
@@ -112,7 +118,7 @@ const InsightsModal: React.FC<InsightsModalProps> = ({
             >
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
-                components={{ a: MarkdownLink }}
+                components={{ a: MarkdownLinkWithClose }}
               >
                 {insight.historical_context}
               </ReactMarkdown>
@@ -126,7 +132,7 @@ const InsightsModal: React.FC<InsightsModalProps> = ({
             >
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
-                components={{ a: MarkdownLink }}
+                components={{ a: MarkdownLinkWithClose }}
               >
                 {insight.theological_significance}
               </ReactMarkdown>
@@ -140,7 +146,7 @@ const InsightsModal: React.FC<InsightsModalProps> = ({
             >
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
-                components={{ a: MarkdownLink }}
+                components={{ a: MarkdownLinkWithClose }}
               >
                 {insight.practical_application}
               </ReactMarkdown>

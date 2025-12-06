@@ -5,13 +5,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { ChatMessage } from "../types";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import MarkdownLink from "./MarkdownLink";
+import MarkdownLink, { createMarkdownLinkWithCallback } from "./MarkdownLink";
 
 interface ChatInterfaceProps {
   messages: ChatMessage[];
   onSendMessage: (message: string) => Promise<void>;
   loading: boolean;
   streamingMessage?: string;
+  onNavigate?: () => void;
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -19,11 +20,19 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   onSendMessage,
   loading,
   streamingMessage,
+  onNavigate,
 }) => {
   const [inputValue, setInputValue] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Create link component with navigation callback if provided
+  const LinkComponent = React.useMemo(
+    () =>
+      onNavigate ? createMarkdownLinkWithCallback(onNavigate) : MarkdownLink,
+    [onNavigate],
+  );
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -120,7 +129,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   <div className="prose prose-sm llm-response dark:prose-invert max-w-none">
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
-                      components={{ a: MarkdownLink }}
+                      components={{ a: LinkComponent }}
                     >
                       {msg.content}
                     </ReactMarkdown>
@@ -138,7 +147,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               <div className="prose prose-sm llm-response dark:prose-invert max-w-none">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
-                  components={{ a: MarkdownLink }}
+                  components={{ a: LinkComponent }}
                 >
                   {streamingMessage}
                 </ReactMarkdown>

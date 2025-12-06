@@ -63,6 +63,7 @@ const ChatModal: React.FC<ChatModalProps> = ({
             onSendMessage={onSendMessage}
             loading={loading}
             streamingMessage={streamingMessage}
+            onNavigate={() => onOpenChange(false)}
           />
         </div>
       </DialogContent>
