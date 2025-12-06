@@ -304,6 +304,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({
       </CardHeader>
       <CardContent
         ref={contentRef}
+        key={passage && !loading ? passage.reference : "loading"}
         className="flex-1 relative overflow-y-auto min-h-0 pt-6 px-4 sm:px-6 scrollbar-thin"
         onTouchStart={isTouchDevice ? handleTouchStart : undefined}
         onTouchMove={isTouchDevice ? handleTouchMove : undefined}
@@ -314,14 +315,17 @@ const BibleReader: React.FC<BibleReaderProps> = ({
           className="relative max-w-2xl min-h-full mx-auto"
         >
           {loading ? (
-            <div className="space-y-3 mt-2">
-              {Array.from({ length: 12 }).map((_, index) => (
-                <div key={index} className="flex items-start gap-2">
-                  <Skeleton className="h-6 w-[28px] min-w-[28px]" />
-                  <Skeleton
-                    className="h-6 flex-1"
-                    style={{ width: `${Math.random() * 30 + 70}%` }}
-                  />
+            <div className="space-y-3 mt-2 pl-4">
+              {Array.from({ length: 9 }).map((_, index) => (
+                <div key={index} className="flex gap-2 mb-4">
+                  <Skeleton className="h-5 w-5 min-w-[24px] flex-shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-5 w-full" />
+                    <Skeleton
+                      className="h-5"
+                      style={{ width: `${Math.random() * 40 + 50}%` }}
+                    />
+                  </div>
                 </div>
               ))}
             </div>
