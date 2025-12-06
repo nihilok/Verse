@@ -127,12 +127,15 @@ async def test_get_conversation_date(rag_service, mock_db):
     mock_message = Mock()
     mock_message.created_at = datetime(2024, 3, 15, 10, 0)
 
-    # Mock database query
-    mock_query = Mock()
-    mock_query.filter.return_value = mock_query
-    mock_query.order_by.return_value = mock_query
-    mock_query.first.return_value = mock_message
-    mock_db.query.return_value = mock_query
+    # Mock async database execute result
+    mock_result = Mock()
+    mock_result.scalar_one_or_none.return_value = mock_message
+
+    # Mock db.execute to return awaitable
+    async def mock_execute(*args, **kwargs):
+        return mock_result
+
+    mock_db.execute = mock_execute
 
     result = await rag_service._get_conversation_date(
         db=mock_db,
