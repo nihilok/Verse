@@ -332,6 +332,7 @@ class DeviceLinkService:
 
         # Delete device record
         await db.delete(device)
+        await db.commit()
 
         # If this was the last device, delete all user data
         data_deleted = False
@@ -340,6 +341,7 @@ class DeviceLinkService:
             await self.user_service.clear_user_data(db, user_id)
             # Delete user record
             await db.delete(user)
+            await db.commit()
             data_deleted = True
 
         return {

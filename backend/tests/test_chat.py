@@ -6,8 +6,11 @@ from app.models.models import ChatMessage, SavedInsight
 from app.services.chat_service import ChatService
 
 
-def test_chat_message_creation(db, test_user):
+@pytest.mark.asyncio
+async def test_chat_message_creation(async_db, async_test_user):
     """Test that chat messages can be created and linked to insights."""
+    from sqlalchemy import select
+
     # Create an insight first
     insight = SavedInsight(
         passage_reference="John 3:16",
@@ -16,26 +19,27 @@ def test_chat_message_creation(db, test_user):
         theological_significance="Theological significance...",
         practical_application="Practical application...",
     )
-    db.add(insight)
-    db.commit()
-    db.refresh(insight)
+    async_db.add(insight)
+    await async_db.commit()
+    await async_db.refresh(insight)
 
     # Create a chat message
     chat_msg = ChatMessage(
         insight_id=insight.id,
-        user_id=test_user.id,
+        user_id=async_test_user.id,
         role="user",
         content="What does this mean?",
     )
-    db.add(chat_msg)
-    db.commit()
+    async_db.add(chat_msg)
+    await async_db.commit()
 
     # Verify the chat message was created
-    messages = (
-        db.query(ChatMessage)
-        .filter(ChatMessage.insight_id == insight.id, ChatMessage.user_id == test_user.id)
-        .all()
+    result = await async_db.execute(
+        select(ChatMessage).where(
+            ChatMessage.insight_id == insight.id, ChatMessage.user_id == async_test_user.id
+        )
     )
+    messages = list(result.scalars().all())
 
     assert len(messages) == 1
     assert messages[0].role == "user"
@@ -116,8 +120,11 @@ async def test_clear_chat_messages(async_db, async_test_user):
     assert len(messages) == 0
 
 
-def test_cascade_delete_chat_messages(db, test_user):
+@pytest.mark.asyncio
+async def test_cascade_delete_chat_messages(async_db, async_test_user):
     """Test that chat messages are deleted when insight is deleted."""
+    from sqlalchemy import select
+
     # Create an insight
     insight = SavedInsight(
         passage_reference="Matthew 5:3",
@@ -126,28 +133,29 @@ def test_cascade_delete_chat_messages(db, test_user):
         theological_significance="Theological significance...",
         practical_application="Practical application...",
     )
-    db.add(insight)
-    db.commit()
-    db.refresh(insight)
+    async_db.add(insight)
+    await async_db.commit()
+    await async_db.refresh(insight)
 
     # Add chat messages
     for i in range(3):
         msg = ChatMessage(
             insight_id=insight.id,
-            user_id=test_user.id,
+            user_id=async_test_user.id,
             role="user",
             content=f"Message {i}",
         )
-        db.add(msg)
-    db.commit()
+        async_db.add(msg)
+    await async_db.commit()
 
     insight_id = insight.id
 
     # Delete the insight
-    db.delete(insight)
-    db.commit()
+    await async_db.delete(insight)
+    await async_db.commit()
 
     # Verify chat messages are also deleted (cascade)
-    messages = db.query(ChatMessage).filter(ChatMessage.insight_id == insight_id).all()
+    result = await async_db.execute(select(ChatMessage).where(ChatMessage.insight_id == insight_id))
+    messages = list(result.scalars().all())
 
     assert len(messages) == 0

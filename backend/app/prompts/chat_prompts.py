@@ -78,7 +78,7 @@ def build_standalone_chat_system_prompt(
     """
     if passage_reference and passage_text:
         # Chat about a specific passage without prior insights
-        intro = f"""{build_general_conversation_prompt().split('.')[0]}. The user is exploring this passage
+        intro = f"""{build_general_conversation_prompt().split(".")[0]}. The user is exploring this passage
 and has questions about it.
 
 Context About Your Role:

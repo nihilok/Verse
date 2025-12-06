@@ -1,9 +1,12 @@
 """Tests for definitions functionality."""
 
+import pytest
+
 from app.services.definition_service import DefinitionService
 
 
-def test_save_and_get_definition_with_same_word(db, test_user):
+@pytest.mark.asyncio
+async def test_save_and_get_definition_with_same_word(async_db, async_test_user):
     """Test that definitions are cached based on word, reference, and verse text."""
     service = DefinitionService()
 
@@ -14,18 +17,18 @@ def test_save_and_get_definition_with_same_word(db, test_user):
         original_language = "Greek: agape"
 
     # Save a definition
-    service.save_definition(
-        db,
+    await service.save_definition(
+        async_db,
         word="love",
         passage_reference="John 3:16",
         verse_text="For God so loved the world",
         definition=MockDefinition(),
-        user_id=test_user.id,
+        user_id=async_test_user.id,
     )
 
     # Retrieve the same definition
-    saved = service.get_saved_definition(
-        db,
+    saved = await service.get_saved_definition(
+        async_db,
         word="love",
         passage_reference="John 3:16",
         verse_text="For God so loved the world",
@@ -40,7 +43,8 @@ def test_save_and_get_definition_with_same_word(db, test_user):
     assert saved.original_language == "Greek: agape"
 
 
-def test_different_word_same_verse_not_cached(db, test_user):
+@pytest.mark.asyncio
+async def test_different_word_same_verse_not_cached(async_db, async_test_user):
     """Test that different words with same verse are not cached together."""
     service = DefinitionService()
 
@@ -51,18 +55,18 @@ def test_different_word_same_verse_not_cached(db, test_user):
         original_language = "Greek: agape"
 
     # Save a definition for one word
-    service.save_definition(
-        db,
+    await service.save_definition(
+        async_db,
         word="love",
         passage_reference="John 3:16",
         verse_text="For God so loved the world",
         definition=MockDefinition(),
-        user_id=test_user.id,
+        user_id=async_test_user.id,
     )
 
     # Try to retrieve with different word but same verse
-    saved = service.get_saved_definition(
-        db,
+    saved = await service.get_saved_definition(
+        async_db,
         word="world",
         passage_reference="John 3:16",
         verse_text="For God so loved the world",
@@ -72,7 +76,8 @@ def test_different_word_same_verse_not_cached(db, test_user):
     assert saved is None
 
 
-def test_get_all_definitions(db, test_user):
+@pytest.mark.asyncio
+async def test_get_all_definitions(async_db, async_test_user):
     """Test getting all definitions for a user."""
     service = DefinitionService()
 
@@ -82,31 +87,32 @@ def test_get_all_definitions(db, test_user):
         original_language = "Original language"
 
     # Save multiple definitions
-    service.save_definition(
-        db,
+    await service.save_definition(
+        async_db,
         word="love",
         passage_reference="John 3:16",
         verse_text="For God so loved the world",
         definition=MockDefinition(),
-        user_id=test_user.id,
+        user_id=async_test_user.id,
     )
 
-    service.save_definition(
-        db,
+    await service.save_definition(
+        async_db,
         word="world",
         passage_reference="John 3:16",
         verse_text="For God so loved the world",
         definition=MockDefinition(),
-        user_id=test_user.id,
+        user_id=async_test_user.id,
     )
 
     # Get all definitions for the user
-    definitions = service.get_user_definitions(db, test_user.id, limit=50)
+    definitions = await service.get_user_definitions(async_db, async_test_user.id, limit=50)
 
     assert len(definitions) == 2
 
 
-def test_clear_all_definitions(db, test_user):
+@pytest.mark.asyncio
+async def test_clear_all_definitions(async_db, async_test_user):
     """Test clearing all definitions for a user."""
     service = DefinitionService()
 
@@ -116,31 +122,31 @@ def test_clear_all_definitions(db, test_user):
         original_language = "Original language"
 
     # Save some definitions
-    service.save_definition(
-        db,
+    await service.save_definition(
+        async_db,
         word="love",
         passage_reference="John 3:16",
         verse_text="For God so loved the world",
         definition=MockDefinition(),
-        user_id=test_user.id,
+        user_id=async_test_user.id,
     )
 
-    service.save_definition(
-        db,
+    await service.save_definition(
+        async_db,
         word="world",
         passage_reference="John 3:16",
         verse_text="For God so loved the world",
         definition=MockDefinition(),
-        user_id=test_user.id,
+        user_id=async_test_user.id,
     )
 
     # Clear all definitions for the user
-    count = service.clear_user_definitions(db, test_user.id)
+    count = await service.clear_user_definitions(async_db, async_test_user.id)
 
     assert count == 2
 
     # Verify all definitions are cleared for the user
-    definitions = service.get_user_definitions(db, test_user.id, limit=50)
+    definitions = await service.get_user_definitions(async_db, async_test_user.id, limit=50)
     assert len(definitions) == 0
 
 

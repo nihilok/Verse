@@ -391,9 +391,7 @@ class ChatService:
         """
         # Get the chat session and verify it belongs to the user
         result = await db.execute(
-            select(StandaloneChat).where(
-                StandaloneChat.id == chat_id, StandaloneChat.user_id == user_id
-            )
+            select(StandaloneChat).where(StandaloneChat.id == chat_id, StandaloneChat.user_id == user_id)
         )
         chat = result.scalar_one_or_none()
         if not chat:
@@ -490,9 +488,7 @@ class ChatService:
         """Get all messages for a standalone chat for a specific user."""
         # Verify the chat belongs to the user
         result = await db.execute(
-            select(StandaloneChat).where(
-                StandaloneChat.id == chat_id, StandaloneChat.user_id == user_id
-            )
+            select(StandaloneChat).where(StandaloneChat.id == chat_id, StandaloneChat.user_id == user_id)
         )
         chat = result.scalar_one_or_none()
 
@@ -671,9 +667,7 @@ class ChatService:
         """
         # Get the chat session and verify it belongs to the user
         result = await db.execute(
-            select(StandaloneChat).where(
-                StandaloneChat.id == chat_id, StandaloneChat.user_id == user_id
-            )
+            select(StandaloneChat).where(StandaloneChat.id == chat_id, StandaloneChat.user_id == user_id)
         )
         chat = result.scalar_one_or_none()
         if not chat:

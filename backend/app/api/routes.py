@@ -276,7 +276,7 @@ async def generate_definition(
 
     # Check if we already have a definition for this word in this context
     if definition_request.save:
-        existing = service.get_saved_definition(
+        existing = await service.get_saved_definition(
             db,
             definition_request.word,
             definition_request.passage_reference,
@@ -284,7 +284,7 @@ async def generate_definition(
         )
         if existing:
             # Link the definition to the user if not already linked
-            service.link_definition_to_user(db, existing.id, current_user.id)
+            await service.link_definition_to_user(db, existing.id, current_user.id)
             return {
                 "id": existing.id,
                 "word": existing.word,
@@ -307,7 +307,7 @@ async def generate_definition(
     # Save if requested
     definition_id = None
     if definition_request.save:
-        saved_definition = service.save_definition(
+        saved_definition = await service.save_definition(
             db,
             definition_request.word,
             definition_request.passage_reference,
