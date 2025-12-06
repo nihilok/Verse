@@ -187,12 +187,10 @@ function App() {
     loadHistory();
   }, []);
 
-  // Load passage from URL parameters or last viewed passage on mount
+  // Watch for URL parameter changes
   useEffect(() => {
-    // First check if there are URL parameters
     const urlParams = parsePassageFromURL(searchParams);
     if (urlParams) {
-      // Load passage from URL
       handleSearch(
         urlParams.book,
         urlParams.chapter,
@@ -200,8 +198,13 @@ function App() {
         urlParams.verseEnd,
         urlParams.translation || "WEB",
       );
-    } else {
-      // Fall back to last viewed passage
+    }
+  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Load last passage only on mount (if no URL params)
+  useEffect(() => {
+    const urlParams = parsePassageFromURL(searchParams);
+    if (!urlParams) {
       const lastPassage = loadLastPassage();
       if (lastPassage) {
         // Auto-load the last passage the user was viewing
@@ -255,7 +258,7 @@ function App() {
       verseEnd,
       translation,
     });
-    setSearchParams(newUrl.replace("?", ""));
+    setSearchParams(newUrl.slice(1));
 
     try {
       let result: BiblePassage;

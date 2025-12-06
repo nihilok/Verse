@@ -21,7 +21,7 @@ export interface PassageLinkParams {
  * ```ts
  * // Single verse
  * const link = createPassageLink({ book: "John", chapter: 3, verseStart: 16 });
- * // Result: "http://localhost:5173?book=John&chapter=3&verse=16&translation=WEB"
+ * // Result: "http://localhost:5173?book=John&chapter=3&verse=16"
  * 
  * // Verse range
  * const link = createPassageLink({ 
@@ -50,7 +50,7 @@ export function createPassageLink(params: PassageLinkParams, baseUrl?: string): 
  *   { book: "John", chapter: 3, verseStart: 16 },
  *   "Read John 3:16"
  * );
- * // Result: "[Read John 3:16](http://localhost:5173?book=John&chapter=3&verse=16&translation=WEB)"
+ * // Result: "[Read John 3:16](http://localhost:5173?book=John&chapter=3&verse=16)"
  * ```
  */
 export function createMarkdownPassageLink(

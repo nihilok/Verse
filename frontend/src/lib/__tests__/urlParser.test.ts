@@ -80,6 +80,19 @@ describe("urlParser", () => {
       const result = parsePassageFromURL(params);
       expect(result).toBeNull();
     });
+
+    it("should prioritize verse parameter over verseStart/verseEnd", () => {
+      const params = new URLSearchParams(
+        "book=John&chapter=3&verse=16&verseStart=20&verseEnd=22"
+      );
+      const result = parsePassageFromURL(params);
+      expect(result).toEqual({
+        book: "John",
+        chapter: 3,
+        verseStart: 16,
+        verseEnd: 16,
+      });
+    });
   });
 
   describe("generatePassageURL", () => {

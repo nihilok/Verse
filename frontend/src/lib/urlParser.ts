@@ -37,26 +37,28 @@ export function parsePassageFromURL(searchParams: URLSearchParams): PassageParam
   };
 
   // Handle single verse parameter (verse=16)
+  // Takes priority over verseStart/verseEnd if both are provided
   if (verseStr) {
     const verse = parseInt(verseStr);
     if (!isNaN(verse)) {
       result.verseStart = verse;
       result.verseEnd = verse;
     }
-  }
-
-  // Handle verse range parameters (verseStart=16&verseEnd=17)
-  if (verseStartStr) {
-    const verseStart = parseInt(verseStartStr);
-    if (!isNaN(verseStart)) {
-      result.verseStart = verseStart;
+  } else {
+    // Handle verse range parameters (verseStart=16&verseEnd=17)
+    // Only used if 'verse' parameter is not provided
+    if (verseStartStr) {
+      const verseStart = parseInt(verseStartStr);
+      if (!isNaN(verseStart)) {
+        result.verseStart = verseStart;
+      }
     }
-  }
 
-  if (verseEndStr) {
-    const verseEnd = parseInt(verseEndStr);
-    if (!isNaN(verseEnd)) {
-      result.verseEnd = verseEnd;
+    if (verseEndStr) {
+      const verseEnd = parseInt(verseEndStr);
+      if (!isNaN(verseEnd)) {
+        result.verseEnd = verseEnd;
+      }
     }
   }
 
