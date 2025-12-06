@@ -360,7 +360,8 @@ class ChatService:
             )
             db.add(ai_msg)
 
-            # No commit needed - handled by get_db() dependency
+            # Commit to save chat and messages
+            await db.commit()
 
             # Yield the chat_id as a special marker (maintaining backward compatibility)
             yield (f"{CHAT_ID_MARKER}{chat.id}", None)
@@ -637,7 +638,8 @@ class ChatService:
             )
             db.add(ai_msg)
 
-            # No commit needed - handled by get_db() dependency
+            # Commit to save messages
+            await db.commit()
 
             # Yield final chunk with stop_reason
             yield ("", stop_reason)
@@ -763,7 +765,8 @@ class ChatService:
             # Update chat's updated_at timestamp
             chat.updated_at = func.now()
 
-            # No commit needed - handled by get_db() dependency
+            # Commit to save messages
+            await db.commit()
 
             # Yield final chunk with stop_reason
             yield ("", stop_reason)
