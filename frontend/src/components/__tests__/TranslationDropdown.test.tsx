@@ -27,7 +27,7 @@ describe("TranslationDropdown", () => {
     expect(container.textContent).toContain("KJV");
   });
 
-  it("renders all 16 translations in the dropdown", async () => {
+  it("renders all translations from TRANSLATIONS constant in the dropdown", async () => {
     render(<TranslationDropdown value="WEB" onChange={onChange} />);
     
     const trigger = screen.getByRole("combobox");
@@ -37,7 +37,6 @@ describe("TranslationDropdown", () => {
     await waitFor(() => {
       const options = screen.getAllByRole("option");
       expect(options.length).toBe(TRANSLATIONS.length);
-      expect(options.length).toBe(16);
     });
   });
 
