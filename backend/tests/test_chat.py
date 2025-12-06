@@ -1,5 +1,7 @@
 """Tests for chat functionality."""
 
+import pytest
+
 from app.models.models import ChatMessage, SavedInsight
 from app.services.chat_service import ChatService
 
@@ -40,7 +42,8 @@ def test_chat_message_creation(db, test_user):
     assert messages[0].content == "What does this mean?"
 
 
-def test_get_chat_messages(db, test_user):
+@pytest.mark.asyncio
+async def test_get_chat_messages(async_db, async_test_user):
     """Test retrieving chat messages for an insight."""
     # Create an insight
     insight = SavedInsight(
@@ -50,25 +53,25 @@ def test_get_chat_messages(db, test_user):
         theological_significance="Theological significance...",
         practical_application="Practical application...",
     )
-    db.add(insight)
-    db.commit()
-    db.refresh(insight)
+    async_db.add(insight)
+    await async_db.flush()
+    await async_db.refresh(insight)
 
     # Add multiple chat messages
     for i in range(3):
         role = "user" if i % 2 == 0 else "assistant"
         msg = ChatMessage(
             insight_id=insight.id,
-            user_id=test_user.id,
+            user_id=async_test_user.id,
             role=role,
             content=f"Message {i}",
         )
-        db.add(msg)
-    db.commit()
+        async_db.add(msg)
+    await async_db.flush()
 
     # Get messages using service
     service = ChatService()
-    messages = service.get_chat_messages(db, insight.id, test_user.id)
+    messages = await service.get_chat_messages(async_db, insight.id, async_test_user.id)
 
     assert len(messages) == 3
     assert messages[0].content == "Message 0"
@@ -76,7 +79,8 @@ def test_get_chat_messages(db, test_user):
     assert messages[2].content == "Message 2"
 
 
-def test_clear_chat_messages(db, test_user):
+@pytest.mark.asyncio
+async def test_clear_chat_messages(async_db, async_test_user):
     """Test clearing chat messages for an insight."""
     # Create an insight
     insight = SavedInsight(
@@ -86,29 +90,29 @@ def test_clear_chat_messages(db, test_user):
         theological_significance="Theological significance...",
         practical_application="Practical application...",
     )
-    db.add(insight)
-    db.commit()
-    db.refresh(insight)
+    async_db.add(insight)
+    await async_db.flush()
+    await async_db.refresh(insight)
 
     # Add chat messages
     for i in range(5):
         msg = ChatMessage(
             insight_id=insight.id,
-            user_id=test_user.id,
+            user_id=async_test_user.id,
             role="user",
             content=f"Message {i}",
         )
-        db.add(msg)
-    db.commit()
+        async_db.add(msg)
+    await async_db.flush()
 
     # Clear messages
     service = ChatService()
-    count = service.clear_chat_messages(db, insight.id, test_user.id)
+    count = await service.clear_chat_messages(async_db, insight.id, async_test_user.id)
 
     assert count == 5
 
     # Verify messages are cleared
-    messages = service.get_chat_messages(db, insight.id, test_user.id)
+    messages = await service.get_chat_messages(async_db, insight.id, async_test_user.id)
     assert len(messages) == 0
 
 
