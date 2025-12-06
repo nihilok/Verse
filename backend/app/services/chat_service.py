@@ -1,4 +1,5 @@
 import logging
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
@@ -342,22 +343,25 @@ class ChatService:
                     )
                     # Continue without embeddings
 
-            # Save user message
+            # Save user message with explicit timestamp
+            now = datetime.now(UTC)
             user_msg = StandaloneChatMessage(
                 chat_id=chat.id,
                 role="user",
                 content=user_message,
                 embedding=user_embedding,
+                created_at=now,
             )
             db.add(user_msg)
 
-            # Save AI response
+            # Save AI response with slightly later timestamp to ensure correct ordering
             ai_msg = StandaloneChatMessage(
                 chat_id=chat.id,
                 role="assistant",
                 content=complete_response,
                 was_truncated=(stop_reason == "max_tokens"),
                 embedding=ai_embedding,
+                created_at=now + timedelta(microseconds=1),
             )
             db.add(ai_msg)
 
@@ -622,17 +626,19 @@ class ChatService:
                     )
                     # Continue without embeddings
 
-            # Save user message
+            # Save user message with explicit timestamp
+            now = datetime.now(UTC)
             user_msg = ChatMessage(
                 insight_id=insight_id,
                 user_id=user_id,
                 role="user",
                 content=user_message,
                 embedding=user_embedding,
+                created_at=now,
             )
             db.add(user_msg)
 
-            # Save AI response
+            # Save AI response with slightly later timestamp to ensure correct ordering
             ai_msg = ChatMessage(
                 insight_id=insight_id,
                 user_id=user_id,
@@ -640,6 +646,7 @@ class ChatService:
                 content=complete_response,
                 was_truncated=(stop_reason == "max_tokens"),
                 embedding=ai_embedding,
+                created_at=now + timedelta(microseconds=1),
             )
             db.add(ai_msg)
 
@@ -746,22 +753,25 @@ class ChatService:
                     )
                     # Continue without embeddings
 
-            # Save user message
+            # Save user message with explicit timestamp
+            now = datetime.now(UTC)
             user_msg = StandaloneChatMessage(
                 chat_id=chat_id,
                 role="user",
                 content=user_message,
                 embedding=user_embedding,
+                created_at=now,
             )
             db.add(user_msg)
 
-            # Save AI response
+            # Save AI response with slightly later timestamp to ensure correct ordering
             ai_msg = StandaloneChatMessage(
                 chat_id=chat_id,
                 role="assistant",
                 content=complete_response,
                 was_truncated=(stop_reason == "max_tokens"),
                 embedding=ai_embedding,
+                created_at=now + timedelta(microseconds=1),
             )
             db.add(ai_msg)
 
