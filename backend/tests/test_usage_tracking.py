@@ -3,7 +3,7 @@
 import pytest
 from datetime import UTC, datetime, timedelta
 
-from app.models.models import User, UsageTracking
+from app.models.models import UsageTracking
 from app.services.usage_service import UsageService, FREE_USER_DAILY_LIMIT
 
 

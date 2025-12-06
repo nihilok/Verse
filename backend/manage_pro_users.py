@@ -169,11 +169,15 @@ async def check_status(anonymous_id: str):
             print(f"\n  Today's Usage:")
             print(f"    LLM Calls: {usage.llm_calls}")
             if not user.pro_subscription:
-                print(f"    Remaining: {max(0, 10 - usage.llm_calls)}")
+                from app.services.usage_service import FREE_USER_DAILY_LIMIT
+
+                print(f"    Remaining: {max(0, FREE_USER_DAILY_LIMIT - usage.llm_calls)}")
         else:
             print(f"\n  Today's Usage: 0 LLM calls")
             if not user.pro_subscription:
-                print(f"    Remaining: 10")
+                from app.services.usage_service import FREE_USER_DAILY_LIMIT
+
+                print(f"    Remaining: {FREE_USER_DAILY_LIMIT}")
 
         return True
 
