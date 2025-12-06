@@ -44,16 +44,17 @@ async def get_current_user(request: Request, db: AsyncSession = Depends(get_db))
     return user
 
 
-async def check_and_enforce_usage_limit(
-    db: AsyncSession, user_id: int, usage_service: UsageService
-) -> None:
+async def check_and_enforce_usage_limit(db: AsyncSession, user_id: int, usage_service: UsageService) -> None:
     """Check usage limit and raise HTTPException if exceeded."""
     can_call, current_usage, limit = await usage_service.can_make_llm_call(db, user_id)
     if not can_call:
         raise HTTPException(
             status_code=429,
             detail={
-                "message": f"Daily limit of {limit} AI requests reached. Please try again tomorrow or upgrade to pro.",
+                "message": (
+                    f"Daily limit of {limit} AI requests reached. "
+                    "Please try again tomorrow or upgrade to pro."
+                ),
                 "current_usage": current_usage,
                 "limit": limit,
                 "is_pro": False,
@@ -789,7 +790,7 @@ async def get_user_devices(
 ):
     """Get all devices linked to current user."""
     service = DeviceLinkService()
-    devices = service.get_user_devices(db, current_user.id)
+    devices = await service.get_user_devices(db, current_user.id)
     return devices
 
 
