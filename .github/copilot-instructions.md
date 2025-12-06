@@ -110,9 +110,22 @@ Verse is an interactive Bible reader with AI-powered insights. Users can highlig
 
 ## Tooling
 
-- Use `bun` for JavaScript/TypeScript package management and scripts in the frontend. Prefer `bun` over `npm` or `yarn` for all relevant commands.
-- Use `uv` for Python environment management and running commands. Prefer `uv run` over direct `python` or `pytest` commands in the backend.
-- Backend uses `pyproject.toml` for dependency management (not `requirements.txt`). Use `uv add` to add dependencies, `uv sync` to install them.
+### CRITICAL: Tool Usage Requirements
+
+**Frontend - ALWAYS use `bun`:**
+- Package management: `bun install`, `bun add`, `bun remove`
+- Scripts: `bun run dev`, `bun run build`, `bun run lint`, `bun test`
+- NEVER use `npm` or `yarn` for this project
+
+**Backend - ALWAYS use `uv`:**
+- **Running tests**: `uv run pytest` (NEVER `pytest` or `python -m pytest`)
+- **Running Python scripts**: `uv run python script.py` (NEVER `python script.py`)
+- **Running any Python tool**: `uv run <command>` (NEVER bare `python -m <command>`)
+- **Installing packages**: `uv add package` or `uv add --dev package` (NEVER `pip install`)
+- **Syncing dependencies**: `uv sync` (installs from `pyproject.toml`)
+- Backend uses `pyproject.toml` for dependency management (NOT `requirements.txt`)
+
+These are NOT suggestions - they are mandatory requirements for this project.
 
 ## Development Workflow
 
