@@ -646,7 +646,7 @@ class RagService:
                 # Mark matched messages
                 marker = "← Retrieved via semantic search"
                 if len(ctx.matched_messages) > 1:
-                    marker = f"← Match {i+1}/{len(ctx.matched_messages)} via semantic search"
+                    marker = f"← Match {i + 1}/{len(ctx.matched_messages)} via semantic search"
 
                 formatted_parts.append(f"{role_label} ({timestamp}): {matched_msg.content}  {marker}")
 

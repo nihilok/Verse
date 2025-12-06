@@ -1,5 +1,4 @@
 from sqlalchemy import select
-from sqlalchemy.orm import Session
 
 from app.clients.ai_client import DefinitionRequest, DefinitionResponse
 from app.clients.claude_client import ClaudeAIClient
@@ -19,9 +18,9 @@ class DefinitionService:
         request = DefinitionRequest(word=word, verse_text=verse_text, passage_reference=passage_reference)
         return await self.client.generate_definition(request)
 
-    def save_definition(
+    async def save_definition(
         self,
-        db: Session,
+        db,
         word: str,
         passage_reference: str,
         verse_text: str,
@@ -38,13 +37,13 @@ class DefinitionService:
             original_language=definition.original_language,
         )
         db.add(db_definition)
-        db.flush()
+        await db.flush()
 
         # Link definition to user
-        db.execute(user_definitions.insert().values(user_id=user_id, definition_id=db_definition.id))
+        await db.execute(user_definitions.insert().values(user_id=user_id, definition_id=db_definition.id))
 
-        db.commit()
-        db.refresh(db_definition)
+        await db.commit()
+        await db.refresh(db_definition)
         return db_definition
 
     async def link_definition_to_user(self, db, definition_id: int, user_id: int) -> bool:

@@ -8,26 +8,28 @@ from app.services.insight_service import InsightService
 from app.services.user_service import UserService
 
 
-def test_create_anonymous_user(db):
+@pytest.mark.asyncio
+async def test_create_anonymous_user(async_db):
     """Test creating an anonymous user."""
     service = UserService()
-    user = service.get_or_create_user(db)
+    user = await service.get_or_create_user(async_db)
 
     assert user is not None
     assert user.anonymous_id is not None
     assert user.id is not None
 
 
-def test_get_existing_user(db):
+@pytest.mark.asyncio
+async def test_get_existing_user(async_db):
     """Test getting an existing user by anonymous_id."""
     service = UserService()
 
     # Create a user
-    user1 = service.get_or_create_user(db)
+    user1 = await service.get_or_create_user(async_db)
     anonymous_id = user1.anonymous_id
 
     # Get the same user
-    user2 = service.get_or_create_user(db, anonymous_id)
+    user2 = await service.get_or_create_user(async_db, anonymous_id)
 
     assert user1.id == user2.id
     assert user1.anonymous_id == user2.anonymous_id
