@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def get_current_user(request: Request, db: AsyncSession = Depends(get_db)) -> User:
+async def get_current_user(request: Request, db: AsyncSession = Depends(get_db)) -> User:
     """Dependency to get or create the current user."""
     # Check if user is already in request state
     if hasattr(request.state, "user") and request.state.user:
@@ -33,7 +33,7 @@ def get_current_user(request: Request, db: AsyncSession = Depends(get_db)) -> Us
 
     # Get or create user
     user_service = UserService()
-    user = user_service.get_or_create_user(db, anonymous_id)
+    user = await user_service.get_or_create_user(db, anonymous_id)
 
     # Store user and anonymous_id in request state
     # Store anonymous_id separately so middleware can access it after session closes
