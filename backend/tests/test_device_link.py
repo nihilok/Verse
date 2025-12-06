@@ -147,15 +147,16 @@ def test_validate_code_invalid(db, test_user):
         service.validate_and_use_code(db, "INVALID-CODE-1234", test_user.id)
 
 
-def test_merge_users_data_transfer(db):
+@pytest.mark.asyncio
+async def test_merge_users_data_transfer(async_db):
     """Test that user data is correctly merged."""
     user_service = UserService()
     device_service = DeviceLinkService()
     insight_service = InsightService()
 
     # Create two users
-    user1 = user_service.get_or_create_user(db)
-    user2 = user_service.get_or_create_user(db)
+    user1 = await user_service.get_or_create_user(async_db)
+    user2 = await user_service.get_or_create_user(async_db)
 
     # Create a mock insight response
     class MockInsight:
@@ -164,8 +165,8 @@ def test_merge_users_data_transfer(db):
         practical_application = "Practical application"
 
     # User 1 has some insights
-    insight_service.save_insight(
-        db,
+    await insight_service.save_insight(
+        async_db,
         passage_reference="John 3:16",
         passage_text="For God so loved the world",
         insights=MockInsight(),
@@ -173,8 +174,8 @@ def test_merge_users_data_transfer(db):
     )
 
     # User 2 has different insights
-    insight_service.save_insight(
-        db,
+    await insight_service.save_insight(
+        async_db,
         passage_reference="Romans 8:28",
         passage_text="And we know that in all things",
         insights=MockInsight(),
@@ -183,17 +184,20 @@ def test_merge_users_data_transfer(db):
 
     # User 1 has a standalone chat
     chat1 = StandaloneChat(user_id=user1.id, title="User 1 Chat")
-    db.add(chat1)
-    db.commit()
+    async_db.add(chat1)
+    await async_db.flush()
 
     # Merge users
-    kept_user_id = device_service.merge_users(db, user1.id, user2.id)
+    kept_user_id = await device_service.merge_users(async_db, user1.id, user2.id)
 
     # Get the kept user
-    kept_user = db.query(User).filter(User.id == kept_user_id).first()
+    from sqlalchemy import select
+
+    result = await async_db.execute(select(User).where(User.id == kept_user_id))
+    kept_user = result.scalar_one_or_none()
 
     # Verify insights were merged
-    kept_user_insights = insight_service.get_user_insights(db, kept_user_id)
+    kept_user_insights = await insight_service.get_user_insights(async_db, kept_user_id)
     assert len(kept_user_insights) == 2
 
     insight_refs = [i.passage_reference for i in kept_user_insights]
@@ -201,7 +205,8 @@ def test_merge_users_data_transfer(db):
     assert "Romans 8:28" in insight_refs
 
     # Verify standalone chats were transferred
-    chats = db.query(StandaloneChat).filter(StandaloneChat.user_id == kept_user_id).all()
+    result = await async_db.execute(select(StandaloneChat).where(StandaloneChat.user_id == kept_user_id))
+    chats = list(result.scalars().all())
     assert len(chats) == 1
 
     # Verify device count was updated
@@ -233,15 +238,16 @@ def test_merge_users_keeps_higher_device_count(db):
     assert kept_user.device_count == 4
 
 
-def test_merge_users_no_duplicate_insights(db):
+@pytest.mark.asyncio
+async def test_merge_users_no_duplicate_insights(async_db):
     """Test that shared insights are not duplicated during merge."""
     user_service = UserService()
     device_service = DeviceLinkService()
     insight_service = InsightService()
 
     # Create two users
-    user1 = user_service.get_or_create_user(db)
-    user2 = user_service.get_or_create_user(db)
+    user1 = await user_service.get_or_create_user(async_db)
+    user2 = await user_service.get_or_create_user(async_db)
 
     # Create a mock insight response
     class MockInsight:
@@ -250,8 +256,8 @@ def test_merge_users_no_duplicate_insights(db):
         practical_application = "Practical application"
 
     # Both users have the same insight
-    insight = insight_service.save_insight(
-        db,
+    insight = await insight_service.save_insight(
+        async_db,
         passage_reference="John 3:16",
         passage_text="For God so loved the world",
         insights=MockInsight(),
@@ -259,13 +265,13 @@ def test_merge_users_no_duplicate_insights(db):
     )
 
     # Link the same insight to user2
-    insight_service.link_insight_to_user(db, insight.id, user2.id)
+    await insight_service.link_insight_to_user(async_db, insight.id, user2.id)
 
     # Merge users
-    kept_user_id = device_service.merge_users(db, user1.id, user2.id)
+    kept_user_id = await device_service.merge_users(async_db, user1.id, user2.id)
 
     # Verify insight appears only once
-    kept_user_insights = insight_service.get_user_insights(db, kept_user_id)
+    kept_user_insights = await insight_service.get_user_insights(async_db, kept_user_id)
     assert len(kept_user_insights) == 1
     assert kept_user_insights[0].id == insight.id
 
@@ -435,15 +441,16 @@ def test_revoke_user_codes(db, test_user):
     assert all(code.status == "revoked" for code in codes)
 
 
-def test_full_device_linking_workflow(db):
+@pytest.mark.asyncio
+async def test_full_device_linking_workflow(async_db):
     """Test complete device linking workflow."""
     user_service = UserService()
     device_service = DeviceLinkService()
     insight_service = InsightService()
 
     # Create two users (representing two devices)
-    user1 = user_service.get_or_create_user(db)
-    user2 = user_service.get_or_create_user(db)
+    user1 = await user_service.get_or_create_user(async_db)
+    user2 = await user_service.get_or_create_user(async_db)
 
     # Create a mock insight response
     class MockInsight:
@@ -452,8 +459,8 @@ def test_full_device_linking_workflow(db):
         practical_application = "Practical application"
 
     # User 1 has some data
-    insight_service.save_insight(
-        db,
+    await insight_service.save_insight(
+        async_db,
         passage_reference="John 3:16",
         passage_text="For God so loved the world",
         insights=MockInsight(),
@@ -461,8 +468,8 @@ def test_full_device_linking_workflow(db):
     )
 
     # User 2 has different data
-    insight_service.save_insight(
-        db,
+    await insight_service.save_insight(
+        async_db,
         passage_reference="Romans 8:28",
         passage_text="And we know that in all things",
         insights=MockInsight(),
@@ -470,11 +477,11 @@ def test_full_device_linking_workflow(db):
     )
 
     # User 1 generates a link code
-    code_result = device_service.generate_link_code(db, user1.id)
+    code_result = await device_service.generate_link_code(async_db, user1.id)
     display_code = code_result["display_code"]
 
     # User 2 uses the code to link devices
-    link_result = device_service.validate_and_use_code(db, display_code, user2.id)
+    link_result = await device_service.validate_and_use_code(async_db, display_code, user2.id)
 
     assert link_result["success"] is True
 
@@ -482,8 +489,8 @@ def test_full_device_linking_workflow(db):
     merged_anonymous_id = link_result["new_anonymous_id"]
 
     # Verify both users' data is accessible under merged account
-    merged_user = user_service.get_user_by_anonymous_id(db, merged_anonymous_id)
-    merged_insights = insight_service.get_user_insights(db, merged_user.id)
+    merged_user = await user_service.get_user_by_anonymous_id(async_db, merged_anonymous_id)
+    merged_insights = await insight_service.get_user_insights(async_db, merged_user.id)
 
     assert len(merged_insights) == 2
     insight_refs = [i.passage_reference for i in merged_insights]
