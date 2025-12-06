@@ -4,6 +4,8 @@ Base Prompt Components
 Reusable prompt snippets that define core context and role for the AI.
 """
 
+from app.clients.sqlite_bible_client import SQLiteBibleClient
+
 # Core app context that appears in all prompts
 VERSE_APP_CONTEXT = """You are a study companion in Verse, an interactive Bible reading app."""
 
@@ -24,8 +26,52 @@ BIBLE_PASSAGE_LINKING_GUIDANCE = """When referencing Bible passages:
 - For single verses, use: [John 3:16](/?book=John&chapter=3&verse=16)
 - For whole chapters, omit verse params: [Genesis 1](/?book=Genesis&chapter=1)
 - For whole books, reference the first chapter: [Genesis](/?book=Genesis&chapter=1)
-- Optionally include translation: [Genesis 1:1](/?book=Genesis&chapter=1&verse=1&translation=BST)
+- Include the translation that the user initially referenced if there was one; alternatively, include a
+  different translation if you are specifically referencing a different one:
+  [Genesis 1:1](/?book=Genesis&chapter=1&verse=1&translation=BST)
 - This allows users to navigate directly to referenced passages in the app"""
+
+
+def build_available_translations_note() -> str:
+    """
+    Build a note listing all available Bible translations.
+
+    Returns:
+        Formatted string with available translations
+    """
+    # Translation names mapping (code -> full name)
+    translation_names = {
+        "WEB": "World English Bible",
+        "KJV": "King James Version",
+        "BSB": "Berean Standard Bible",
+        "ASV": "American Standard Version",
+        "LSV": "Literal Standard Version",
+        "BST": "Brenton English Septuagint",
+        "LXXSB": "British English Septuagint 2012",
+        "TOJBT": "The Orthodox Jewish Bible",
+        "PEV": "Plain English Version",
+        "RV": "Revised Version",
+        "MSB": "Majority Standard Bible",
+        "YLT": "Young's Literal Translation",
+        "BBE": "Bible in Basic English",
+        "EMTV": "English Majority Text Version",
+    }
+
+    # Get all supported translation codes from the client
+    supported_codes = SQLiteBibleClient.TRANSLATION_IDS.keys()
+
+    # Build list of available translations that we expose to users
+    available = []
+    for code in supported_codes:
+        if code in translation_names:
+            available.append(f"- {code}: {translation_names[code]}")
+
+    translations_list = "\n".join(sorted(available))
+
+    return f"""Available Bible Translations:
+{translations_list}
+
+These translations can be referenced in passage links by adding &translation=CODE to the URL."""
 
 
 # For standalone chats without a specific passage
@@ -126,7 +172,7 @@ def build_engagement_guidelines(for_passage: bool = True) -> str:
 - Be accessible and warm, not overly academic
 - Help them see connections and patterns in Scripture
 - Encourage further exploration of related passages"""
-    
+
     return f"{base_guidelines}\n\n{BIBLE_PASSAGE_LINKING_GUIDANCE}"
 
 
