@@ -44,6 +44,23 @@ async def get_current_user(request: Request, db: AsyncSession = Depends(get_db))
     return user
 
 
+async def check_and_enforce_usage_limit(
+    db: AsyncSession, user_id: int, usage_service: UsageService
+) -> None:
+    """Check usage limit and raise HTTPException if exceeded."""
+    can_call, current_usage, limit = await usage_service.can_make_llm_call(db, user_id)
+    if not can_call:
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "message": f"Daily limit of {limit} AI requests reached. Please try again tomorrow or upgrade to pro.",
+                "current_usage": current_usage,
+                "limit": limit,
+                "is_pro": False,
+            },
+        )
+
+
 class PassageRequest(BaseModel):
     """Request model for fetching a passage."""
 
@@ -199,17 +216,7 @@ async def generate_insights(
             }
 
     # Check usage limits before generating new insights
-    can_call, current_usage, limit = await usage_service.can_make_llm_call(db, current_user.id)
-    if not can_call:
-        raise HTTPException(
-            status_code=429,
-            detail={
-                "message": f"Daily limit of {limit} AI requests reached. Please try again tomorrow or upgrade to pro.",
-                "current_usage": current_usage,
-                "limit": limit,
-                "is_pro": False,
-            },
-        )
+    await check_and_enforce_usage_limit(db, current_user.id, usage_service)
 
     # Generate new insights
     insights = await service.generate_insights(
@@ -314,17 +321,7 @@ async def generate_definition(
             }
 
     # Check usage limits before generating new definition
-    can_call, current_usage, limit = await usage_service.can_make_llm_call(db, current_user.id)
-    if not can_call:
-        raise HTTPException(
-            status_code=429,
-            detail={
-                "message": f"Daily limit of {limit} AI requests reached. Please try again tomorrow or upgrade to pro.",
-                "current_usage": current_usage,
-                "limit": limit,
-                "is_pro": False,
-            },
-        )
+    await check_and_enforce_usage_limit(db, current_user.id, usage_service)
 
     # Generate new definition
     definition = await service.generate_definition(
@@ -412,17 +409,7 @@ async def send_chat_message(
     usage_service = UsageService()
 
     # Check usage limits before starting the stream
-    can_call, current_usage, limit = await usage_service.can_make_llm_call(db, current_user.id)
-    if not can_call:
-        raise HTTPException(
-            status_code=429,
-            detail={
-                "message": f"Daily limit of {limit} AI requests reached. Please try again tomorrow or upgrade to pro.",
-                "current_usage": current_usage,
-                "limit": limit,
-                "is_pro": False,
-            },
-        )
+    await check_and_enforce_usage_limit(db, current_user.id, usage_service)
 
     service = ChatService()
 
@@ -509,17 +496,7 @@ async def create_standalone_chat(
     usage_service = UsageService()
 
     # Check usage limits before starting the stream
-    can_call, current_usage, limit = await usage_service.can_make_llm_call(db, current_user.id)
-    if not can_call:
-        raise HTTPException(
-            status_code=429,
-            detail={
-                "message": f"Daily limit of {limit} AI requests reached. Please try again tomorrow or upgrade to pro.",
-                "current_usage": current_usage,
-                "limit": limit,
-                "is_pro": False,
-            },
-        )
+    await check_and_enforce_usage_limit(db, current_user.id, usage_service)
 
     service = ChatService()
 
@@ -578,17 +555,7 @@ async def send_standalone_chat_message(
     usage_service = UsageService()
 
     # Check usage limits before starting the stream
-    can_call, current_usage, limit = await usage_service.can_make_llm_call(db, current_user.id)
-    if not can_call:
-        raise HTTPException(
-            status_code=429,
-            detail={
-                "message": f"Daily limit of {limit} AI requests reached. Please try again tomorrow or upgrade to pro.",
-                "current_usage": current_usage,
-                "limit": limit,
-                "is_pro": False,
-            },
-        )
+    await check_and_enforce_usage_limit(db, current_user.id, usage_service)
 
     service = ChatService()
 
