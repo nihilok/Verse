@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verse Highlighting Demo</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .demo-section {
+            margin: 40px 0;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+        .verse-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        .verse {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+            padding: 8px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+        .verse-number {
+            color: #666;
+            font-weight: 600;
+            min-width: 28px;
+            text-align: right;
+            user-select: none;
+        }
+        .verse-text {
+            flex: 1;
+        }
+        .verse.highlighted {
+            background: #fef3c7;
+            margin-left: -8px;
+            margin-right: -8px;
+            padding-left: 16px;
+            padding-right: 16px;
+        }
+        .url-demo {
+            background: #e0f2fe;
+            padding: 12px;
+            border-radius: 4px;
+            font-family: monospace;
+            margin: 10px 0;
+            word-break: break-all;
+        }
+        code {
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <h1>📖 Verse - Passage Linking Demo</h1>
+    
+    <div class="demo-section">
+        <h2>Feature: URL-based Passage Highlighting</h2>
+        <p>This demo shows how passage links work in the Verse application.</p>
+        
+        <h3>Example URL:</h3>
+        <div class="url-demo">
+            http://localhost:5173?book=John&chapter=3&verse=16
+        </div>
+        
+        <h3>Visual Result:</h3>
+        <div class="verse-container">
+            <div class="verse">
+                <span class="verse-number">14</span>
+                <span class="verse-text">As Moses lifted up the serpent in the wilderness, even so must the Son of Man be lifted up,</span>
+            </div>
+            <div class="verse">
+                <span class="verse-number">15</span>
+                <span class="verse-text">that whoever believes in him may have eternal life.</span>
+            </div>
+            <div class="verse highlighted">
+                <span class="verse-number">16</span>
+                <span class="verse-text">For God so loved the world, that he gave his only born Son, that whoever believes in him should not perish, but have eternal life.</span>
+            </div>
+            <div class="verse">
+                <span class="verse-number">17</span>
+                <span class="verse-text">For God didn't send his Son into the world to judge the world, but that the world should be saved through him.</span>
+            </div>
+            <div class="verse">
+                <span class="verse-number">18</span>
+                <span class="verse-text">He who believes in him is not judged. He who doesn't believe has been judged already, because he hasn't believed in the name of the only born Son of God.</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="demo-section">
+        <h2>Verse Range Highlighting</h2>
+        <p>You can also highlight a range of verses:</p>
+        
+        <h3>Example URL:</h3>
+        <div class="url-demo">
+            http://localhost:5173?book=John&chapter=3&verseStart=16&verseEnd=17
+        </div>
+        
+        <h3>Visual Result:</h3>
+        <div class="verse-container">
+            <div class="verse">
+                <span class="verse-number">15</span>
+                <span class="verse-text">that whoever believes in him may have eternal life.</span>
+            </div>
+            <div class="verse highlighted">
+                <span class="verse-number">16</span>
+                <span class="verse-text">For God so loved the world, that he gave his only born Son, that whoever believes in him should not perish, but have eternal life.</span>
+            </div>
+            <div class="verse highlighted">
+                <span class="verse-number">17</span>
+                <span class="verse-text">For God didn't send his Son into the world to judge the world, but that the world should be saved through him.</span>
+            </div>
+            <div class="verse">
+                <span class="verse-number">18</span>
+                <span class="verse-text">He who believes in him is not judged. He who doesn't believe has been judged already, because he hasn't believed in the name of the only born Son of God.</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="demo-section">
+        <h2>URL Parameters Supported</h2>
+        <ul>
+            <li><code>book</code> - Bible book name (e.g., "John", "1 Corinthians")</li>
+            <li><code>chapter</code> - Chapter number (required)</li>
+            <li><code>verse</code> - Single verse to highlight</li>
+            <li><code>verseStart</code> - Start of verse range</li>
+            <li><code>verseEnd</code> - End of verse range</li>
+            <li><code>translation</code> - Bible translation code (e.g., "KJV", "WEB")</li>
+        </ul>
+        
+        <h3>How It Works:</h3>
+        <ol>
+            <li>When a user clicks a passage link, the URL parameters are parsed</li>
+            <li>The entire chapter is loaded for context</li>
+            <li>The specified verse(s) are highlighted with a yellow background</li>
+            <li>The page smoothly scrolls to bring the highlighted verse into view</li>
+            <li>The PassageSearch component works the same way - searching for a verse highlights it</li>
+        </ol>
+    </div>
+</body>
+</html>
