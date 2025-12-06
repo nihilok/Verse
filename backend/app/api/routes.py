@@ -15,6 +15,7 @@ from app.services.chat_service import CHAT_ID_MARKER, ChatService
 from app.services.definition_service import DefinitionService
 from app.services.device_link_service import DeviceLinkService
 from app.services.insight_service import InsightService
+from app.services.usage_service import UsageService
 from app.services.user_service import UserService
 
 logger = logging.getLogger(__name__)
@@ -179,6 +180,7 @@ async def generate_insights(
 ):
     """Generate AI insights for a passage."""
     service = InsightService()
+    usage_service = UsageService()
 
     # Check if we already have insights for this passage
     if insight_request.save:
@@ -196,6 +198,19 @@ async def generate_insights(
                 "cached": True,
             }
 
+    # Check usage limits before generating new insights
+    can_call, current_usage, limit = await usage_service.can_make_llm_call(db, current_user.id)
+    if not can_call:
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "message": f"Daily limit of {limit} AI requests reached. Please try again tomorrow or upgrade to pro.",
+                "current_usage": current_usage,
+                "limit": limit,
+                "is_pro": False,
+            },
+        )
+
     # Generate new insights
     insights = await service.generate_insights(
         passage_text=insight_request.passage_text,
@@ -204,6 +219,9 @@ async def generate_insights(
 
     if not insights:
         raise HTTPException(status_code=500, detail="Failed to generate insights")
+
+    # Track the LLM call
+    await usage_service.track_llm_call(db, current_user.id)
 
     # Save if requested
     insight_id = None
@@ -273,6 +291,7 @@ async def generate_definition(
 ):
     """Generate AI definition for a word in context."""
     service = DefinitionService()
+    usage_service = UsageService()
 
     # Check if we already have a definition for this word in this context
     if definition_request.save:
@@ -294,6 +313,19 @@ async def generate_definition(
                 "cached": True,
             }
 
+    # Check usage limits before generating new definition
+    can_call, current_usage, limit = await usage_service.can_make_llm_call(db, current_user.id)
+    if not can_call:
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "message": f"Daily limit of {limit} AI requests reached. Please try again tomorrow or upgrade to pro.",
+                "current_usage": current_usage,
+                "limit": limit,
+                "is_pro": False,
+            },
+        )
+
     # Generate new definition
     definition = await service.generate_definition(
         word=definition_request.word,
@@ -303,6 +335,9 @@ async def generate_definition(
 
     if not definition:
         raise HTTPException(status_code=500, detail="Failed to generate definition")
+
+    # Track the LLM call
+    await usage_service.track_llm_call(db, current_user.id)
 
     # Save if requested
     definition_id = None
@@ -374,6 +409,21 @@ async def send_chat_message(
     current_user: User = Depends(get_current_user),
 ):
     """Stream chat message response via SSE."""
+    usage_service = UsageService()
+
+    # Check usage limits before starting the stream
+    can_call, current_usage, limit = await usage_service.can_make_llm_call(db, current_user.id)
+    if not can_call:
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "message": f"Daily limit of {limit} AI requests reached. Please try again tomorrow or upgrade to pro.",
+                "current_usage": current_usage,
+                "limit": limit,
+                "is_pro": False,
+            },
+        )
+
     service = ChatService()
 
     async def event_stream():
@@ -392,6 +442,9 @@ async def send_chat_message(
                     yield f"event: token\ndata: {json.dumps({'token': chunk})}\n\n"
                 if chunk_stop_reason:  # Capture stop_reason
                     stop_reason = chunk_stop_reason
+
+            # Track the LLM call after successful completion
+            await usage_service.track_llm_call(db, current_user.id)
 
             # Send completion event with stop_reason
             yield f"event: done\ndata: {json.dumps({'status': 'complete', 'stop_reason': stop_reason})}\n\n"
@@ -453,6 +506,21 @@ async def create_standalone_chat(
     current_user: User = Depends(get_current_user),
 ):
     """Create a new standalone chat session and stream the first response via SSE."""
+    usage_service = UsageService()
+
+    # Check usage limits before starting the stream
+    can_call, current_usage, limit = await usage_service.can_make_llm_call(db, current_user.id)
+    if not can_call:
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "message": f"Daily limit of {limit} AI requests reached. Please try again tomorrow or upgrade to pro.",
+                "current_usage": current_usage,
+                "limit": limit,
+                "is_pro": False,
+            },
+        )
+
     service = ChatService()
 
     async def event_stream():
@@ -477,6 +545,9 @@ async def create_standalone_chat(
 
                 if chunk_stop_reason:  # Capture stop_reason
                     stop_reason = chunk_stop_reason
+
+            # Track the LLM call after successful completion
+            await usage_service.track_llm_call(db, current_user.id)
 
             # Send completion event with stop_reason
             yield f"event: done\ndata: {json.dumps({'status': 'complete', 'stop_reason': stop_reason})}\n\n"
@@ -504,6 +575,21 @@ async def send_standalone_chat_message(
     current_user: User = Depends(get_current_user),
 ):
     """Stream standalone chat message response via SSE."""
+    usage_service = UsageService()
+
+    # Check usage limits before starting the stream
+    can_call, current_usage, limit = await usage_service.can_make_llm_call(db, current_user.id)
+    if not can_call:
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "message": f"Daily limit of {limit} AI requests reached. Please try again tomorrow or upgrade to pro.",
+                "current_usage": current_usage,
+                "limit": limit,
+                "is_pro": False,
+            },
+        )
+
     service = ChatService()
 
     async def event_stream():
@@ -522,6 +608,9 @@ async def send_standalone_chat_message(
                     yield f"event: token\ndata: {json.dumps({'token': chunk})}\n\n"
                 if chunk_stop_reason:  # Capture stop_reason
                     stop_reason = chunk_stop_reason
+
+            # Track the LLM call after successful completion
+            await usage_service.track_llm_call(db, current_user.id)
 
             # Send completion event with stop_reason
             yield f"event: done\ndata: {json.dumps({'status': 'complete', 'stop_reason': stop_reason})}\n\n"
@@ -615,11 +704,17 @@ class AcceptLinkCodeRequest(BaseModel):
 
 
 @router.get("/user/session")
-async def get_user_session(current_user: User = Depends(get_current_user)):
+async def get_user_session(
+    db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)
+):
     """Get the current user session information."""
+    usage_service = UsageService()
+    usage_info = await usage_service.get_user_usage(db, current_user.id)
+
     return {
         "anonymous_id": current_user.anonymous_id,
         "created_at": int(current_user.created_at.timestamp() * 1000) if current_user.created_at else None,
+        "usage": usage_info,
     }
 
 
