@@ -31,8 +31,9 @@
    result = await db.execute(select(Model).where(Model.id == id))
    model = result.scalar_one_or_none()
    ```
-3. Add `await` to: `db.commit()`, `db.refresh()`, `db.execute()`
-4. Keep `db.add()` and `db.delete()` as-is (not async)
+3. Add `await` to: `db.refresh()`, `db.execute()`. Remove manual `db.commit()` calls (handled automatically by `get_db()`)
+4. Use `await db.flush()` when you need generated IDs before the transaction completes
+5. Keep `db.add()` and `db.delete()` as-is (not async)
 
 **Services to migrate:**
 - `chat_service.py`: 4 methods (get_chat_messages, clear_chat_messages, get_standalone_chats, delete_standalone_chat)
