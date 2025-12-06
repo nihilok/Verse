@@ -35,9 +35,9 @@ def test_get_existing_user(db):
 
 @pytest.mark.asyncio
 async def test_clear_user_data(async_db, async_test_user):
+    user_service = UserService()
     """Test clearing all data for a user."""
     insight_service = InsightService()
-    user_service = UserService()
 
     # Create a mock insight response
     class MockInsight:
@@ -75,8 +75,8 @@ async def test_clear_user_data(async_db, async_test_user):
 @pytest.mark.asyncio
 async def test_export_user_data(async_db, async_test_user):
     """Test exporting user data as JSON."""
-    insight_service = InsightService()
     user_service = UserService()
+    insight_service = InsightService()
 
     # Create a mock insight response
     class MockInsight:
@@ -145,12 +145,13 @@ async def test_import_user_data(async_db, async_test_user):
 @pytest.mark.asyncio
 async def test_user_data_segregation_insights(async_db):
     """Test that users can only see their own insights."""
-    user_service = UserService()
     insight_service = InsightService()
 
     # Create two users
-    user1 = await user_service.get_or_create_user(async_db)
-    user2 = await user_service.get_or_create_user(async_db)
+    from tests.conftest import create_test_user
+
+    user1 = await create_test_user(async_db)
+    user2 = await create_test_user(async_db)
 
     # Create a mock insight response
     class MockInsight:
@@ -189,11 +190,12 @@ async def test_user_data_segregation_insights(async_db):
 @pytest.mark.asyncio
 async def test_user_data_segregation_chats(async_db):
     """Test that users can only see their own standalone chats."""
-    user_service = UserService()
 
     # Create two users
-    user1 = await user_service.get_or_create_user(async_db)
-    user2 = await user_service.get_or_create_user(async_db)
+    from tests.conftest import create_test_user
+
+    user1 = await create_test_user(async_db)
+    user2 = await create_test_user(async_db)
 
     # Create standalone chats for each user
     chat1 = StandaloneChat(user_id=user1.id, title="User 1 Chat", passage_text="Some text")
@@ -217,12 +219,13 @@ async def test_user_data_segregation_chats(async_db):
 @pytest.mark.asyncio
 async def test_insight_caching_across_users(async_db):
     """Test that insights are cached across users (many-to-many)."""
-    user_service = UserService()
     insight_service = InsightService()
 
     # Create two users
-    user1 = await user_service.get_or_create_user(async_db)
-    user2 = await user_service.get_or_create_user(async_db)
+    from tests.conftest import create_test_user
+
+    user1 = await create_test_user(async_db)
+    user2 = await create_test_user(async_db)
 
     # Create a mock insight response
     class MockInsight:

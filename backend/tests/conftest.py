@@ -93,9 +93,20 @@ async def async_db():
             await session.commit()
 
 
+async def create_test_user(async_db):
+    """Helper to create a user in async tests."""
+    import secrets
+
+    from app.models.models import User
+
+    user = User(anonymous_id=secrets.token_urlsafe(32))
+    async_db.add(user)
+    await async_db.flush()
+    await async_db.refresh(user)
+    return user
+
+
 @pytest_asyncio.fixture
 async def async_test_user(async_db):
     """Create a test user for async tests."""
-    user_service = UserService()
-    user = await user_service.get_or_create_user(async_db)
-    return user
+    return await create_test_user(async_db)

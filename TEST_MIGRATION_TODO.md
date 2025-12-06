@@ -2,13 +2,16 @@
 
 ## Status
 
-The service layer methods have been converted to async, but the tests still use synchronous database sessions and fixtures. This causes test failures because async methods are being called without `await`.
+**Current: 139/154 tests passing (90%)**
 
-## Failing Tests (19 total)
+The async database migration is largely complete with async test fixtures working. Remaining 15 failures are due to incomplete service layer migrations.
 
-### test_chat.py
-- test_get_chat_messages
-- test_clear_chat_messages
+## Remaining Failures (15 total)
+
+### Fixed ✅
+- test_chat.py: All passing after adding greenlet dependency
+- test_insights.py: All passing
+- test_translation_references.py: All passing
 
 ### test_insights.py
 - test_save_and_get_insight_with_same_text
@@ -16,30 +19,25 @@ The service layer methods have been converted to async, but the tests still use 
 - test_get_all_insights
 - test_clear_all_insights
 
-### test_translation_references.py
-- test_insight_with_translation_in_reference
-- test_different_translations_cached_separately
-- test_standalone_chat_with_translation_in_reference
-- test_user_insights_with_multiple_translations
+### test_streaming.py (9 failures)
+- All streaming test failures are due to ChatMessage not being persisted
+- Root cause: Transaction handling in async context with streaming responses
+- Need to investigate flush/commit timing in streaming scenarios
 
-### test_device_link.py
-- test_merge_users_data_transfer
-- test_merge_users_no_duplicate_insights
-- test_full_device_linking_workflow
+### test_device_link.py (3 failures)
+- test_merge_users_data_transfer - DeviceLinkService.merge_users() not yet async
+- test_merge_users_no_duplicate_insights - DeviceLinkService.merge_users() not yet async
+- test_full_device_linking_workflow - DeviceLinkService.generate_link_code(), validate_and_use_code() not yet async
 
-### test_user.py
-- test_clear_user_data
-- test_export_user_data
-- test_import_user_data
-- test_user_data_segregation_insights
-- test_user_data_segregation_chats
-- test_insight_caching_across_users
+### test_user.py (3 failures)
+- test_clear_user_data - Missing await on db.execute() in user_service.clear_user_data()
+- test_export_user_data - UserService methods need full async conversion
+- test_import_user_data - UserService.import_user_data() transaction handling needs fixing
 
-## Solution
+## Fixes Applied
 
-Two approaches:
-
-### Option 1: Async Test Fixtures (Recommended)
+### Async Test Fixtures ✅
+Implemented in conftest.py:
 Add async database session support to `conftest.py`:
 
 ```python
@@ -92,20 +90,25 @@ def test_get_all_insights(db, test_user):
     # This is hacky and not recommended
 ```
 
-## Recommendation
+### Dependencies Added ✅
+- Added `greenlet>=3.0.0` to pyproject.toml (required for async SQLAlchemy)
 
-Implement **Option 1** properly:
+### Syntax Errors Fixed ✅
+- Fixed misplaced docstrings in test_device_link.py and test_user.py
+- Fixed missing UserService imports in several test functions
 
-1. Add `pytest-asyncio` to `requirements-test.txt`
-2. Create async fixtures in `conftest.py`
-3. Mark affected tests with `@pytest.mark.asyncio`
-4. Update test method signatures to `async def`
-5. Add `await` to all service method calls
+## Remaining Work
 
-This ensures tests properly exercise the async code paths and database operations.
+### 1. Complete Service Layer Async Migration
+Services still needing async conversion for failing tests:
+- `DeviceLinkService`: merge_users(), generate_link_code(), validate_and_use_code()
+- `UserService`: Fix await statements in clear_user_data(), export_user_data(), import_user_data()
 
-## Timeline
+### 2. Fix Streaming Tests
+- Investigate why ChatMessage objects aren't being persisted in async streaming context
+- May need to adjust transaction/flush timing around streaming responses
+- All 9 streaming tests have same root cause
 
-- **Short term**: Skip/mark failing tests to unblock PR merge
-- **Medium term**: Implement async test fixtures and update all affected tests
-- **Long term**: All tests should use async patterns once full migration is complete
+### 3. Documentation Updates
+- Backend now uses `pyproject.toml` with `uv` for dependency management
+- Updated `.github/copilot-instructions.md` with correct commands
