@@ -138,7 +138,7 @@ async def get_passage(
             raise HTTPException(status_code=404, detail="Passage not found")
 
         if save:
-            service.save_passage(db, passage)
+            await service.save_passage(db, passage)
 
         return passage
     finally:
@@ -162,7 +162,7 @@ async def get_chapter(
             raise HTTPException(status_code=404, detail="Chapter not found")
 
         if save:
-            service.save_passage(db, passage)
+            await service.save_passage(db, passage)
 
         return passage
     finally:
@@ -182,12 +182,12 @@ async def generate_insights(
 
     # Check if we already have insights for this passage
     if insight_request.save:
-        existing = service.get_saved_insight(
+        existing = await service.get_saved_insight(
             db, insight_request.passage_reference, insight_request.passage_text
         )
         if existing:
             # Link the insight to the user if not already linked
-            service.link_insight_to_user(db, existing.id, current_user.id)
+            await service.link_insight_to_user(db, existing.id, current_user.id)
             return {
                 "id": existing.id,
                 "historical_context": existing.historical_context,
@@ -208,7 +208,7 @@ async def generate_insights(
     # Save if requested
     insight_id = None
     if insight_request.save:
-        saved_insight = service.save_insight(
+        saved_insight = await service.save_insight(
             db,
             insight_request.passage_reference,
             insight_request.passage_text,
@@ -234,7 +234,7 @@ async def get_insights_history(
 ):
     """Get insights history from the database for the current user."""
     service = InsightService()
-    insights = service.get_user_insights(db, current_user.id, limit=limit)
+    insights = await service.get_user_insights(db, current_user.id, limit=limit)
 
     return [
         {
@@ -258,7 +258,7 @@ async def clear_insights_history(
 ):
     """Clear all insights history from the database for the current user."""
     service = InsightService()
-    count = service.clear_user_insights(db, current_user.id)
+    count = await service.clear_user_insights(db, current_user.id)
 
     return {"message": f"Cleared {count} insights from history"}
 
@@ -335,7 +335,7 @@ async def get_definitions_history(
 ):
     """Get definitions history from the database for the current user."""
     service = DefinitionService()
-    definitions = service.get_user_definitions(db, current_user.id, limit=limit)
+    definitions = await service.get_user_definitions(db, current_user.id, limit=limit)
 
     return [
         {
@@ -360,7 +360,7 @@ async def clear_definitions_history(
 ):
     """Clear all definitions history from the database for the current user."""
     service = DefinitionService()
-    count = service.clear_user_definitions(db, current_user.id)
+    count = await service.clear_user_definitions(db, current_user.id)
 
     return {"message": f"Cleared {count} definitions from history"}
 
@@ -418,7 +418,7 @@ async def get_chat_messages(
 ):
     """Get all chat messages for an insight for the current user."""
     service = ChatService()
-    messages = service.get_chat_messages(db, insight_id, current_user.id)
+    messages = await service.get_chat_messages(db, insight_id, current_user.id)
 
     return [
         {
@@ -439,7 +439,7 @@ async def clear_chat_messages(
 ):
     """Clear all chat messages for an insight for the current user."""
     service = ChatService()
-    count = service.clear_chat_messages(db, insight_id, current_user.id)
+    count = await service.clear_chat_messages(db, insight_id, current_user.id)
 
     return {"message": f"Cleared {count} chat messages"}
 
@@ -548,7 +548,7 @@ async def get_standalone_chats(
 ):
     """Get all standalone chat sessions for the current user."""
     service = ChatService()
-    chats = service.get_standalone_chats(db, current_user.id, limit=limit)
+    chats = await service.get_standalone_chats(db, current_user.id, limit=limit)
 
     return [
         {
@@ -571,7 +571,7 @@ async def get_standalone_chat_messages(
 ):
     """Get all messages for a standalone chat for the current user."""
     service = ChatService()
-    messages = service.get_standalone_chat_messages(db, chat_id, current_user.id)
+    messages = await service.get_standalone_chat_messages(db, chat_id, current_user.id)
 
     return [
         {
@@ -592,7 +592,7 @@ async def delete_standalone_chat(
 ):
     """Delete a standalone chat session."""
     service = ChatService()
-    success = service.delete_standalone_chat(db, chat_id, current_user.id)
+    success = await service.delete_standalone_chat(db, chat_id, current_user.id)
 
     if not success:
         raise HTTPException(status_code=404, detail="Chat not found")
@@ -627,7 +627,7 @@ async def get_user_session(current_user: User = Depends(get_current_user)):
 async def clear_user_data(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Clear all data for the current user."""
     service = UserService()
-    counts = service.clear_user_data(db, current_user.id)
+    counts = await service.clear_user_data(db, current_user.id)
 
     return {"message": "User data cleared successfully", "deleted": counts}
 
@@ -638,7 +638,7 @@ async def export_user_data(
 ):
     """Export all data for the current user as JSON."""
     service = UserService()
-    data = service.export_user_data(db, current_user.id)
+    data = await service.export_user_data(db, current_user.id)
 
     return data
 
@@ -652,7 +652,7 @@ async def import_user_data(
     """Import user data from JSON."""
     service = UserService()
     try:
-        counts = service.import_user_data(db, current_user.id, request.data)
+        counts = await service.import_user_data(db, current_user.id, request.data)
         return {"message": "User data imported successfully", "imported": counts}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
