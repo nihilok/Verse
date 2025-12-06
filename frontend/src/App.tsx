@@ -1013,6 +1013,7 @@ function App() {
             // Clear both pending and current passage when modal closes
             setPendingChatPassage(null);
             setCurrentChatPassage(null);
+            setError(null);
           }
         }}
         title="Chat"
@@ -1023,12 +1024,16 @@ function App() {
         onSendMessage={handleSendStandaloneChatMessage}
         loading={standaloneChatLoading}
         streamingMessage={standaloneChatStreamingMessage}
+        error={error}
       />
 
       {/* Insight Chat Modal */}
       <ChatModal
         open={insightChatModalOpen}
-        onOpenChange={setInsightChatModalOpen}
+        onOpenChange={(open) => {
+          setInsightChatModalOpen(open);
+          if (!open) setError(null);
+        }}
         title="Continue Chat"
         subtitle={selectedReference}
         passageText={selectedText}
@@ -1038,6 +1043,7 @@ function App() {
         onSendMessage={handleSendInsightChatMessage}
         loading={chatLoading}
         streamingMessage={chatStreamingMessage}
+        error={error}
       />
 
       {/* Device Link Modal */}

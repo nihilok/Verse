@@ -29,6 +29,7 @@ interface ChatModalProps {
   onSendMessage: (message: string) => Promise<void>;
   loading: boolean;
   streamingMessage?: string;
+  error?: string | null;
 }
 
 const ChatModal: React.FC<ChatModalProps> = ({
@@ -43,6 +44,7 @@ const ChatModal: React.FC<ChatModalProps> = ({
   onSendMessage,
   loading,
   streamingMessage,
+  error,
 }) => {
   // Format reference with verse range if available
   const formattedReference = React.useMemo(() => {
@@ -114,6 +116,7 @@ const ChatModal: React.FC<ChatModalProps> = ({
             loading={loading}
             streamingMessage={streamingMessage}
             onNavigate={() => onOpenChange(false)}
+            error={error}
           />
         </div>
       </DialogContent>

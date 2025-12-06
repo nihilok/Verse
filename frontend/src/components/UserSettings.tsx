@@ -1,7 +1,16 @@
-import { useState } from "react";
-import { Download, Upload, Trash2, Info, Link2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import {
+  Download,
+  Upload,
+  Trash2,
+  Info,
+  Link2,
+  Copy,
+  Check,
+} from "lucide-react";
 import { Button } from "./ui/button";
 import { bibleService } from "../services/api";
+import type { UserSession } from "../types";
 
 interface UserSettingsProps {
   onError: (message: string) => void;
@@ -15,6 +24,20 @@ export default function UserSettings({
   onOpenDeviceLinking,
 }: UserSettingsProps) {
   const [loading, setLoading] = useState(false);
+  const [userSession, setUserSession] = useState<UserSession | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    const loadSession = async () => {
+      try {
+        const session = await bibleService.getUserSession();
+        setUserSession(session);
+      } catch (err) {
+        console.error("Failed to load user session:", err);
+      }
+    };
+    loadSession();
+  }, []);
 
   const handleClearData = async () => {
     if (
@@ -115,8 +138,52 @@ export default function UserSettings({
     input.click();
   };
 
+  const handleCopyUserId = async () => {
+    if (!userSession?.anonymous_id) return;
+
+    try {
+      await navigator.clipboard.writeText(userSession.anonymous_id);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy user ID:", err);
+      onError("Failed to copy user ID. Please try again.");
+    }
+  };
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* User ID Section */}
+      {userSession && (
+        <div className="space-y-2">
+          <h3 className="text-sm font-medium">User ID</h3>
+          <p className="text-xs text-muted-foreground">
+            Your anonymous user ID for pro subscription management.
+          </p>
+          <div className="flex gap-2">
+            <div className="flex-1 bg-muted rounded-md px-3 py-2 text-xs font-mono break-all">
+              {userSession.anonymous_id}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCopyUserId}
+              className="flex-shrink-0"
+            >
+              {copied ? (
+                <>
+                  <Check className="h-4 w-4" />
+                </>
+              ) : (
+                <>
+                  <Copy className="h-4 w-4" />
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-2">
         <h3 className="text-sm font-medium">Data Management</h3>
         <p className="text-xs text-muted-foreground">

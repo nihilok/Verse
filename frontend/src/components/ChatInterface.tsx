@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Send, Loader2 } from "lucide-react";
+import { Send, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ChatMessage } from "../types";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -13,6 +14,7 @@ interface ChatInterfaceProps {
   loading: boolean;
   streamingMessage?: string;
   onNavigate?: () => void;
+  error?: string | null;
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -21,6 +23,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   loading,
   streamingMessage,
   onNavigate,
+  error,
 }) => {
   const [inputValue, setInputValue] = useState("");
   const [isMobile, setIsMobile] = useState(false);
@@ -106,6 +109,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   return (
     <div className="flex flex-col h-full min-h-0">
+      {/* Error Alert */}
+      {error && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Request Limit Reached</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
       {/* Chat messages */}
       <div className="flex-1 overflow-y-auto pb-2 space-y-4 scrollbar-thin min-h-0 relative chat-messages-container">
         {messages.length === 0 ? (
