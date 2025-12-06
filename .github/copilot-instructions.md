@@ -109,7 +109,8 @@ Verse is an interactive Bible reader with AI-powered insights. Users can highlig
 ## Tooling
 
 - Use `bun` for JavaScript/TypeScript package management and scripts in the frontend. Prefer `bun` over `npm` or `yarn` for all relevant commands.
-- Use `uv` for Python environment management where possible.
+- Use `uv` for Python environment management and running commands. Prefer `uv run` over direct `python` or `pytest` commands in the backend.
+- Backend uses `pyproject.toml` for dependency management (not `requirements.txt`). Use `uv add` to add dependencies, `uv sync` to install them.
 
 ## Development Workflow
 
@@ -131,12 +132,14 @@ Verse is an interactive Bible reader with AI-powered insights. Users can highlig
 
 ### Backend Development
 
-- **Install dependencies**: `cd backend && pip install -r requirements.txt`
-- **Install test dependencies**: `pip install -r requirements-test.txt`
-- **Run development server**: `uvicorn app.main:app --reload --host 0.0.0.0 --port 8000`
-- **Run tests**: `pytest`
-- **Test with coverage**: `pytest --cov=app`
+- **Install dependencies**: `cd backend && uv sync`
+- **Add new dependency**: `uv add <package-name>` (automatically updates `pyproject.toml`)
+- **Add dev dependency**: `uv add --dev <package-name>`
+- **Run development server**: `uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000`
+- **Run tests**: `uv run pytest`
+- **Test with coverage**: `uv run pytest --cov=app`
 - **CI environment**: Tests run with SQLite database using `DATABASE_URL=sqlite:///./test.db`
+- **Note**: Backend uses `pyproject.toml` for dependency management, not `requirements.txt`
 
 ### Docker Development
 
@@ -176,6 +179,7 @@ The application follows a modular, layered architecture:
 
 - **Documentation**: See `README.md`, `DEVELOPMENT.md`, `CONTRIBUTING.md`, `ARCHITECTURE.md`, and `API.md`
 - **Configuration**: Environment variables in `.env` (not committed), example in `.env.example`
+- **Dependencies**: Backend uses `backend/pyproject.toml`, frontend uses `frontend/package.json`
 - **Tests**: Backend tests in `backend/tests/`, frontend tests co-located with components
 - **Docker**: `Dockerfile` in each service directory, `docker-compose.yml` at root
 
@@ -212,11 +216,12 @@ bun run build        # Build for production
 ### Backend
 ```bash
 cd backend
-pip install -r requirements.txt          # Install dependencies
-pip install -r requirements-test.txt     # Install test dependencies
-uvicorn app.main:app --reload           # Start dev server
-pytest                                   # Run tests
-pytest --cov=app                        # Run tests with coverage
+uv sync                                     # Install all dependencies from pyproject.toml
+uv add <package>                            # Add a new dependency
+uv add --dev <package>                      # Add a dev dependency
+uv run uvicorn app.main:app --reload       # Start dev server
+uv run pytest                               # Run tests
+uv run pytest --cov=app                    # Run tests with coverage
 ```
 
 ### Docker

@@ -7,7 +7,6 @@ import pytest
 from app.models.models import DeviceLinkCode, StandaloneChat, User
 from app.services.device_link_service import DeviceLinkService
 from app.services.insight_service import InsightService
-from app.services.user_service import UserService
 
 
 def test_generate_link_code(db, test_user):
@@ -50,6 +49,8 @@ def test_generate_link_code_rate_limiting(db, test_user):
 
 def test_validate_and_use_code_success(db):
     """Test successfully validating and using a link code."""
+    from app.services.user_service import UserService
+
     user_service = UserService()
     device_service = DeviceLinkService()
 
@@ -78,6 +79,9 @@ def test_validate_and_use_code_success(db):
 
 def test_validate_code_expired(db, test_user):
     """Test that expired codes are rejected."""
+    from app.services.user_service import UserService
+
+    user_service = UserService()
     service = DeviceLinkService()
 
     # Generate a code
@@ -91,7 +95,6 @@ def test_validate_code_expired(db, test_user):
     db.commit()
 
     # Create second user
-    user_service = UserService()
     user2 = user_service.get_or_create_user(db)
 
     # Attempt to use expired code
@@ -105,6 +108,8 @@ def test_validate_code_expired(db, test_user):
 
 def test_validate_code_already_used(db):
     """Test that already used codes are rejected."""
+    from app.services.user_service import UserService
+
     user_service = UserService()
     device_service = DeviceLinkService()
 
@@ -150,13 +155,14 @@ def test_validate_code_invalid(db, test_user):
 @pytest.mark.asyncio
 async def test_merge_users_data_transfer(async_db):
     """Test that user data is correctly merged."""
-    user_service = UserService()
     device_service = DeviceLinkService()
     insight_service = InsightService()
 
     # Create two users
-    user1 = await user_service.get_or_create_user(async_db)
-    user2 = await user_service.get_or_create_user(async_db)
+    from tests.conftest import create_test_user
+
+    user1 = await create_test_user(async_db)
+    user2 = await create_test_user(async_db)
 
     # Create a mock insight response
     class MockInsight:
@@ -215,6 +221,8 @@ async def test_merge_users_data_transfer(async_db):
 
 def test_merge_users_keeps_higher_device_count(db):
     """Test that user with higher device_count is kept."""
+    from app.services.user_service import UserService
+
     user_service = UserService()
     device_service = DeviceLinkService()
 
@@ -241,13 +249,14 @@ def test_merge_users_keeps_higher_device_count(db):
 @pytest.mark.asyncio
 async def test_merge_users_no_duplicate_insights(async_db):
     """Test that shared insights are not duplicated during merge."""
-    user_service = UserService()
     device_service = DeviceLinkService()
     insight_service = InsightService()
 
     # Create two users
-    user1 = await user_service.get_or_create_user(async_db)
-    user2 = await user_service.get_or_create_user(async_db)
+    from tests.conftest import create_test_user
+
+    user1 = await create_test_user(async_db)
+    user2 = await create_test_user(async_db)
 
     # Create a mock insight response
     class MockInsight:
@@ -383,6 +392,8 @@ def test_unlink_last_device_deletes_data(db, test_user):
 
 def test_unlink_device_wrong_user(db):
     """Test that users cannot unlink devices belonging to other users."""
+    from app.services.user_service import UserService
+
     user_service = UserService()
     device_service = DeviceLinkService()
 
@@ -444,13 +455,16 @@ def test_revoke_user_codes(db, test_user):
 @pytest.mark.asyncio
 async def test_full_device_linking_workflow(async_db):
     """Test complete device linking workflow."""
+    from app.services.user_service import UserService
+    from tests.conftest import create_test_user
+
     user_service = UserService()
     device_service = DeviceLinkService()
     insight_service = InsightService()
 
     # Create two users (representing two devices)
-    user1 = await user_service.get_or_create_user(async_db)
-    user2 = await user_service.get_or_create_user(async_db)
+    user1 = await create_test_user(async_db)
+    user2 = await create_test_user(async_db)
 
     # Create a mock insight response
     class MockInsight:

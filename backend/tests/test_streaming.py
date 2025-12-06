@@ -107,7 +107,7 @@ async def test_claude_client_generate_standalone_chat_response_stream():
 
 
 @pytest.mark.asyncio
-async def test_chat_service_send_message_stream(db, test_user):
+async def test_chat_service_send_message_stream(async_db, async_test_user):
     """Test that chat service streams messages and saves to DB atomically."""
     # Create an insight
     insight = SavedInsight(
@@ -117,9 +117,9 @@ async def test_chat_service_send_message_stream(db, test_user):
         theological_significance="Theological significance...",
         practical_application="Practical application...",
     )
-    db.add(insight)
-    db.commit()
-    db.refresh(insight)
+    async_db.add(insight)
+    await async_db.flush()
+    await async_db.refresh(insight)
 
     service = ChatService()
     mock_tokens = ["Test", " ", "streaming", " ", "response"]
@@ -137,9 +137,9 @@ async def test_chat_service_send_message_stream(db, test_user):
         # Collect streamed tokens
         tokens = []
         async for chunk, _stop_reason in service.send_message_stream(
-            db=db,
+            db=async_db,
             insight_id=insight.id,
-            user_id=test_user.id,
+            user_id=async_test_user.id,
             user_message="Test message",
             passage_text="Test passage",
             passage_reference="Test 1:1",
@@ -156,14 +156,15 @@ async def test_chat_service_send_message_stream(db, test_user):
         assert tokens == mock_tokens
 
         # Verify messages were saved to database
-        messages = (
-            db.query(ChatMessage)
-            .filter(
+        from sqlalchemy import select
+
+        result = await async_db.execute(
+            select(ChatMessage).where(
                 ChatMessage.insight_id == insight.id,
-                ChatMessage.user_id == test_user.id,
+                ChatMessage.user_id == async_test_user.id,
             )
-            .all()
         )
+        messages = list(result.scalars().all())
 
         assert len(messages) == 2  # User message + AI response
         assert messages[0].role == "user"
@@ -173,18 +174,18 @@ async def test_chat_service_send_message_stream(db, test_user):
 
 
 @pytest.mark.asyncio
-async def test_chat_service_send_standalone_message_stream(db, test_user):
+async def test_chat_service_send_standalone_message_stream(async_db, async_test_user):
     """Test that chat service streams standalone messages correctly."""
     # Create a standalone chat
     chat = StandaloneChat(
-        user_id=test_user.id,
+        user_id=async_test_user.id,
         title="Test Chat",
         passage_text="Test passage",
         passage_reference="Test 1:1",
     )
-    db.add(chat)
-    db.commit()
-    db.refresh(chat)
+    async_db.add(chat)
+    await async_db.flush()
+    await async_db.refresh(chat)
 
     service = ChatService()
     mock_tokens = ["Standalone", " ", "response"]
@@ -202,7 +203,7 @@ async def test_chat_service_send_standalone_message_stream(db, test_user):
         # Collect streamed tokens
         tokens = []
         async for chunk, _stop_reason in service.send_standalone_message_stream(
-            db=db, chat_id=chat.id, user_id=test_user.id, user_message="Test message"
+            db=async_db, chat_id=chat.id, user_id=async_test_user.id, user_message="Test message"
         ):
             if chunk:
                 tokens.append(chunk)
@@ -211,7 +212,12 @@ async def test_chat_service_send_standalone_message_stream(db, test_user):
         assert tokens == mock_tokens
 
         # Verify messages were saved to database
-        messages = db.query(StandaloneChatMessage).filter(StandaloneChatMessage.chat_id == chat.id).all()
+        from sqlalchemy import select
+
+        result = await async_db.execute(
+            select(StandaloneChatMessage).where(StandaloneChatMessage.chat_id == chat.id)
+        )
+        messages = list(result.scalars().all())
 
         assert len(messages) == 2
         assert messages[0].role == "user"
@@ -221,7 +227,7 @@ async def test_chat_service_send_standalone_message_stream(db, test_user):
 
 
 @pytest.mark.asyncio
-async def test_chat_service_create_standalone_chat_stream(db, test_user):
+async def test_chat_service_create_standalone_chat_stream(async_db, async_test_user):
     """Test that chat service creates chat and streams first message."""
     service = ChatService()
     mock_tokens = ["First", " ", "message"]
@@ -240,8 +246,8 @@ async def test_chat_service_create_standalone_chat_stream(db, test_user):
         tokens = []
         chat_id = None
         async for chunk, _stop_reason in service.create_standalone_chat_stream(
-            db=db,
-            user_id=test_user.id,
+            db=async_db,
+            user_id=async_test_user.id,
             user_message="First message",
             passage_text="Test passage",
             passage_reference="Test 1:1",
@@ -256,16 +262,22 @@ async def test_chat_service_create_standalone_chat_stream(db, test_user):
         assert chat_id is not None
 
         # Verify chat was created
-        chat = db.query(StandaloneChat).filter(StandaloneChat.id == chat_id).first()
+        from sqlalchemy import select
+
+        result = await async_db.execute(select(StandaloneChat).where(StandaloneChat.id == chat_id))
+        chat = result.scalar_one_or_none()
 
         assert chat is not None
-        assert chat.user_id == test_user.id
+        assert chat.user_id == async_test_user.id
         assert chat.passage_text == "Test passage"
         assert chat.passage_reference == "Test 1:1"
         assert chat.title == "First message"
 
         # Verify messages were saved
-        messages = db.query(StandaloneChatMessage).filter(StandaloneChatMessage.chat_id == chat_id).all()
+        result = await async_db.execute(
+            select(StandaloneChatMessage).where(StandaloneChatMessage.chat_id == chat_id)
+        )
+        messages = list(result.scalars().all())
 
         assert len(messages) == 2
         assert messages[0].role == "user"
@@ -275,7 +287,7 @@ async def test_chat_service_create_standalone_chat_stream(db, test_user):
 
 
 @pytest.mark.asyncio
-async def test_streaming_atomic_db_save_on_error(db, test_user):
+async def test_streaming_atomic_db_save_on_error(async_db, async_test_user):
     """Test that DB is not modified if streaming fails."""
     # Create an insight
     insight = SavedInsight(
@@ -285,9 +297,9 @@ async def test_streaming_atomic_db_save_on_error(db, test_user):
         theological_significance="Theology",
         practical_application="Practice",
     )
-    db.add(insight)
-    db.commit()
-    db.refresh(insight)
+    async_db.add(insight)
+    await async_db.flush()
+    await async_db.refresh(insight)
 
     service = ChatService()
 
@@ -305,9 +317,9 @@ async def test_streaming_atomic_db_save_on_error(db, test_user):
         with pytest.raises(Exception, match="Streaming error"):
             tokens = []
             async for chunk, _stop_reason in service.send_message_stream(
-                db=db,
+                db=async_db,
                 insight_id=insight.id,
-                user_id=test_user.id,
+                user_id=async_test_user.id,
                 user_message="Test message",
                 passage_text="Test passage",
                 passage_reference="Test 1:1",
@@ -317,14 +329,15 @@ async def test_streaming_atomic_db_save_on_error(db, test_user):
                     tokens.append(chunk)
 
         # Verify no messages were saved (atomic rollback)
-        messages = (
-            db.query(ChatMessage)
-            .filter(
+        from sqlalchemy import select
+
+        result = await async_db.execute(
+            select(ChatMessage).where(
                 ChatMessage.insight_id == insight.id,
-                ChatMessage.user_id == test_user.id,
+                ChatMessage.user_id == async_test_user.id,
             )
-            .all()
         )
+        messages = list(result.scalars().all())
 
         assert len(messages) == 0
 
@@ -438,7 +451,7 @@ async def test_sse_chat_id_marker_event():
 
 
 @pytest.mark.asyncio
-async def test_was_truncated_field_when_max_tokens(db, test_user):
+async def test_was_truncated_field_when_max_tokens(async_db, async_test_user):
     """Test that was_truncated is set to True when stop_reason is max_tokens."""
     # Create an insight
     insight = SavedInsight(
@@ -448,9 +461,9 @@ async def test_was_truncated_field_when_max_tokens(db, test_user):
         theological_significance="Theology",
         practical_application="Practice",
     )
-    db.add(insight)
-    db.commit()
-    db.refresh(insight)
+    async_db.add(insight)
+    await async_db.flush()
+    await async_db.refresh(insight)
 
     service = ChatService()
     mock_tokens = ["This", " ", "was", " ", "truncated"]
@@ -468,9 +481,9 @@ async def test_was_truncated_field_when_max_tokens(db, test_user):
         # Stream the message
         tokens = []
         async for chunk, _stop_reason in service.send_message_stream(
-            db=db,
+            db=async_db,
             insight_id=insight.id,
-            user_id=test_user.id,
+            user_id=async_test_user.id,
             user_message="Test message",
             passage_text="Test passage",
             passage_reference="Test 1:1",
@@ -480,15 +493,16 @@ async def test_was_truncated_field_when_max_tokens(db, test_user):
                 tokens.append(chunk)
 
         # Verify message was saved with was_truncated=True
-        messages = (
-            db.query(ChatMessage)
-            .filter(
+        from sqlalchemy import select
+
+        result = await async_db.execute(
+            select(ChatMessage).where(
                 ChatMessage.insight_id == insight.id,
-                ChatMessage.user_id == test_user.id,
+                ChatMessage.user_id == async_test_user.id,
                 ChatMessage.role == "assistant",
             )
-            .all()
         )
+        messages = list(result.scalars().all())
 
         assert len(messages) == 1
         assert messages[0].was_truncated is True
@@ -496,7 +510,7 @@ async def test_was_truncated_field_when_max_tokens(db, test_user):
 
 
 @pytest.mark.asyncio
-async def test_was_truncated_field_when_end_turn(db, test_user):
+async def test_was_truncated_field_when_end_turn(async_db, async_test_user):
     """Test that was_truncated is set to False when stop_reason is end_turn."""
     # Create an insight
     insight = SavedInsight(
@@ -506,9 +520,9 @@ async def test_was_truncated_field_when_end_turn(db, test_user):
         theological_significance="Theology",
         practical_application="Practice",
     )
-    db.add(insight)
-    db.commit()
-    db.refresh(insight)
+    async_db.add(insight)
+    await async_db.flush()
+    await async_db.refresh(insight)
 
     service = ChatService()
     mock_tokens = ["Complete", " ", "response"]
@@ -526,9 +540,9 @@ async def test_was_truncated_field_when_end_turn(db, test_user):
         # Stream the message
         tokens = []
         async for chunk, _stop_reason in service.send_message_stream(
-            db=db,
+            db=async_db,
             insight_id=insight.id,
-            user_id=test_user.id,
+            user_id=async_test_user.id,
             user_message="Test message",
             passage_text="Test passage",
             passage_reference="Test 1:1",
@@ -538,15 +552,16 @@ async def test_was_truncated_field_when_end_turn(db, test_user):
                 tokens.append(chunk)
 
         # Verify message was saved with was_truncated=False
-        messages = (
-            db.query(ChatMessage)
-            .filter(
+        from sqlalchemy import select
+
+        result = await async_db.execute(
+            select(ChatMessage).where(
                 ChatMessage.insight_id == insight.id,
-                ChatMessage.user_id == test_user.id,
+                ChatMessage.user_id == async_test_user.id,
                 ChatMessage.role == "assistant",
             )
-            .all()
         )
+        messages = list(result.scalars().all())
 
         assert len(messages) == 1
         assert messages[0].was_truncated is False
@@ -554,18 +569,18 @@ async def test_was_truncated_field_when_end_turn(db, test_user):
 
 
 @pytest.mark.asyncio
-async def test_was_truncated_field_standalone_chat_max_tokens(db, test_user):
+async def test_was_truncated_field_standalone_chat_max_tokens(async_db, async_test_user):
     """Test that was_truncated works for standalone chats when truncated."""
     # Create a standalone chat
     chat = StandaloneChat(
-        user_id=test_user.id,
+        user_id=async_test_user.id,
         title="Test Chat",
         passage_text="Test passage",
         passage_reference="Test 1:1",
     )
-    db.add(chat)
-    db.commit()
-    db.refresh(chat)
+    async_db.add(chat)
+    await async_db.flush()
+    await async_db.refresh(chat)
 
     service = ChatService()
     mock_tokens = ["Truncated", " ", "standalone"]
@@ -583,20 +598,21 @@ async def test_was_truncated_field_standalone_chat_max_tokens(db, test_user):
         # Stream the message
         tokens = []
         async for chunk, _stop_reason in service.send_standalone_message_stream(
-            db=db, chat_id=chat.id, user_id=test_user.id, user_message="Test message"
+            db=async_db, chat_id=chat.id, user_id=async_test_user.id, user_message="Test message"
         ):
             if chunk:
                 tokens.append(chunk)
 
         # Verify message was saved with was_truncated=True
-        messages = (
-            db.query(StandaloneChatMessage)
-            .filter(
+        from sqlalchemy import select
+
+        result = await async_db.execute(
+            select(StandaloneChatMessage).where(
                 StandaloneChatMessage.chat_id == chat.id,
                 StandaloneChatMessage.role == "assistant",
             )
-            .all()
         )
+        messages = list(result.scalars().all())
 
         assert len(messages) == 1
         assert messages[0].was_truncated is True
@@ -604,18 +620,18 @@ async def test_was_truncated_field_standalone_chat_max_tokens(db, test_user):
 
 
 @pytest.mark.asyncio
-async def test_was_truncated_field_standalone_chat_complete(db, test_user):
+async def test_was_truncated_field_standalone_chat_complete(async_db, async_test_user):
     """Test that was_truncated works for standalone chats when complete."""
     # Create a standalone chat
     chat = StandaloneChat(
-        user_id=test_user.id,
+        user_id=async_test_user.id,
         title="Test Chat",
         passage_text="Test passage",
         passage_reference="Test 1:1",
     )
-    db.add(chat)
-    db.commit()
-    db.refresh(chat)
+    async_db.add(chat)
+    await async_db.flush()
+    await async_db.refresh(chat)
 
     service = ChatService()
     mock_tokens = ["Complete", " ", "standalone"]
@@ -633,20 +649,21 @@ async def test_was_truncated_field_standalone_chat_complete(db, test_user):
         # Stream the message
         tokens = []
         async for chunk, _stop_reason in service.send_standalone_message_stream(
-            db=db, chat_id=chat.id, user_id=test_user.id, user_message="Test message"
+            db=async_db, chat_id=chat.id, user_id=async_test_user.id, user_message="Test message"
         ):
             if chunk:
                 tokens.append(chunk)
 
         # Verify message was saved with was_truncated=False
-        messages = (
-            db.query(StandaloneChatMessage)
-            .filter(
+        from sqlalchemy import select
+
+        result = await async_db.execute(
+            select(StandaloneChatMessage).where(
                 StandaloneChatMessage.chat_id == chat.id,
                 StandaloneChatMessage.role == "assistant",
             )
-            .all()
         )
+        messages = list(result.scalars().all())
 
         assert len(messages) == 1
         assert messages[0].was_truncated is False
