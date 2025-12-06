@@ -6,19 +6,35 @@ from app.core.config import get_settings
 
 settings = get_settings()
 
+
+def convert_to_async_url(database_url: str) -> str:
+    """
+    Convert synchronous database URL to async driver format.
+
+    Handles multiple PostgreSQL URL formats (postgresql://, postgresql+psycopg2://)
+    and SQLite URLs.
+    """
+    if database_url.startswith("sqlite"):
+        return database_url.replace("sqlite://", "sqlite+aiosqlite://")
+    elif database_url.startswith("postgresql"):
+        # Handle both postgresql:// and postgresql+psycopg2:// formats
+        return database_url.replace("postgresql+psycopg2://", "postgresql+asyncpg://").replace(
+            "postgresql://", "postgresql+asyncpg://"
+        )
+    else:
+        raise ValueError(f"Unsupported database URL: {database_url}")
+
+
 # Configure async engine for application use
-# Convert database URL to async format
+async_database_url = convert_to_async_url(settings.database_url)
+
 if settings.database_url.startswith("sqlite"):
-    # SQLite: sqlite:///path -> sqlite+aiosqlite:///path
-    async_database_url = settings.database_url.replace("sqlite://", "sqlite+aiosqlite://")
     async_engine = create_async_engine(
         async_database_url,
         connect_args={"check_same_thread": False},
         echo=False,
     )
 elif settings.database_url.startswith("postgresql"):
-    # PostgreSQL: postgresql:// -> postgresql+asyncpg://
-    async_database_url = settings.database_url.replace("postgresql://", "postgresql+asyncpg://")
     async_engine = create_async_engine(
         async_database_url,
         pool_size=10,
@@ -81,5 +97,3 @@ async def get_db():
         except Exception:
             await session.rollback()
             raise
-        finally:
-            await session.close()

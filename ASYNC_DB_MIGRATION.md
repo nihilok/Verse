@@ -10,7 +10,7 @@ Migrate to SQLAlchemy's async session support (`AsyncSession`) to allow non-bloc
 
 ### Synchronous DB Operations Found
 
-**bible_service.py** (2 sync methods):
+**bible_service.py** (1 sync method):
 - `save_passage(db: Session, ...)`
 
 **chat_service.py** (4 sync methods):
@@ -24,7 +24,7 @@ Migrate to SQLAlchemy's async session support (`AsyncSession`) to allow non-bloc
 - `get_user_definitions(db: Session, ...)`
 - `clear_user_definitions(db: Session, ...)`
 
-**device_link_service.py** (5 sync methods):
+**device_link_service.py** (6 sync methods):
 - `generate_link_code(db: Session, ...)`
 - `merge_users(db: Session, ...)`
 - `get_user_devices(db: Session, ...)`
@@ -37,7 +37,7 @@ Migrate to SQLAlchemy's async session support (`AsyncSession`) to allow non-bloc
 - `get_user_insights(db: Session, ...)`
 - `clear_user_insights(db: Session, ...)`
 
-**user_service.py** (5 sync methods):
+**user_service.py** (6 sync methods):
 - `get_or_create_user(db: Session, ...)`
 - `get_user_by_anonymous_id(db: Session, ...)`
 - `_link_insight_to_user(db: Session, ...)`
@@ -110,6 +110,6 @@ model = result.scalar_one_or_none()
   - **Mitigation:** Keep sync engine available for migrations
 
 ## Dependencies
-- SQLAlchemy 2.0+ (already installed: >=2.0.36)
-- asyncpg for PostgreSQL (need to add)
-- aiosqlite for SQLite testing (already installed: >=0.19.0)
+- SQLAlchemy 2.0+ (✅ already installed: >=2.0.36)
+- asyncpg for PostgreSQL (✅ added: >=0.29.0)
+- aiosqlite for SQLite testing (✅ already installed: >=0.19.0)
