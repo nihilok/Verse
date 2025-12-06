@@ -60,9 +60,26 @@ engine = sync_engine  # For backwards compatibility with migrations
 
 
 async def get_db():
-    """Async dependency for database session."""
+    """
+    Async dependency for database session with automatic transaction management.
+
+    The session is automatically committed if no exceptions occur, and rolled back
+    if an exception is raised. This follows the FastAPI dependency injection pattern
+    and ensures proper cleanup of database resources.
+
+    Usage:
+        @app.get("/endpoint")
+        async def endpoint(db: AsyncSession = Depends(get_db)):
+            # Database operations here
+            # Commit happens automatically on success
+            # Rollback happens automatically on exception
+    """
     async with AsyncSessionLocal() as session:
         try:
             yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
         finally:
             await session.close()

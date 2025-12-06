@@ -6,10 +6,14 @@
 - Added `asyncpg>=0.29.0` dependency for PostgreSQL async operations
 - Created `AsyncEngine` with `create_async_engine()` in `database.py`
 - Created `AsyncSessionLocal` session maker
-- Converted `get_db()` dependency to async generator
+- Converted `get_db()` dependency to async generator with **automatic transaction management**:
+  - Yields `AsyncSession`
+  - Auto-commits on success
+  - Auto-rolls back on exception
+  - Proper cleanup in finally block
 - Kept separate `sync_engine` for Alembic migrations (backwards compatibility)
 - Updated `main.py` to dispose async engine on shutdown
-- Started service migration with `bible_service.save_passage()`
+- Started service migration with `bible_service.save_passage()` as example
 
 ## Remaining Work (Steps 2-3)
 
