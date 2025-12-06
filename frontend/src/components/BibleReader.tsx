@@ -23,8 +23,15 @@ interface BibleReaderProps {
     reference: string,
     isSingleWord: boolean,
     verseText?: string,
+    verseStart?: number,
+    verseEnd?: number,
   ) => void;
-  onAskQuestion: (text: string, reference: string) => void;
+  onAskQuestion: (
+    text: string,
+    reference: string,
+    verseStart?: number,
+    verseEnd?: number,
+  ) => void;
   onNavigate?: (direction: "prev" | "next") => void;
   loading?: boolean;
   highlightVerseStart?: number;
@@ -143,7 +150,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({
     // Wait for the passage to render before scrolling
     const scrollTimeout = setTimeout(() => {
       const highlightedElement = document.getElementById(
-        `verse-${highlightVerseStart}`
+        `verse-${highlightVerseStart}`,
       );
       if (highlightedElement) {
         // Scroll the element into view with smooth behavior
@@ -183,6 +190,75 @@ const BibleReader: React.FC<BibleReaderProps> = ({
     return null;
   };
 
+  // Helper function to get verse range from current selection
+  const getVerseRangeFromSelection = (): {
+    start?: number;
+    end?: number;
+  } => {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return {};
+
+    const range = selection.getRangeAt(0);
+    const container = readerRef.current;
+    if (!container || !container.contains(range.commonAncestorContainer)) {
+      return {};
+    }
+
+    // Find all verse elements in the selection
+    const verseElements: Element[] = [];
+    const walker = document.createTreeWalker(
+      range.commonAncestorContainer,
+      NodeFilter.SHOW_ELEMENT,
+      {
+        acceptNode: (node: Node) => {
+          if (
+            node instanceof Element &&
+            node.id &&
+            node.id.startsWith("verse-")
+          ) {
+            return NodeFilter.FILTER_ACCEPT;
+          }
+          return NodeFilter.FILTER_SKIP;
+        },
+      },
+    );
+
+    let node = walker.nextNode();
+    while (node) {
+      if (range.intersectsNode(node)) {
+        verseElements.push(node as Element);
+      }
+      node = walker.nextNode();
+    }
+
+    // Also check start and end containers for verse parents
+    const startVerse =
+      range.startContainer.parentElement?.closest('[id^="verse-"]');
+    const endVerse =
+      range.endContainer.parentElement?.closest('[id^="verse-"]');
+
+    if (startVerse) verseElements.push(startVerse);
+    if (endVerse && endVerse !== startVerse) verseElements.push(endVerse);
+
+    if (verseElements.length === 0) return {};
+
+    // Extract verse numbers from IDs
+    const verseNumbers = verseElements
+      .map((el) => {
+        const match = el.id.match(/^verse-(\d+)$/);
+        return match ? parseInt(match[1]) : null;
+      })
+      .filter((n): n is number => n !== null)
+      .sort((a, b) => a - b);
+
+    if (verseNumbers.length === 0) return {};
+
+    return {
+      start: verseNumbers[0],
+      end: verseNumbers[verseNumbers.length - 1],
+    };
+  };
+
   // Memoize whether the current selection is a single word
   const isSelectedSingleWord = useMemo(() => {
     return isSingleWord(selectedText);
@@ -197,6 +273,9 @@ const BibleReader: React.FC<BibleReaderProps> = ({
       // Store the text before clearing
       const textToSend = selectedText.trim();
       const isSingleWordSelection = isSingleWord(textToSend);
+
+      // Get verse range from selection
+      const verseRange = getVerseRangeFromSelection();
 
       // For single word selections, find the verse containing the word
       const verseInfo = isSingleWordSelection
@@ -220,6 +299,8 @@ const BibleReader: React.FC<BibleReaderProps> = ({
         referenceToSend,
         isSingleWordSelection,
         verseTextToSend,
+        verseRange.start,
+        verseRange.end,
       );
 
       // Clear the browser selection after a brief delay to ensure click is processed
@@ -237,6 +318,10 @@ const BibleReader: React.FC<BibleReaderProps> = ({
     if (selectedText && passage) {
       // Store the text before clearing
       const textToSend = selectedText;
+
+      // Get verse range from selection
+      const verseRange = getVerseRangeFromSelection();
+
       // Include translation in reference
       const referenceToSend = formatReferenceWithTranslation(
         passage.reference,
@@ -248,7 +333,12 @@ const BibleReader: React.FC<BibleReaderProps> = ({
       setSelectionPosition(null);
 
       // Send the text after clearing the selection
-      onAskQuestion(textToSend, referenceToSend);
+      onAskQuestion(
+        textToSend,
+        referenceToSend,
+        verseRange.start,
+        verseRange.end,
+      );
 
       // Clear the browser selection after a brief delay to ensure click is processed
       setTimeout(() => {
@@ -362,7 +452,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({
               const highlighted = isVerseHighlighted(
                 verse.verse,
                 highlightVerseStart,
-                highlightVerseEnd
+                highlightVerseEnd,
               );
               return (
                 <div
@@ -377,7 +467,9 @@ const BibleReader: React.FC<BibleReaderProps> = ({
                   <span className="verse-number text-primary/70 font-semibold min-w-[28px] text-right select-none">
                     {verse.verse}
                   </span>
-                  <span className="text-base leading-relaxed">{verse.text}</span>
+                  <span className="text-base leading-relaxed">
+                    {verse.text}
+                  </span>
                 </div>
               );
             })
