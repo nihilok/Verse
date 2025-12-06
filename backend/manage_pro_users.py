@@ -97,7 +97,7 @@ async def remove_pro(anonymous_id: str):
 async def list_pro_users():
     """List all pro users."""
     async with await get_async_session() as db:
-        result = await db.execute(select(User).where(User.pro_subscription == True))  # noqa: E712
+        result = await db.execute(select(User).where(User.pro_subscription.is_(True)))
         users = result.scalars().all()
 
         if not users:
