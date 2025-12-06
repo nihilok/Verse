@@ -17,29 +17,11 @@ import {
   getBookIndex,
   clampChapterForBook,
 } from "@/lib/bibleStructure";
+import { TRANSLATIONS } from "@/lib/translations";
 import toast from "@/lib/toast";
 
 // Derive a simple list of book names from the canonical structure
 const BOOK_NAMES = BIBLE_BOOKS.map((b) => b.name);
-
-const TRANSLATIONS = [
-  { code: "KJV", name: "King James Version" },
-  { code: "ASV", name: "American Standard Version" },
-  { code: "LSV", name: "Literal Standard Version" },
-  { code: "WEB", name: "World English Bible" },
-  { code: "BSB", name: "Berean Standard Bible" },
-  { code: "BST", name: "Brenton English Septuagint" },
-  { code: "LXXSB", name: "British English Septuagint 2012" },
-  { code: "TOJBT", name: "The Orthodox Jewish Bible" },
-  { code: "PEV", name: "Plain English Version" },
-  { code: "RV", name: "Revised Version" },
-  { code: "MSB", name: "Majority Standard Bible" },
-  { code: "YLT", name: "Young's Literal Translation" },
-  { code: "BBE", name: "Bible in Basic English" },
-  { code: "EMTV", name: "English Majority Text Version" },
-  { code: "BES", name: "La Biblia en Español Sencillo" },
-  { code: "SRV", name: "Santa Biblia - Reina-Valera 1909" },
-];
 
 interface PassageSearchProps {
   onSearch: (
