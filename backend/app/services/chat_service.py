@@ -1,7 +1,8 @@
 import logging
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy.orm import Session
+from sqlalchemy import delete, select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func
 
 from app.clients.claude_client import ClaudeAIClient
@@ -49,7 +50,7 @@ class ChatService:
 
     async def send_message(
         self,
-        db: Session,
+        db: AsyncSession,
         insight_id: int,
         user_id: int,
         user_message: str,
@@ -158,28 +159,25 @@ class ChatService:
 
         return ai_response
 
-    def get_chat_messages(self, db: Session, insight_id: int, user_id: int) -> list[ChatMessage]:
+    async def get_chat_messages(self, db: AsyncSession, insight_id: int, user_id: int) -> list[ChatMessage]:
         """Get all chat messages for an insight for a specific user."""
-        return (
-            db.query(ChatMessage)
-            .filter(ChatMessage.insight_id == insight_id, ChatMessage.user_id == user_id)
+        result = await db.execute(
+            select(ChatMessage)
+            .where(ChatMessage.insight_id == insight_id, ChatMessage.user_id == user_id)
             .order_by(ChatMessage.created_at)
-            .all()
         )
+        return list(result.scalars().all())
 
-    def clear_chat_messages(self, db: Session, insight_id: int, user_id: int) -> int:
+    async def clear_chat_messages(self, db: AsyncSession, insight_id: int, user_id: int) -> int:
         """Clear all chat messages for an insight for a specific user."""
-        count = (
-            db.query(ChatMessage)
-            .filter(ChatMessage.insight_id == insight_id, ChatMessage.user_id == user_id)
-            .delete()
+        result = await db.execute(
+            delete(ChatMessage).where(ChatMessage.insight_id == insight_id, ChatMessage.user_id == user_id)
         )
-        db.commit()
-        return count
+        return result.rowcount
 
     async def create_standalone_chat(
         self,
-        db: Session,
+        db: AsyncSession,
         user_id: int,
         user_message: str,
         passage_text: str | None = None,
@@ -269,7 +267,7 @@ class ChatService:
 
     async def create_standalone_chat_stream(
         self,
-        db: Session,
+        db: AsyncSession,
         user_id: int,
         user_message: str,
         passage_text: str | None = None,
@@ -381,7 +379,7 @@ class ChatService:
             raise
 
     async def send_standalone_message(
-        self, db: Session, chat_id: int, user_id: int, user_message: str
+        self, db: AsyncSession, chat_id: int, user_id: int, user_message: str
     ) -> str | None:
         """
         Send a message in a standalone chat and get AI response.
@@ -491,7 +489,7 @@ class ChatService:
         return ai_response
 
     def get_standalone_chat_messages(
-        self, db: Session, chat_id: int, user_id: int
+        self, db: AsyncSession, chat_id: int, user_id: int
     ) -> list[StandaloneChatMessage]:
         """Get all messages for a standalone chat for a specific user."""
         # Verify the chat belongs to the user
@@ -511,32 +509,32 @@ class ChatService:
             .all()
         )
 
-    def get_standalone_chats(self, db: Session, user_id: int, limit: int = 50) -> list[StandaloneChat]:
+    async def get_standalone_chats(
+        self, db: AsyncSession, user_id: int, limit: int = 50
+    ) -> list[StandaloneChat]:
         """Get all standalone chat sessions for a specific user."""
-        return (
-            db.query(StandaloneChat)
-            .filter(StandaloneChat.user_id == user_id)
+        result = await db.execute(
+            select(StandaloneChat)
+            .where(StandaloneChat.user_id == user_id)
             .order_by(StandaloneChat.updated_at.desc())
             .limit(limit)
-            .all()
         )
+        return list(result.scalars().all())
 
-    def delete_standalone_chat(self, db: Session, chat_id: int, user_id: int) -> bool:
+    async def delete_standalone_chat(self, db: AsyncSession, chat_id: int, user_id: int) -> bool:
         """Delete a standalone chat session for a specific user."""
-        chat = (
-            db.query(StandaloneChat)
-            .filter(StandaloneChat.id == chat_id, StandaloneChat.user_id == user_id)
-            .first()
+        result = await db.execute(
+            select(StandaloneChat).where(StandaloneChat.id == chat_id, StandaloneChat.user_id == user_id)
         )
+        chat = result.scalar_one_or_none()
         if chat:
-            db.delete(chat)
-            db.commit()
+            await db.delete(chat)
             return True
         return False
 
     async def send_message_stream(
         self,
-        db: Session,
+        db: AsyncSession,
         insight_id: int,
         user_id: int,
         user_message: str,
@@ -663,7 +661,7 @@ class ChatService:
             raise
 
     async def send_standalone_message_stream(
-        self, db: Session, chat_id: int, user_id: int, user_message: str
+        self, db: AsyncSession, chat_id: int, user_id: int, user_message: str
     ):
         """
         Stream standalone chat response and save to database after completion.
