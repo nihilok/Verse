@@ -1,4 +1,3 @@
-
 services:
   db:
     image: pgvector/pgvector:pg18
@@ -35,9 +34,8 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
-#    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-    restart:
-        unless-stopped
+    #    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    restart: unless-stopped
 
   frontend:
     build:

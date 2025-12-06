@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:15-alpine
+    image: pgvector/pgvector:pg18
     container_name: verse-db-prod
     environment:
       POSTGRES_USER: verse_user
@@ -8,6 +8,8 @@ services:
       POSTGRES_DB: verse_db
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U verse_user -d verse_db"]
