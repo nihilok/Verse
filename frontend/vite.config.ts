@@ -99,5 +99,9 @@ export default defineConfig(({ mode }) => {
       // Add allowedHosts if defined in environment
       ...(allowedHosts && { allowedHosts }),
     },
+    test: {
+      environment: "jsdom",
+      globals: true,
+    },
   };
 });
