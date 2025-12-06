@@ -204,8 +204,8 @@ const BibleReader: React.FC<BibleReaderProps> = ({
       return {};
     }
 
-    // Find all verse elements in the selection
-    const verseElements: Element[] = [];
+    // Find all verse elements in the selection using a Set to avoid duplicates
+    const verseElementSet = new Set<Element>();
     const walker = document.createTreeWalker(
       range.commonAncestorContainer,
       NodeFilter.SHOW_ELEMENT,
@@ -226,7 +226,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({
     let node = walker.nextNode();
     while (node) {
       if (range.intersectsNode(node)) {
-        verseElements.push(node as Element);
+        verseElementSet.add(node as Element);
       }
       node = walker.nextNode();
     }
@@ -237,8 +237,10 @@ const BibleReader: React.FC<BibleReaderProps> = ({
     const endVerse =
       range.endContainer.parentElement?.closest('[id^="verse-"]');
 
-    if (startVerse) verseElements.push(startVerse);
-    if (endVerse && endVerse !== startVerse) verseElements.push(endVerse);
+    if (startVerse) verseElementSet.add(startVerse);
+    if (endVerse) verseElementSet.add(endVerse);
+
+    const verseElements = Array.from(verseElementSet);
 
     if (verseElements.length === 0) return {};
 

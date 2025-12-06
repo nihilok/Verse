@@ -541,8 +541,9 @@ function App() {
       if (chat.passage_text && chat.passage_reference) {
         // Try to parse reference to extract params (for old chats)
         // Format: "Book Chapter:VerseStart-VerseEnd (Translation)" or variations
+        // Supports multi-word book names like "1 John", "Song of Solomon", etc.
         const refMatch = chat.passage_reference.match(
-          /^(.+?)\s+(\d+)(?::(\d+)(?:-(\d+))?)?\s*(?:\(([^)]+)\))?$/,
+          /^(.+)\s+(\d+)(?::(\d+)(?:-(\d+))?)?\s*(?:\(([^)]+)\))?$/,
         );
 
         let params = undefined;
