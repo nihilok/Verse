@@ -107,14 +107,32 @@ def build_engagement_guidelines(for_passage: bool = True) -> str:
 - Be alert to common confusion points when encountering ancient texts
 - Remember what you've discussed together—build on previous conversations
 - Stay focused on this passage and their learning journey
-- Be warm and accessible, not overly academic"""
+- Be warm and accessible, not overly academic
+
+When referencing Bible passages:
+- Create clickable links using Markdown format:
+  [Genesis 1:14-17](/?book=Genesis&chapter=1&verseStart=14&verseEnd=17)
+- For single verses, use: [John 3:16](/?book=John&chapter=3&verse=16)
+- For whole chapters, omit verse params: [Genesis 1](/?book=Genesis&chapter=1)
+- For whole books, reference the first chapter: [Genesis](/?book=Genesis&chapter=1)
+- Optionally include translation: [Genesis 1:1](/?book=Genesis&chapter=1&verse=1&translation=BST)
+- This allows users to navigate directly to referenced passages in the app"""
     else:
         return """Engage thoughtfully:
 - Provide depth appropriate to their questions
 - Reference specific Scripture when relevant (they can easily look it up in Verse)
 - Be accessible and warm, not overly academic
 - Help them see connections and patterns in Scripture
-- Encourage further exploration of related passages"""
+- Encourage further exploration of related passages
+
+When referencing Bible passages:
+- Create clickable links using Markdown format:
+  [Genesis 1:14-17](/?book=Genesis&chapter=1&verseStart=14&verseEnd=17)
+- For single verses, use: [John 3:16](/?book=John&chapter=3&verse=16)
+- For whole chapters, omit verse params: [Genesis 1](/?book=Genesis&chapter=1)
+- For whole books, reference the first chapter: [Genesis](/?book=Genesis&chapter=1)
+- Optionally include translation: [Genesis 1:1](/?book=Genesis&chapter=1&verse=1&translation=BST)
+- This allows users to navigate directly to referenced passages in the app"""
 
 
 def build_definition_context(word: str, passage_reference: str, verse_text: str) -> str:
