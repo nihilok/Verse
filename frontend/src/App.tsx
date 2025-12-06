@@ -518,9 +518,28 @@ function App() {
       setPendingChatPassage(null); // Clear any pending passage
       // Set passage from the chat object
       if (chat.passage_text && chat.passage_reference) {
+        // Try to parse reference to extract params (for old chats)
+        // Format: "Book Chapter:VerseStart-VerseEnd (Translation)" or variations
+        const refMatch = chat.passage_reference.match(
+          /^(.+?)\s+(\d+)(?::(\d+)(?:-(\d+))?)?\s*(?:\(([^)]+)\))?$/,
+        );
+
+        let params = undefined;
+        if (refMatch) {
+          const [, book, chapter, verseStart, verseEnd, translation] = refMatch;
+          params = {
+            book: book.trim(),
+            chapter: parseInt(chapter),
+            verseStart: verseStart ? parseInt(verseStart) : undefined,
+            verseEnd: verseEnd ? parseInt(verseEnd) : undefined,
+            translation: translation || undefined,
+          };
+        }
+
         setCurrentChatPassage({
           text: chat.passage_text,
           reference: chat.passage_reference,
+          params,
         });
       } else {
         setCurrentChatPassage(null);
