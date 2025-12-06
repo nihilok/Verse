@@ -5,6 +5,7 @@ import { formatReferenceWithTranslation } from "../types";
 import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import SelectionButtons from "./SelectionButtons";
+import { isVerseHighlighted } from "@/lib/urlParser";
 
 // Selection timing constants
 const SELECTION_CHANGE_DELAY = 100; // ms to wait after selection change before capturing
@@ -26,6 +27,8 @@ interface BibleReaderProps {
   onAskQuestion: (text: string, reference: string) => void;
   onNavigate?: (direction: "prev" | "next") => void;
   loading?: boolean;
+  highlightVerseStart?: number;
+  highlightVerseEnd?: number;
 }
 
 const BibleReader: React.FC<BibleReaderProps> = ({
@@ -34,6 +37,8 @@ const BibleReader: React.FC<BibleReaderProps> = ({
   onAskQuestion,
   onNavigate,
   loading = false,
+  highlightVerseStart,
+  highlightVerseEnd,
 }) => {
   const [selectedText, setSelectedText] = useState("");
   const [selectionPosition, setSelectionPosition] = useState<{
@@ -128,6 +133,29 @@ const BibleReader: React.FC<BibleReaderProps> = ({
       document.removeEventListener("touchend", handlePointerUp);
     };
   }, []);
+
+  // Scroll to highlighted verse when passage loads or highlight changes
+  useEffect(() => {
+    if (!passage || !highlightVerseStart || loading) {
+      return;
+    }
+
+    // Wait for the passage to render before scrolling
+    const scrollTimeout = setTimeout(() => {
+      const highlightedElement = document.getElementById(
+        `verse-${highlightVerseStart}`
+      );
+      if (highlightedElement && contentRef.current) {
+        // Scroll the element into view with smooth behavior
+        highlightedElement.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }
+    }, 100);
+
+    return () => clearTimeout(scrollTimeout);
+  }, [passage, highlightVerseStart, loading]);
 
   // Helper function to check if text is a single word
   const isSingleWord = (text: string): boolean => {
@@ -330,17 +358,29 @@ const BibleReader: React.FC<BibleReaderProps> = ({
               ))}
             </div>
           ) : passage ? (
-            passage.verses.map((verse, index) => (
-              <div
-                key={`${verse.chapter}:${verse.verse}`}
-                className={`mb-3 flex items-start gap-2 group ${index === 0 ? "mt-2" : ""}`}
-              >
-                <span className="verse-number text-primary/70 font-semibold min-w-[28px] text-right select-none">
-                  {verse.verse}
-                </span>
-                <span className="text-base leading-relaxed">{verse.text}</span>
-              </div>
-            ))
+            passage.verses.map((verse, index) => {
+              const highlighted = isVerseHighlighted(
+                verse.verse,
+                highlightVerseStart,
+                highlightVerseEnd
+              );
+              return (
+                <div
+                  key={`${verse.chapter}:${verse.verse}`}
+                  id={`verse-${verse.verse}`}
+                  className={`mb-3 flex items-start gap-2 group ${index === 0 ? "mt-2" : ""} ${
+                    highlighted
+                      ? "bg-yellow-100 dark:bg-yellow-900/30 -mx-2 px-2 py-2 rounded-md transition-colors duration-300"
+                      : ""
+                  }`}
+                >
+                  <span className="verse-number text-primary/70 font-semibold min-w-[28px] text-right select-none">
+                    {verse.verse}
+                  </span>
+                  <span className="text-base leading-relaxed">{verse.text}</span>
+                </div>
+              );
+            })
           ) : null}
 
           {/* Selection Tooltip */}
