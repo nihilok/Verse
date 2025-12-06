@@ -674,10 +674,10 @@ async def generate_link_code(
     user_agent = request.headers.get("user-agent", "")
 
     # Create or update device record
-    device = service.create_or_update_device(db=db, user_id=current_user.id, user_agent=user_agent)
+    device = await service.create_or_update_device(db=db, user_id=current_user.id, user_agent=user_agent)
 
     try:
-        result = service.generate_link_code(db, current_user.id, device.id)
+        result = await service.generate_link_code(db, current_user.id, device.id)
         return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
@@ -697,7 +697,7 @@ async def accept_link_code(
     user_agent = request.headers.get("user-agent", "")
 
     # Create or update device record
-    device = service.create_or_update_device(
+    device = await service.create_or_update_device(
         db=db,
         user_id=current_user.id,
         device_name=link_request.device_name,
@@ -706,7 +706,7 @@ async def accept_link_code(
     )
 
     try:
-        result = service.validate_and_use_code(
+        result = await service.validate_and_use_code(
             db=db,
             display_code=link_request.code,
             target_user_id=current_user.id,
@@ -727,7 +727,7 @@ async def get_user_devices(
 ):
     """Get all devices linked to current user."""
     service = DeviceLinkService()
-    devices = service.get_user_devices(db, current_user.id)
+    devices = await service.get_user_devices(db, current_user.id)
     return devices
 
 
@@ -740,7 +740,7 @@ async def unlink_device(
     """Unlink a specific device."""
     service = DeviceLinkService()
     try:
-        result = service.unlink_device(db, device_id, current_user.id)
+        result = await service.unlink_device(db, device_id, current_user.id)
         return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
@@ -752,7 +752,7 @@ async def revoke_link_codes(
 ):
     """Revoke all pending link codes for user."""
     service = DeviceLinkService()
-    count = service.revoke_user_codes(db, current_user.id)
+    count = await service.revoke_user_codes(db, current_user.id)
     return {"message": f"Revoked {count} pending link codes", "count": count}
 
 
