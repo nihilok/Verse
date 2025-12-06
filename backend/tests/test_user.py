@@ -106,14 +106,15 @@ async def test_export_user_data(async_db, async_test_user):
     assert "chat_messages" in data["insights"][0]
 
 
-def test_import_user_data(db, test_user):
+@pytest.mark.asyncio
+async def test_import_user_data(async_db, async_test_user):
     """Test importing user data from JSON."""
     user_service = UserService()
 
     # Create mock data to import
     data = {
         "user": {
-            "anonymous_id": test_user.anonymous_id,
+            "anonymous_id": async_test_user.anonymous_id,
             "created_at": "2024-01-01T00:00:00",
         },
         "insights": [
@@ -130,25 +131,26 @@ def test_import_user_data(db, test_user):
     }
 
     # Import data
-    counts = user_service.import_user_data(db, test_user.id, data)
+    counts = await user_service.import_user_data(async_db, async_test_user.id, data)
 
     assert counts["insights"] == 1
 
     # Verify insights were imported
     insight_service = InsightService()
-    user_insights = insight_service.get_user_insights(db, test_user.id)
+    user_insights = await insight_service.get_user_insights(async_db, async_test_user.id)
     assert len(user_insights) == 1
     assert user_insights[0].passage_reference == "Romans 8:28"
 
 
-def test_user_data_segregation_insights(db):
+@pytest.mark.asyncio
+async def test_user_data_segregation_insights(async_db):
     """Test that users can only see their own insights."""
     user_service = UserService()
     insight_service = InsightService()
 
     # Create two users
-    user1 = user_service.get_or_create_user(db)
-    user2 = user_service.get_or_create_user(db)
+    user1 = await user_service.get_or_create_user(async_db)
+    user2 = await user_service.get_or_create_user(async_db)
 
     # Create a mock insight response
     class MockInsight:
@@ -157,8 +159,8 @@ def test_user_data_segregation_insights(db):
         practical_application = "Practical application"
 
     # User 1 saves an insight
-    insight_service.save_insight(
-        db,
+    await insight_service.save_insight(
+        async_db,
         passage_reference="John 3:16",
         passage_text="For God so loved the world",
         insights=MockInsight(),
@@ -166,8 +168,8 @@ def test_user_data_segregation_insights(db):
     )
 
     # User 2 saves a different insight
-    insight_service.save_insight(
-        db,
+    await insight_service.save_insight(
+        async_db,
         passage_reference="Romans 8:28",
         passage_text="And we know that in all things",
         insights=MockInsight(),
@@ -175,8 +177,8 @@ def test_user_data_segregation_insights(db):
     )
 
     # Verify each user only sees their own insights
-    user1_insights = insight_service.get_user_insights(db, user1.id)
-    user2_insights = insight_service.get_user_insights(db, user2.id)
+    user1_insights = await insight_service.get_user_insights(async_db, user1.id)
+    user2_insights = await insight_service.get_user_insights(async_db, user2.id)
 
     assert len(user1_insights) == 1
     assert len(user2_insights) == 1
@@ -184,26 +186,27 @@ def test_user_data_segregation_insights(db):
     assert user2_insights[0].passage_reference == "Romans 8:28"
 
 
-def test_user_data_segregation_chats(db):
+@pytest.mark.asyncio
+async def test_user_data_segregation_chats(async_db):
     """Test that users can only see their own standalone chats."""
     user_service = UserService()
 
     # Create two users
-    user1 = user_service.get_or_create_user(db)
-    user2 = user_service.get_or_create_user(db)
+    user1 = await user_service.get_or_create_user(async_db)
+    user2 = await user_service.get_or_create_user(async_db)
 
     # Create standalone chats for each user
     chat1 = StandaloneChat(user_id=user1.id, title="User 1 Chat", passage_text="Some text")
-    db.add(chat1)
+    async_db.add(chat1)
 
     chat2 = StandaloneChat(user_id=user2.id, title="User 2 Chat", passage_text="Some other text")
-    db.add(chat2)
-    db.commit()
+    async_db.add(chat2)
+    await async_db.flush()
 
     # Verify each user only sees their own chats
     chat_service = ChatService()
-    user1_chats = chat_service.get_standalone_chats(db, user1.id)
-    user2_chats = chat_service.get_standalone_chats(db, user2.id)
+    user1_chats = await chat_service.get_standalone_chats(async_db, user1.id)
+    user2_chats = await chat_service.get_standalone_chats(async_db, user2.id)
 
     assert len(user1_chats) == 1
     assert len(user2_chats) == 1
@@ -211,14 +214,15 @@ def test_user_data_segregation_chats(db):
     assert user2_chats[0].title == "User 2 Chat"
 
 
-def test_insight_caching_across_users(db):
+@pytest.mark.asyncio
+async def test_insight_caching_across_users(async_db):
     """Test that insights are cached across users (many-to-many)."""
     user_service = UserService()
     insight_service = InsightService()
 
     # Create two users
-    user1 = user_service.get_or_create_user(db)
-    user2 = user_service.get_or_create_user(db)
+    user1 = await user_service.get_or_create_user(async_db)
+    user2 = await user_service.get_or_create_user(async_db)
 
     # Create a mock insight response
     class MockInsight:
@@ -227,8 +231,8 @@ def test_insight_caching_across_users(db):
         practical_application = "Practical application"
 
     # User 1 generates and saves an insight
-    saved_insight = insight_service.save_insight(
-        db,
+    saved_insight = await insight_service.save_insight(
+        async_db,
         passage_reference="John 3:16",
         passage_text="For God so loved the world",
         insights=MockInsight(),
@@ -236,19 +240,19 @@ def test_insight_caching_across_users(db):
     )
 
     # User 2 requests the same passage - should link to existing insight
-    existing_insight = insight_service.get_saved_insight(
-        db, passage_reference="John 3:16", passage_text="For God so loved the world"
+    existing_insight = await insight_service.get_saved_insight(
+        async_db, passage_reference="John 3:16", passage_text="For God so loved the world"
     )
 
     assert existing_insight is not None
     assert existing_insight.id == saved_insight.id
 
     # Link the insight to user 2
-    insight_service.link_insight_to_user(db, existing_insight.id, user2.id)
+    await insight_service.link_insight_to_user(async_db, existing_insight.id, user2.id)
 
     # Both users should see the same insight
-    user1_insights = insight_service.get_user_insights(db, user1.id)
-    user2_insights = insight_service.get_user_insights(db, user2.id)
+    user1_insights = await insight_service.get_user_insights(async_db, user1.id)
+    user2_insights = await insight_service.get_user_insights(async_db, user2.id)
 
     assert len(user1_insights) == 1
     assert len(user2_insights) == 1
