@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   motion,
   AnimatePresence,
@@ -48,6 +49,7 @@ import { Button } from "./components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 import { loadLastPassage, saveLastPassage } from "./lib/storage";
 import { BIBLE_BOOKS, getBookIndex } from "./lib/bibleStructure";
+import { parsePassageFromURL, generatePassageURL } from "./lib/urlParser";
 import "./App.css";
 
 // Maximum number of insights to keep in history
@@ -87,6 +89,7 @@ function getUsageLimitErrorMessage(err: unknown): string | null {
 }
 
 function App() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [passage, setPassage] = useState<BiblePassage | null>(null);
   const [insight, setInsight] = useState<Insight | null>(null);
   const [definition, setDefinition] = useState<Definition | null>(null);
@@ -100,6 +103,12 @@ function App() {
   const [currentBook, setCurrentBook] = useState("John");
   const [currentChapter, setCurrentChapter] = useState(3);
   const [currentTranslation, setCurrentTranslation] = useState("WEB");
+  const [highlightVerseStart, setHighlightVerseStart] = useState<
+    number | undefined
+  >(undefined);
+  const [highlightVerseEnd, setHighlightVerseEnd] = useState<
+    number | undefined
+  >(undefined);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarFullyHidden, setSidebarFullyHidden] = useState(false);
   const [insightsModalOpen, setInsightsModalOpen] = useState(false);
@@ -178,18 +187,35 @@ function App() {
     loadHistory();
   }, []);
 
-  // Load last viewed passage on mount
+  // Watch for URL parameter changes
   useEffect(() => {
-    const lastPassage = loadLastPassage();
-    if (lastPassage) {
-      // Auto-load the last passage the user was viewing
+    const urlParams = parsePassageFromURL(searchParams);
+    if (urlParams) {
       handleSearch(
-        lastPassage.book,
-        lastPassage.chapter,
-        lastPassage.verse_start,
-        lastPassage.verse_end,
-        lastPassage.translation,
+        urlParams.book,
+        urlParams.chapter,
+        urlParams.verseStart,
+        urlParams.verseEnd,
+        urlParams.translation || "WEB",
       );
+    }
+  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Load last passage only on mount (if no URL params)
+  useEffect(() => {
+    const urlParams = parsePassageFromURL(searchParams);
+    if (!urlParams) {
+      const lastPassage = loadLastPassage();
+      if (lastPassage) {
+        // Auto-load the last passage the user was viewing
+        handleSearch(
+          lastPassage.book,
+          lastPassage.chapter,
+          lastPassage.verse_start,
+          lastPassage.verse_end,
+          lastPassage.translation,
+        );
+      }
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -220,21 +246,25 @@ function App() {
     setCurrentChapter(chapter);
     setCurrentTranslation(translation);
 
+    // Set highlighting for specific verses
+    setHighlightVerseStart(verseStart);
+    setHighlightVerseEnd(verseEnd);
+
+    // Update URL parameters
+    const newUrl = generatePassageURL({
+      book,
+      chapter,
+      verseStart,
+      verseEnd,
+      translation,
+    });
+    setSearchParams(newUrl.slice(1));
+
     try {
       let result: BiblePassage;
-      if (verseStart !== undefined) {
-        // Load specific verses
-        result = await bibleService.getPassage({
-          book,
-          chapter,
-          verse_start: verseStart,
-          verse_end: verseEnd,
-          translation,
-        });
-      } else {
-        // Load full chapter for better reading experience
-        result = await bibleService.getChapter(book, chapter, translation);
-      }
+      // Always load full chapter for better reading experience
+      // but highlight the specific verses if provided
+      result = await bibleService.getChapter(book, chapter, translation);
       setPassage(result);
 
       // Save the current passage to localStorage for persistence
@@ -838,6 +868,8 @@ function App() {
                 onAskQuestion={handleAskQuestion}
                 onNavigate={handleNavigate}
                 loading={loading}
+                highlightVerseStart={highlightVerseStart}
+                highlightVerseEnd={highlightVerseEnd}
               />
             </div>
           </div>
