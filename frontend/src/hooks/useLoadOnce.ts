@@ -17,18 +17,19 @@ export function useLoadOnce() {
    * Wraps a load function with loading state management.
    * If already loaded, returns early without calling the load function.
    * Sets loading to true before calling, and false in finally block.
+   * Sets loaded to true after execution, even if the function throws an error,
+   * to prevent repeated failed attempts.
    *
    * @param loadFn The async function to execute
    */
   const executeLoad = useCallback(
-    async <T>(loadFn: () => Promise<T>): Promise<T | undefined> => {
+    async <T>(loadFn: () => Promise<T>): Promise<void> => {
       if (loaded) return;
       setLoading(true);
       try {
-        const result = await loadFn();
-        setLoaded(true);
-        return result;
+        await loadFn();
       } finally {
+        setLoaded(true);
         setLoading(false);
       }
     },

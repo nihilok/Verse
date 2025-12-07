@@ -11,8 +11,13 @@ export function useInsightsHistory() {
 
   const loadHistory = useCallback(async () => {
     await executeLoad(async () => {
-      const history = await bibleService.getInsightsHistory(MAX_HISTORY_ITEMS);
-      setInsightsHistory(history);
+      try {
+        const history = await bibleService.getInsightsHistory(MAX_HISTORY_ITEMS);
+        setInsightsHistory(history);
+      } catch (e) {
+        console.error("Failed to load insights history:", e);
+        throw e;
+      }
     });
   }, [executeLoad]);
 
