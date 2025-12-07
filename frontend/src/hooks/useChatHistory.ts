@@ -11,8 +11,13 @@ export function useChatHistory() {
 
   const loadHistory = useCallback(async () => {
     await executeLoad(async () => {
-      const chats = await bibleService.getStandaloneChats(MAX_HISTORY_ITEMS);
-      setChatHistory(chats);
+      try {
+        const chats = await bibleService.getStandaloneChats(MAX_HISTORY_ITEMS);
+        setChatHistory(chats);
+      } catch (e) {
+        console.error("Failed to load chat history:", e);
+        throw e;
+      }
     });
   }, [executeLoad]);
 

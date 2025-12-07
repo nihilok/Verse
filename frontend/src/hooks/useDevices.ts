@@ -5,12 +5,17 @@ import { useLoadOnce } from "./useLoadOnce";
 
 export function useDevices() {
   const [devices, setDevices] = useState<UserDevice[]>([]);
-  const { executeLoad } = useLoadOnce();
+  const { loading, executeLoad } = useLoadOnce();
 
   const loadDevices = useCallback(async () => {
     await executeLoad(async () => {
-      const deviceList = await bibleService.getUserDevices();
-      setDevices(deviceList);
+      try {
+        const deviceList = await bibleService.getUserDevices();
+        setDevices(deviceList);
+      } catch (err) {
+        console.error("Failed to load devices:", err);
+        throw err;
+      }
     });
   }, [executeLoad]);
 
@@ -18,5 +23,6 @@ export function useDevices() {
     devices,
     setDevices,
     loadDevices,
+    loading,
   };
 }
