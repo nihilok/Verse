@@ -1,33 +1,25 @@
 import { useState, useCallback } from "react";
 import { bibleService } from "../services/api";
 import { StandaloneChat } from "../types";
+import { useLoadOnce } from "./useLoadOnce";
 
 const MAX_HISTORY_ITEMS = 50;
 
 export function useChatHistory() {
   const [chatHistory, setChatHistory] = useState<StandaloneChat[]>([]);
-  const [loaded, setLoaded] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const { loading, executeLoad } = useLoadOnce();
 
   const loadHistory = useCallback(async () => {
-    if (loaded) return;
-    setLoading(true);
-    try {
+    await executeLoad(async () => {
       const chats = await bibleService.getStandaloneChats(MAX_HISTORY_ITEMS);
       setChatHistory(chats);
-      setLoaded(true);
-    } catch (e) {
-      console.error("Failed to load chat history:", e);
-    } finally {
-      setLoading(false);
-    }
-  }, [loaded]);
+    });
+  }, [executeLoad]);
 
   const reloadHistory = useCallback(async () => {
     try {
       const chats = await bibleService.getStandaloneChats(MAX_HISTORY_ITEMS);
       setChatHistory(chats);
-      setLoaded(true);
     } catch (e) {
       console.error("Failed to reload chat history:", e);
     }

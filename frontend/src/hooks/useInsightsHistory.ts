@@ -1,33 +1,25 @@
 import { useState, useCallback } from "react";
 import { bibleService } from "../services/api";
 import { InsightHistory } from "../types";
+import { useLoadOnce } from "./useLoadOnce";
 
 const MAX_HISTORY_ITEMS = 50;
 
 export function useInsightsHistory() {
   const [insightsHistory, setInsightsHistory] = useState<InsightHistory[]>([]);
-  const [loaded, setLoaded] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const { loading, executeLoad } = useLoadOnce();
 
   const loadHistory = useCallback(async () => {
-    if (loaded) return;
-    setLoading(true);
-    try {
+    await executeLoad(async () => {
       const history = await bibleService.getInsightsHistory(MAX_HISTORY_ITEMS);
       setInsightsHistory(history);
-      setLoaded(true);
-    } catch (e) {
-      console.error("Failed to load insights history:", e);
-    } finally {
-      setLoading(false);
-    }
-  }, [loaded]);
+    });
+  }, [executeLoad]);
 
   const reloadHistory = useCallback(async () => {
     try {
       const history = await bibleService.getInsightsHistory(MAX_HISTORY_ITEMS);
       setInsightsHistory(history);
-      setLoaded(true);
     } catch (e) {
       console.error("Failed to reload insights history:", e);
     }
