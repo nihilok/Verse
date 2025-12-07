@@ -17,7 +17,7 @@ export function useChatHistory() {
     } catch (e) {
       console.error("Failed to load chat history:", e);
     }
-  }, [loaded]);
+  }, []);
 
   const reloadHistory = useCallback(async () => {
     try {

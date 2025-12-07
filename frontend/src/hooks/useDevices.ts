@@ -15,7 +15,7 @@ export function useDevices() {
     } catch (err) {
       console.error("Failed to load devices:", err);
     }
-  }, [loaded]);
+  }, []);
 
   return {
     devices,

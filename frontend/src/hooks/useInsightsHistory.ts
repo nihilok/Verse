@@ -17,7 +17,7 @@ export function useInsightsHistory() {
     } catch (e) {
       console.error("Failed to load insights history:", e);
     }
-  }, [loaded]);
+  }, []);
 
   const reloadHistory = useCallback(async () => {
     try {
