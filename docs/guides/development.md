@@ -147,13 +147,13 @@ uv run pytest -v
 cd frontend
 
 # Run tests
-bun test
+bun run test
 
-# Run with coverage
-bun test --coverage
+# Run tests once (CI mode)
+bun run test:unit
 
 # Run in watch mode
-bun test --watch
+bun run test
 ```
 
 ### Code Quality

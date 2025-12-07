@@ -175,7 +175,7 @@ cd frontend
 bun install               # Install dependencies (use Bun, not npm)
 bun run dev              # Start dev server
 bun run lint             # Check linting
-bun test                 # Run tests
+bun run test             # Run tests
 ```
 
 For detailed development instructions, see the [Development Guide](docs/guides/development.md).
@@ -209,7 +209,7 @@ Contributions are welcome! Please see our [Contributing Guidelines](CONTRIBUTING
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes
-4. Run tests (`pytest` for backend, `bun test` for frontend)
+4. Run tests (`pytest` for backend, `bun run test` for frontend)
 5. Commit your changes (`git commit -m 'Add amazing feature'`)
 6. Push to the branch (`git push origin feature/amazing-feature`)
 7. Open a Pull Request
