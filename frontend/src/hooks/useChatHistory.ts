@@ -7,17 +7,21 @@ const MAX_HISTORY_ITEMS = 50;
 export function useChatHistory() {
   const [chatHistory, setChatHistory] = useState<StandaloneChat[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const loadHistory = useCallback(async () => {
     if (loaded) return;
+    setLoading(true);
     try {
       const chats = await bibleService.getStandaloneChats(MAX_HISTORY_ITEMS);
       setChatHistory(chats);
       setLoaded(true);
     } catch (e) {
       console.error("Failed to load chat history:", e);
+    } finally {
+      setLoading(false);
     }
-  }, []);
+  }, [loaded]);
 
   const reloadHistory = useCallback(async () => {
     try {
@@ -44,5 +48,6 @@ export function useChatHistory() {
     loadHistory,
     reloadHistory,
     deleteChat,
+    loading,
   };
 }

@@ -7,17 +7,21 @@ const MAX_HISTORY_ITEMS = 50;
 export function useInsightsHistory() {
   const [insightsHistory, setInsightsHistory] = useState<InsightHistory[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const loadHistory = useCallback(async () => {
     if (loaded) return;
+    setLoading(true);
     try {
       const history = await bibleService.getInsightsHistory(MAX_HISTORY_ITEMS);
       setInsightsHistory(history);
       setLoaded(true);
     } catch (e) {
       console.error("Failed to load insights history:", e);
+    } finally {
+      setLoading(false);
     }
-  }, []);
+  }, [loaded]);
 
   const reloadHistory = useCallback(async () => {
     try {
@@ -46,5 +50,6 @@ export function useInsightsHistory() {
     loadHistory,
     reloadHistory,
     clearHistory,
+    loading,
   };
 }
