@@ -74,7 +74,7 @@ Sidebar → Settings Tab → Wake Lock Section
 
 ### 4. User Feedback
 When the timeout is changed:
-- **Success Message**: "Wake lock timeout updated. Reload the page for changes to take effect."
+- **Success Message**: "Wake lock timeout updated. The new setting will apply to new reading sessions."
 - **Display**: Green success notification at the top of the app
 - **Duration**: Persists until user dismisses it
 
@@ -133,7 +133,7 @@ When the timeout is changed:
 3. Click timeout dropdown
 4. Select desired timeout (or "Disabled")
 5. See success message
-6. Reload page for changes to take effect
+6. The new setting will apply to new reading sessions
 
 ### Disabling Feature
 1. Navigate to Settings → Wake Lock

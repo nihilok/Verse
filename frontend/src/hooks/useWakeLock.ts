@@ -86,6 +86,11 @@ export function useWakeLock(options: UseWakeLockOptions = {}) {
    * This should be called on user activity (scroll, page turn, etc.)
    */
   const refreshWakeLock = useCallback(async () => {
+    // Don't activate wake lock if disabled
+    if (timeout === 0) {
+      return;
+    }
+
     // Clear existing timeout
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
@@ -105,7 +110,11 @@ export function useWakeLock(options: UseWakeLockOptions = {}) {
    */
   useEffect(() => {
     const handleVisibilityChange = async () => {
-      if (document.visibilityState === "visible" && wakeLockRef.current?.released) {
+      if (
+        timeout > 0 &&
+        document.visibilityState === "visible" &&
+        wakeLockRef.current?.released
+      ) {
         // Reacquire wake lock if it was released due to visibility change
         await refreshWakeLock();
       }
@@ -116,7 +125,7 @@ export function useWakeLock(options: UseWakeLockOptions = {}) {
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [refreshWakeLock]);
+  }, [refreshWakeLock, timeout]);
 
   /**
    * Clean up on unmount
