@@ -5,6 +5,7 @@
 const STORAGE_KEYS = {
   PASSAGE_SEARCH: "verse_passage_search",
   LAST_PASSAGE: "verse_last_passage",
+  WAKE_LOCK_TIMEOUT: "verse_wake_lock_timeout",
 } as const;
 
 /**
@@ -82,5 +83,19 @@ export function loadLastPassage(): LastPassageState | null {
   return getStorageItem<LastPassageState | null>(
     STORAGE_KEYS.LAST_PASSAGE,
     null,
+  );
+}
+
+// Wake lock timeout persistence (in minutes)
+const DEFAULT_WAKE_LOCK_TIMEOUT_MINUTES = 5;
+
+export function saveWakeLockTimeout(timeoutMinutes: number): void {
+  setStorageItem(STORAGE_KEYS.WAKE_LOCK_TIMEOUT, timeoutMinutes);
+}
+
+export function loadWakeLockTimeout(): number {
+  return getStorageItem<number>(
+    STORAGE_KEYS.WAKE_LOCK_TIMEOUT,
+    DEFAULT_WAKE_LOCK_TIMEOUT_MINUTES,
   );
 }
