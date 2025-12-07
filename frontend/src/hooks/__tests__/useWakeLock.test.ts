@@ -8,14 +8,14 @@ import { useWakeLock } from "../useWakeLock";
 // Mock wake lock API
 class MockWakeLockSentinel {
   released = false;
-  type: "screen" = "screen";
+  type = "screen" as const;
   private releaseHandler: (() => void) | null = null;
 
   addEventListener(_event: string, handler: () => void) {
     this.releaseHandler = handler;
   }
 
-  removeEventListener(_event: string, _handler: () => void) {
+  removeEventListener() {
     this.releaseHandler = null;
   }
 
