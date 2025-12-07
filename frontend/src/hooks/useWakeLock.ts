@@ -30,14 +30,15 @@ export function useWakeLock(options: UseWakeLockOptions = {}) {
       return false;
     }
 
-    // Don't request if already requesting
+    // Don't request if already requesting - use a more robust check
     if (isRequestingRef.current) {
       return false;
     }
 
-    try {
-      isRequestingRef.current = true;
+    // Set flag immediately to prevent race conditions
+    isRequestingRef.current = true;
 
+    try {
       // Release existing wake lock if any
       if (wakeLockRef.current) {
         await wakeLockRef.current.release();

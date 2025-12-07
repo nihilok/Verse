@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect, type ChangeEvent } from "react";
 import {
   Download,
   Upload,
@@ -47,12 +47,14 @@ export default function UserSettings({
   }, []);
 
   const handleWakeLockTimeoutChange = (
-    e: React.ChangeEvent<HTMLSelectElement>,
+    e: ChangeEvent<HTMLSelectElement>,
   ) => {
     const newTimeout = parseInt(e.target.value);
     setWakeLockTimeout(newTimeout);
     saveWakeLockTimeout(newTimeout);
-    onSuccess("Wake lock timeout updated. Reload the page for changes to take effect.");
+    onSuccess(
+      "Wake lock timeout updated. The new setting will apply to new reading sessions.",
+    );
   };
 
   const handleClearData = async () => {

@@ -69,10 +69,11 @@ const BibleReader: React.FC<BibleReaderProps> = ({
     null,
   );
 
-  // Wake lock - get timeout from localStorage (in minutes) and convert to milliseconds
-  const wakeLockTimeoutMinutes = loadWakeLockTimeout();
-  const wakeLockTimeoutMs =
-    wakeLockTimeoutMinutes > 0 ? wakeLockTimeoutMinutes * 60 * 1000 : 0;
+  // Wake lock - load timeout from localStorage only once on mount
+  const wakeLockTimeoutMs = useMemo(() => {
+    const timeoutMinutes = loadWakeLockTimeout();
+    return timeoutMinutes > 0 ? timeoutMinutes * 60 * 1000 : 0;
+  }, []);
   const { refreshWakeLock } = useWakeLock({
     timeout: wakeLockTimeoutMs,
   });
