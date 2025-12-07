@@ -361,7 +361,7 @@ Strict CORS policy:
 3. Update `BibleService` to use new client
 4. No frontend changes needed
 
-See [Backend Development Guide](guides/backend-development.md) for details.
+See the [Contributing Guidelines](../../CONTRIBUTING.md) for code examples.
 
 ### Adding a New AI Provider
 
