@@ -1,2 +1,0 @@
-psql() docker compose exec db psql -U verse_user -d verse_db "$@"
-psql-prod() docker compose -f docker-compose.prod.yml exec db psql -U verse_user -d verse_db "$@"
