@@ -400,7 +400,7 @@ Docker Compose:
 
 ## Related Documentation
 
-- [Backend Architecture Details](architecture/backend.md)
-- [Frontend Architecture Details](architecture/frontend.md)
-- [Security Features](architecture/security.md)
-- [Database Schema](reference/database.md)
+- [Security Features](security.md)
+- [RAG System](rag.md) - Retrieval-Augmented Generation for conversation memory
+- [Prompt Philosophy](prompt-philosophy.md) - AI prompt design principles
+- [Database Schema](../reference/database.md)
