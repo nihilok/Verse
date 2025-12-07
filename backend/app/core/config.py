@@ -32,9 +32,7 @@ class Settings(BaseSettings):
         """Cookies are secure in production, insecure in development."""
         return self.environment == "production"
 
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
+    model_config = {"env_file": ".env", "case_sensitive": False}
 
 
 @lru_cache
