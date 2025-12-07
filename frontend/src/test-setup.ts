@@ -31,6 +31,7 @@ if (typeof PointerEvent === "undefined") {
       this.pointerType = props.pointerType || "mouse";
     }
   }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (globalThis as any).PointerEvent = MockPointerEvent;
+  
+  // Type-safe global assignment
+  globalThis.PointerEvent = MockPointerEvent as typeof PointerEvent;
 }

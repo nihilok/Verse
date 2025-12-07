@@ -216,7 +216,9 @@ describe("useWakeLock", () => {
 
   it("should handle unsupported Wake Lock API gracefully", async () => {
     // Remove wake lock support by deleting the property
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // Note: We need to delete the property to ensure "wakeLock" in navigator returns false
+    // Setting it to undefined still keeps the property, which would make the check return true
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-dynamic-delete
     delete (navigator as any).wakeLock;
 
     const { result } = renderHook(() => useWakeLock());
