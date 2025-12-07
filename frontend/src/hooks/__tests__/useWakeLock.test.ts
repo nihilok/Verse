@@ -249,4 +249,51 @@ describe("useWakeLock", () => {
 
     expect(mockWakeLockRequest).toHaveBeenCalled();
   });
+
+  it("should not request wake lock when timeout is 0 (disabled)", async () => {
+    const { result } = renderHook(() => useWakeLock({ timeout: 0 }));
+
+    // Try to refresh wake lock
+    await act(async () => {
+      await result.current.refreshWakeLock();
+    });
+
+    // Should not have requested wake lock
+    expect(mockWakeLockRequest).not.toHaveBeenCalled();
+  });
+
+  it("should not reacquire wake lock on visibility change when timeout is 0", async () => {
+    renderHook(() => useWakeLock({ timeout: 0 }));
+
+    mockWakeLockRequest.mockImplementation(async () => {
+      return new MockWakeLockSentinel();
+    });
+
+    // Simulate visibility change to hidden then visible
+    await act(async () => {
+      Object.defineProperty(document, "visibilityState", {
+        value: "hidden",
+        writable: true,
+        configurable: true,
+      });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    await act(async () => {
+      Object.defineProperty(document, "visibilityState", {
+        value: "visible",
+        writable: true,
+        configurable: true,
+      });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    // Wait for any async operations
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    // Should not have requested wake lock when disabled (timeout is 0)
+    expect(mockWakeLockRequest).not.toHaveBeenCalled();
+  });
 });
