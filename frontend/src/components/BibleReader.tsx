@@ -7,6 +7,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import SelectionButtons from "./SelectionButtons";
 import TranslationDropdown from "./TranslationDropdown";
 import { isVerseHighlighted } from "@/lib/urlParser";
+import { useWakeLock } from "@/hooks/useWakeLock";
+import { loadWakeLockTimeout } from "@/lib/storage";
 
 // Selection timing constants
 const SELECTION_CHANGE_DELAY = 100; // ms to wait after selection change before capturing
@@ -66,6 +68,14 @@ const BibleReader: React.FC<BibleReaderProps> = ({
   const [touchEnd, setTouchEnd] = useState<{ x: number; y: number } | null>(
     null,
   );
+
+  // Wake lock - get timeout from localStorage (in minutes) and convert to milliseconds
+  const wakeLockTimeoutMinutes = loadWakeLockTimeout();
+  const wakeLockTimeoutMs =
+    wakeLockTimeoutMinutes > 0 ? wakeLockTimeoutMinutes * 60 * 1000 : 0;
+  const { refreshWakeLock } = useWakeLock({
+    timeout: wakeLockTimeoutMs,
+  });
 
   useEffect(() => {
     let selectionTimeout: ReturnType<typeof setTimeout>;
@@ -166,6 +176,38 @@ const BibleReader: React.FC<BibleReaderProps> = ({
 
     return () => clearTimeout(scrollTimeout);
   }, [passage, highlightVerseStart, loading]);
+
+  // Wake lock: refresh on scroll events
+  useEffect(() => {
+    const contentElement = contentRef.current;
+    if (!contentElement || wakeLockTimeoutMs === 0) {
+      return;
+    }
+
+    let scrollTimeout: ReturnType<typeof setTimeout>;
+
+    const handleScroll = () => {
+      // Debounce scroll events to avoid excessive wake lock requests
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        refreshWakeLock();
+      }, 300);
+    };
+
+    contentElement.addEventListener("scroll", handleScroll);
+
+    return () => {
+      clearTimeout(scrollTimeout);
+      contentElement.removeEventListener("scroll", handleScroll);
+    };
+  }, [refreshWakeLock, wakeLockTimeoutMs]);
+
+  // Wake lock: refresh on page load and navigation
+  useEffect(() => {
+    if (passage && !loading && wakeLockTimeoutMs > 0) {
+      refreshWakeLock();
+    }
+  }, [passage, loading, refreshWakeLock, wakeLockTimeoutMs]);
 
   // Helper function to check if text is a single word
   const isSingleWord = (text: string): boolean => {

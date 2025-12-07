@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Download,
   Upload,
@@ -7,10 +7,12 @@ import {
   Link2,
   Copy,
   Check,
+  Moon,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { bibleService } from "../services/api";
 import type { UserSession } from "../types";
+import { loadWakeLockTimeout, saveWakeLockTimeout } from "../lib/storage";
 
 interface UserSettingsProps {
   onError: (message: string) => void;
@@ -26,6 +28,7 @@ export default function UserSettings({
   const [loading, setLoading] = useState(false);
   const [userSession, setUserSession] = useState<UserSession | null>(null);
   const [copied, setCopied] = useState(false);
+  const [wakeLockTimeout, setWakeLockTimeout] = useState<number>(5);
 
   useEffect(() => {
     const loadSession = async () => {
@@ -37,7 +40,20 @@ export default function UserSettings({
       }
     };
     loadSession();
+
+    // Load wake lock timeout from localStorage
+    const savedTimeout = loadWakeLockTimeout();
+    setWakeLockTimeout(savedTimeout);
   }, []);
+
+  const handleWakeLockTimeoutChange = (
+    e: React.ChangeEvent<HTMLSelectElement>,
+  ) => {
+    const newTimeout = parseInt(e.target.value);
+    setWakeLockTimeout(newTimeout);
+    saveWakeLockTimeout(newTimeout);
+    onSuccess("Wake lock timeout updated. Reload the page for changes to take effect.");
+  };
 
   const handleClearData = async () => {
     if (
@@ -183,6 +199,40 @@ export default function UserSettings({
           </div>
         </div>
       )}
+
+      {/* Wake Lock Settings */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-medium flex items-center gap-2">
+          <Moon className="h-4 w-4" />
+          Wake Lock
+        </h3>
+        <p className="text-xs text-muted-foreground">
+          Keep your device awake while reading. The wake lock will automatically
+          release after the specified timeout period of inactivity.
+        </p>
+        <div className="flex items-center gap-2">
+          <label
+            htmlFor="wake-lock-timeout"
+            className="text-xs text-muted-foreground"
+          >
+            Timeout:
+          </label>
+          <select
+            id="wake-lock-timeout"
+            value={wakeLockTimeout}
+            onChange={handleWakeLockTimeoutChange}
+            className="flex h-8 rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          >
+            <option value="1">1 minute</option>
+            <option value="2">2 minutes</option>
+            <option value="5">5 minutes</option>
+            <option value="10">10 minutes</option>
+            <option value="15">15 minutes</option>
+            <option value="30">30 minutes</option>
+            <option value="0">Disabled</option>
+          </select>
+        </div>
+      </div>
 
       <div className="space-y-2">
         <h3 className="text-sm font-medium">Data Management</h3>
