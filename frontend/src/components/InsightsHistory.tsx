@@ -1,19 +1,33 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { History, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { InsightHistory } from "../types";
+import { useInsightsHistory } from "../hooks/useInsightsHistory";
 
 interface InsightsHistoryProps {
-  history: InsightHistory[];
   onSelect: (item: InsightHistory) => void;
-  onClear: () => void;
+  onError?: (msg: string) => void;
 }
 
 const InsightsHistoryComponent: React.FC<InsightsHistoryProps> = ({
-  history,
   onSelect,
-  onClear,
+  onError,
 }) => {
+  const { insightsHistory, loadHistory, clearHistory } = useInsightsHistory();
+
+  useEffect(() => {
+    loadHistory();
+  }, [loadHistory]);
+
+  const handleClear = async () => {
+    try {
+      await clearHistory();
+    } catch {
+      onError?.("Failed to clear history. Please try again.");
+    }
+  };
+
+  const history = insightsHistory;
   if (history.length === 0) {
     return (
       <div className="text-center text-muted-foreground py-8">
@@ -33,7 +47,7 @@ const InsightsHistoryComponent: React.FC<InsightsHistoryProps> = ({
         <Button
           variant="ghost"
           size="sm"
-          onClick={onClear}
+          onClick={handleClear}
           className="text-destructive"
         >
           <Trash2 size={16} />

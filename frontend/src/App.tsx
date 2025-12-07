@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
 import {
   motion,
   AnimatePresence,
@@ -30,17 +29,6 @@ import InstallPrompt from "./components/InstallPrompt";
 import UpdatePrompt from "./components/UpdatePrompt";
 import LoadingOverlay from "./components/LoadingOverlay";
 import { ModeToggle } from "./components/mode-toggle";
-import { bibleService } from "./services/api";
-import {
-  BiblePassage,
-  Insight,
-  Definition,
-  InsightHistory,
-  ChatMessage,
-  StandaloneChat,
-  StandaloneChatMessage,
-  UserDevice,
-} from "./types";
 import {
   Sidebar,
   SidebarHeader,
@@ -48,19 +36,14 @@ import {
 } from "./components/ui/sidebar";
 import { Button } from "./components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
-import { loadLastPassage, saveLastPassage } from "./lib/storage";
-import { BIBLE_BOOKS, getBookIndex } from "./lib/bibleStructure";
-import { parsePassageFromURL, generatePassageURL } from "./lib/urlParser";
+import { InsightHistory, StandaloneChat } from "./types";
+import { useBiblePassage } from "./hooks/useBiblePassage";
+import { useInsightGeneration } from "./hooks/useInsightGeneration";
+import { useStandaloneChat } from "./hooks/useStandaloneChat";
+import { useInsightChat } from "./hooks/useInsightChat";
+import { useDevices } from "./hooks/useDevices";
 import "./App.css";
 
-// Maximum number of insights to keep in history
-const MAX_HISTORY_ITEMS = 50;
-
-/**
- * Helper function to extract error message from usage limit errors (429 status).
- * @param err - The error object from axios
- * @returns User-friendly error message
- */
 function getUsageLimitErrorMessage(err: unknown): string | null {
   if (
     err &&
@@ -90,90 +73,28 @@ function getUsageLimitErrorMessage(err: unknown): string | null {
 }
 
 function App() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [passage, setPassage] = useState<BiblePassage | null>(null);
-  const [insight, setInsight] = useState<Insight | null>(null);
-  const [definition, setDefinition] = useState<Definition | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [insightLoading, setInsightLoading] = useState(false);
-  const [definitionLoading, setDefinitionLoading] = useState(false);
-  const [selectedText, setSelectedText] = useState("");
-  const [selectedReference, setSelectedReference] = useState("");
-  const [selectedPassageParams, setSelectedPassageParams] = useState<{
-    book: string;
-    chapter: number;
-    verseStart?: number;
-    verseEnd?: number;
-    translation?: string;
-  } | null>(null);
-  const [selectedWord, setSelectedWord] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [currentBook, setCurrentBook] = useState("John");
-  const [currentChapter, setCurrentChapter] = useState(3);
-  const [currentTranslation, setCurrentTranslation] = useState("WEB");
-  const [highlightVerseStart, setHighlightVerseStart] = useState<
-    number | undefined
-  >(undefined);
-  const [highlightVerseEnd, setHighlightVerseEnd] = useState<
-    number | undefined
-  >(undefined);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarFullyHidden, setSidebarFullyHidden] = useState(false);
   const [insightsModalOpen, setInsightsModalOpen] = useState(false);
   const [definitionModalOpen, setDefinitionModalOpen] = useState(false);
-  const [insightsHistory, setInsightsHistory] = useState<InsightHistory[]>([]);
-  const [currentInsightId, setCurrentInsightId] = useState<number | null>(null);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [chatLoading, setChatLoading] = useState(false);
-  const [chatStreamingMessage, setChatStreamingMessage] = useState<string>("");
-
-  // Standalone chat state
-  const [chatHistory, setChatHistory] = useState<StandaloneChat[]>([]);
-  const [currentChatId, setCurrentChatId] = useState<number | null>(null);
-  const [currentChatPassage, setCurrentChatPassage] = useState<{
-    text: string;
-    reference: string;
-    params?: {
-      book: string;
-      chapter: number;
-      verseStart?: number;
-      verseEnd?: number;
-      translation?: string;
-    };
-  } | null>(null);
-  const [standaloneChatMessages, setStandaloneChatMessages] = useState<
-    StandaloneChatMessage[]
-  >([]);
-  const [standaloneChatLoading, setStandaloneChatLoading] = useState(false);
-  const [standaloneChatStreamingMessage, setStandaloneChatStreamingMessage] =
-    useState<string>("");
   const [chatModalOpen, setChatModalOpen] = useState(false);
   const [insightChatModalOpen, setInsightChatModalOpen] = useState(false);
-  const [pendingChatPassage, setPendingChatPassage] = useState<{
-    text: string;
-    reference: string;
-    params?: {
-      book: string;
-      chapter: number;
-      verseStart?: number;
-      verseEnd?: number;
-      translation?: string;
-    };
-  } | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-
-  // Device linking state
   const [deviceLinkModalOpen, setDeviceLinkModalOpen] = useState(false);
-  const [linkedDevices, setLinkedDevices] = useState<UserDevice[]>([]);
-
-  // Check if we're on desktop (lg breakpoint)
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
+
+  // Custom hooks
+  const biblePassage = useBiblePassage();
+  const insightGen = useInsightGeneration();
+  const standaloneChat = useStandaloneChat();
+  const insightChat = useInsightChat();
+  const { devices, setDevices, loadDevices } = useDevices();
 
   useEffect(() => {
     const handleResize = () => {
       const desktop = window.innerWidth >= 1024;
       setIsDesktop(desktop);
-      // Keep sidebar open on desktop
       if (desktop) {
         setSidebarOpen(true);
       }
@@ -183,77 +104,17 @@ function App() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Track sidebar x position for precise visibility control
   const sidebarX = useMotionValue(0);
 
-  // Update button visibility based on sidebar position
   useMotionValueEvent(sidebarX, "change", (latest) => {
-    // Button appears when sidebar is at -320 (fully hidden) or beyond
     setSidebarFullyHidden(latest <= -320);
   });
 
-  // Load insights history and chat history from backend on mount
   useEffect(() => {
-    const loadHistory = async () => {
-      try {
-        const history =
-          await bibleService.getInsightsHistory(MAX_HISTORY_ITEMS);
-        setInsightsHistory(history);
-
-        const chats = await bibleService.getStandaloneChats(MAX_HISTORY_ITEMS);
-        setChatHistory(chats);
-      } catch (e) {
-        console.error("Failed to load history:", e);
-      }
-    };
-    loadHistory();
-  }, []);
-
-  // Watch for URL parameter changes
-  useEffect(() => {
-    const urlParams = parsePassageFromURL(searchParams);
-    if (urlParams) {
-      handleSearch(
-        urlParams.book,
-        urlParams.chapter,
-        urlParams.verseStart,
-        urlParams.verseEnd,
-        urlParams.translation || "WEB",
-      );
-    }
-  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Load last passage only on mount (if no URL params)
-  useEffect(() => {
-    const urlParams = parsePassageFromURL(searchParams);
-    if (!urlParams) {
-      const lastPassage = loadLastPassage();
-      if (lastPassage) {
-        // Auto-load the last passage the user was viewing
-        handleSearch(
-          lastPassage.book,
-          lastPassage.chapter,
-          lastPassage.verse_start,
-          lastPassage.verse_end,
-          lastPassage.translation,
-        );
-      }
+    if (!biblePassage.loadFromURL()) {
+      biblePassage.loadLastViewedPassage();
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Load linked devices on mount
-  useEffect(() => {
-    const loadDevices = async () => {
-      try {
-        const devices = await bibleService.getUserDevices();
-        setLinkedDevices(devices);
-      } catch (err) {
-        // Silent fail - devices endpoint might not exist yet
-        console.error("Failed to load devices:", err);
-      }
-    };
-    loadDevices();
-  }, []);
 
   const handleSearch = async (
     book: string,
@@ -262,43 +123,15 @@ function App() {
     verseEnd?: number,
     translation: string = "WEB",
   ) => {
-    setLoading(true);
     setError(null);
-    setCurrentBook(book);
-    setCurrentChapter(chapter);
-    setCurrentTranslation(translation);
-
-    // Set highlighting for specific verses
-    setHighlightVerseStart(verseStart);
-    setHighlightVerseEnd(verseEnd);
-
-    // Update URL parameters
-    const newUrl = generatePassageURL({
-      book,
-      chapter,
-      verseStart,
-      verseEnd,
-      translation,
-    });
-    setSearchParams(newUrl.slice(1));
-
     try {
-      let result: BiblePassage;
-      // Always load full chapter for better reading experience
-      // but highlight the specific verses if provided
-      result = await bibleService.getChapter(book, chapter, translation);
-      setPassage(result);
-
-      // Save the current passage to localStorage for persistence
-      saveLastPassage({
+      await biblePassage.handleSearch(
         book,
         chapter,
-        verse_start: verseStart,
-        verse_end: verseEnd,
+        verseStart,
+        verseEnd,
         translation,
-      });
-
-      // Close sidebar on mobile after successfully loading passage
+      );
       if (!isDesktop) {
         setSidebarOpen(false);
       }
@@ -307,64 +140,7 @@ function App() {
         "Failed to load passage. Please check your input and try again.",
       );
       console.error("Error loading passage:", err);
-    } finally {
-      setLoading(false);
     }
-  };
-
-  const handleNavigate = async (direction: "prev" | "next") => {
-    const bookIdx = getBookIndex(currentBook);
-    if (bookIdx === -1) return;
-    const currentBookInfo = BIBLE_BOOKS[bookIdx];
-    let newBook = currentBook;
-    let newChapter = currentChapter;
-
-    if (direction === "next") {
-      if (currentChapter < currentBookInfo.chapters) {
-        newChapter = currentChapter + 1;
-      } else if (bookIdx < BIBLE_BOOKS.length - 1) {
-        // Move to first chapter of next book
-        newBook = BIBLE_BOOKS[bookIdx + 1].name;
-        newChapter = 1;
-      } else {
-        // At last chapter of last book, do nothing or loop (optional)
-        return;
-      }
-    } else if (direction === "prev") {
-      if (currentChapter > 1) {
-        newChapter = currentChapter - 1;
-      } else if (bookIdx > 0) {
-        // Move to last chapter of previous book
-        newBook = BIBLE_BOOKS[bookIdx - 1].name;
-        newChapter = BIBLE_BOOKS[bookIdx - 1].chapters;
-      } else {
-        // At first chapter of first book, do nothing or loop (optional)
-        return;
-      }
-    }
-
-    await handleSearch(
-      newBook,
-      newChapter,
-      undefined,
-      undefined,
-      currentTranslation,
-    );
-  };
-
-  const handleTranslationChange = async (newTranslation: string) => {
-    // Reload the current passage with the new translation
-    await handleSearch(
-      currentBook,
-      currentChapter,
-      highlightVerseStart,
-      highlightVerseEnd,
-      newTranslation,
-    );
-  };
-
-  const normaliseWhitespace = (text: string) => {
-    return text.replace(/\s+/g, " ").trim();
   };
 
   const handleTextSelected = async (
@@ -372,136 +148,56 @@ function App() {
     reference: string,
     isSingleWord: boolean,
     verseText?: string,
-    verseStart?: number,
-    verseEnd?: number,
   ) => {
-    // Strip whitespace from text for consistent caching
-    const normalizedText = text.trim();
-
     if (isSingleWord && !verseText) {
       setError(
         "Unable to find the verse containing this word. Please try selecting the full verse.",
       );
       return;
     }
-    if (isSingleWord && verseText) {
-      // Handle single word definition
-      setDefinitionLoading(true);
-      setSelectedWord(normalizedText);
-      setSelectedReference(reference);
-      setError(null);
 
-      try {
-        const result = await bibleService.getDefinition(
-          normalizedText,
-          verseText,
-          reference,
-        );
-        setDefinition(result);
+    setError(null);
+
+    try {
+      if (isSingleWord && verseText) {
+        await insightGen.generateDefinition(text, verseText, reference);
         setDefinitionModalOpen(true);
-      } catch (err) {
-        const usageLimitError = getUsageLimitErrorMessage(err);
-        if (usageLimitError) {
-          setError(usageLimitError);
-        } else {
-          setError("Failed to generate definition. Please try again.");
-        }
-        console.error("Error generating definition:", err);
-      } finally {
-        setDefinitionLoading(false);
-      }
-    } else {
-      // Handle multi-word insight
-      setInsightLoading(true);
-      setSelectedText(normalizedText);
-      setSelectedReference(reference);
-      setSelectedPassageParams({
-        book: currentBook,
-        chapter: currentChapter,
-        verseStart: verseStart || highlightVerseStart,
-        verseEnd: verseEnd || highlightVerseEnd,
-        translation: currentTranslation,
-      });
-      setError(null);
-
-      try {
-        const result = await bibleService.getInsights(
-          normalizedText,
-          reference,
-        );
-        setInsight(result);
+      } else {
+        await insightGen.generateInsight(text, reference);
         setInsightsModalOpen(true);
-
-        // Reload history from backend to get the latest insights
-        try {
-          const history =
-            await bibleService.getInsightsHistory(MAX_HISTORY_ITEMS);
-          setInsightsHistory(history);
-
-          // Get the insight ID from the history (it should be the most recent one)
-          const matchingInsight = history.find(
-            (item) =>
-              normaliseWhitespace(item.text) ===
-                normaliseWhitespace(normalizedText) &&
-              item.reference === reference,
-          );
-          if (matchingInsight) {
-            const insightId = parseInt(matchingInsight.id);
-            setCurrentInsightId(insightId);
-
-            // Load chat messages for this insight
-            const messages = await bibleService.getChatMessages(insightId);
-            setChatMessages(messages);
-          } else {
-            setCurrentInsightId(null);
-            setChatMessages([]);
-          }
-        } catch (historyErr) {
-          console.error("Failed to reload insights history:", historyErr);
-        }
-      } catch (err) {
-        const usageLimitError = getUsageLimitErrorMessage(err);
-        if (usageLimitError) {
-          setError(usageLimitError);
+        if (insightGen.currentInsightId) {
+          await insightChat.loadMessages(insightGen.currentInsightId);
         } else {
-          setError("Failed to generate insights. Please try again.");
+          setError(
+            "Failed to load insight messages. Insight ID was not set. Please try again."
+          );
+          console.error("Insight ID is null after generateInsight");
         }
-        console.error("Error generating insights:", err);
-      } finally {
-        setInsightLoading(false);
       }
+    } catch (err) {
+      const usageLimitError = getUsageLimitErrorMessage(err);
+      if (usageLimitError) {
+        setError(usageLimitError);
+      } else {
+        setError(
+          isSingleWord
+            ? "Failed to generate definition. Please try again."
+            : "Failed to generate insights. Please try again.",
+        );
+      }
+      console.error("Error generating content:", err);
     }
   };
 
   const handleHistorySelect = async (item: InsightHistory) => {
-    setInsight(item.insight);
-    setSelectedText(item.text);
-    setSelectedReference(item.reference);
-    const insightId = parseInt(item.id);
-    setCurrentInsightId(insightId);
-
-    // Load chat messages for this insight
-    try {
-      const messages = await bibleService.getChatMessages(insightId);
-      setChatMessages(messages);
-    } catch (err) {
-      console.error("Failed to load chat messages:", err);
-      setChatMessages([]);
-    }
-
+    await insightGen.loadInsightFromHistory(
+      parseInt(item.id),
+      item.text,
+      item.reference,
+      item.insight,
+    );
+    await insightChat.loadMessages(parseInt(item.id));
     setInsightsModalOpen(true);
-  };
-
-  const handleClearHistory = async () => {
-    if (confirm("Are you sure you want to clear all insights history?")) {
-      try {
-        await bibleService.clearInsightsHistory();
-        setInsightsHistory([]);
-      } catch (err) {
-        console.error("Failed to clear insights history:", err);
-        setError("Failed to clear history. Please try again.");
-      }
-    }
   };
 
   const handleAskQuestion = (
@@ -510,254 +206,84 @@ function App() {
     verseStart?: number,
     verseEnd?: number,
   ) => {
-    // Reconstruct reference with verse numbers from selection or current context
-    const start = verseStart || highlightVerseStart;
-    const end = verseEnd || highlightVerseEnd;
+    const start = verseStart || biblePassage.highlightVerseStart;
+    const end = verseEnd || biblePassage.highlightVerseEnd;
 
-    let fullReference = `${currentBook} ${currentChapter}`;
+    let fullReference = `${biblePassage.currentBook} ${biblePassage.currentChapter}`;
     if (start && end && start !== end) {
       fullReference += `:${start}-${end}`;
     } else if (start) {
       fullReference += `:${start}`;
     }
-    if (currentTranslation) {
-      fullReference += ` (${currentTranslation})`;
+    if (biblePassage.currentTranslation) {
+      fullReference += ` (${biblePassage.currentTranslation})`;
     }
 
-    // Store passage info and open chat modal without creating the chat yet
-    const passageInfo = {
-      text,
-      reference: fullReference,
-      params: {
-        book: currentBook,
-        chapter: currentChapter,
-        verseStart: start,
-        verseEnd: end,
-        translation: currentTranslation,
-      },
-    };
-    setPendingChatPassage(passageInfo);
-    setCurrentChatPassage(passageInfo);
-    setCurrentChatId(null);
-    setStandaloneChatMessages([]);
+    standaloneChat.startNewChat(text, fullReference, {
+      book: biblePassage.currentBook,
+      chapter: biblePassage.currentChapter,
+      verseStart: start,
+      verseEnd: end,
+      translation: biblePassage.currentTranslation,
+    });
     setChatModalOpen(true);
   };
 
   const handleChatHistorySelect = async (chat: StandaloneChat) => {
     try {
-      const messages = await bibleService.getStandaloneChatMessages(chat.id);
-      setCurrentChatId(chat.id);
-      setStandaloneChatMessages(messages);
-      setPendingChatPassage(null); // Clear any pending passage
-      // Set passage from the chat object
-      if (chat.passage_text && chat.passage_reference) {
-        // Try to parse reference to extract params (for old chats)
-        // Format: "Book Chapter:VerseStart-VerseEnd (Translation)" or variations
-        // Supports multi-word book names like "1 John", "Song of Solomon", etc.
-        const refMatch = chat.passage_reference.match(
-          /^(.+)\s+(\d+)(?::(\d+)(?:-(\d+))?)?\s*(?:\(([^)]+)\))?$/,
-        );
-
-        let params = undefined;
-        if (refMatch) {
-          const [, book, chapter, verseStart, verseEnd, translation] = refMatch;
-          params = {
-            book: book.trim(),
-            chapter: parseInt(chapter),
-            verseStart: verseStart ? parseInt(verseStart) : undefined,
-            verseEnd: verseEnd ? parseInt(verseEnd) : undefined,
-            translation: translation || undefined,
-          };
-        }
-
-        setCurrentChatPassage({
-          text: chat.passage_text,
-          reference: chat.passage_reference,
-          params,
-        });
-      } else {
-        setCurrentChatPassage(null);
-      }
+      await standaloneChat.loadExistingChat(
+        chat.id,
+        chat.passage_text || "",
+        chat.passage_reference || "",
+      );
       setChatModalOpen(true);
+      if (!isDesktop) {
+        setSidebarOpen(false);
+      }
     } catch (err) {
       console.error("Failed to load chat messages:", err);
       setError("Failed to load chat. Please try again.");
     }
-
-    // Close sidebar on mobile after selecting chat
-    if (!isDesktop) {
-      setSidebarOpen(false);
-    }
   };
 
   const handleSendStandaloneChatMessage = async (message: string) => {
-    // Create a temporary optimistic message
-    const tempId = -Date.now();
-    const tempMessage: StandaloneChatMessage = {
-      id: tempId,
-      role: "user",
-      content: message,
-      timestamp: Date.now(),
-    };
-
-    // Optimistically add the user's message
-    setStandaloneChatMessages((prev) => [...prev, tempMessage]);
-    setStandaloneChatLoading(true);
-    setStandaloneChatStreamingMessage("");
-
     try {
-      // If no chat exists yet, create it with the first message (now with streaming!)
-      if (!currentChatId) {
-        // Construct full reference including verse numbers if available
-        let fullReference = pendingChatPassage?.reference;
-        if (pendingChatPassage?.params) {
-          const { book, chapter, verseStart, verseEnd, translation } =
-            pendingChatPassage.params;
-          fullReference = `${book} ${chapter}`;
-          if (verseStart && verseEnd && verseStart !== verseEnd) {
-            fullReference += `:${verseStart}-${verseEnd}`;
-          } else if (verseStart) {
-            fullReference += `:${verseStart}`;
-          }
-          if (translation) {
-            fullReference += ` (${translation})`;
-          }
-        }
-
-        const chatId = await bibleService.createStandaloneChat(
-          message,
-          (token: string) => {
-            // Accumulate tokens as they arrive
-            setStandaloneChatStreamingMessage((prev) => prev + token);
-          },
-          pendingChatPassage?.text,
-          fullReference,
-        );
-
-        setCurrentChatId(chatId);
-        setPendingChatPassage(null); // Clear pending passage flag after creating chat
-        // Note: currentChatPassage is kept so the passage stays visible
-
-        // After successful send, reload authoritative messages from server
-        const messages = await bibleService.getStandaloneChatMessages(chatId);
-        setStandaloneChatMessages(messages);
-        setStandaloneChatStreamingMessage("");
-
-        // Reload chat history
-        const chats = await bibleService.getStandaloneChats(MAX_HISTORY_ITEMS);
-        setChatHistory(chats);
-      } else {
-        // Send message to existing chat with streaming
-        await bibleService.sendStandaloneChatMessage(
-          currentChatId,
-          message,
-          (token: string) => {
-            // Accumulate tokens as they arrive
-            setStandaloneChatStreamingMessage((prev) => prev + token);
-          },
-        );
-
-        // After successful send, reload authoritative messages from server
-        const messages =
-          await bibleService.getStandaloneChatMessages(currentChatId);
-        setStandaloneChatMessages(messages);
-        setStandaloneChatStreamingMessage("");
-
-        // Update chat history to reflect new message
-        const chats = await bibleService.getStandaloneChats(MAX_HISTORY_ITEMS);
-        setChatHistory(chats);
-      }
+      await standaloneChat.sendMessage(message);
     } catch (err) {
       console.error("Failed to send chat message:", err);
-
       const usageLimitError = getUsageLimitErrorMessage(err);
       if (usageLimitError) {
         setError(usageLimitError);
       } else {
         setError("Failed to send message. Please try again.");
       }
-
-      // Remove the optimistic temp message on failure
-      setStandaloneChatMessages((prev) => prev.filter((m) => m.id !== tempId));
-      setStandaloneChatStreamingMessage("");
-    } finally {
-      setStandaloneChatLoading(false);
-    }
-  };
-
-  const handleDeleteChat = async (chatId: number) => {
-    try {
-      await bibleService.deleteStandaloneChat(chatId);
-      setChatHistory((prev) => prev.filter((c) => c.id !== chatId));
-
-      // Close modal if the deleted chat is currently open
-      if (currentChatId === chatId) {
-        setChatModalOpen(false);
-        setCurrentChatId(null);
-        setStandaloneChatMessages([]);
-      }
-    } catch (err) {
-      console.error("Failed to delete chat:", err);
-      setError("Failed to delete chat. Please try again.");
     }
   };
 
   const handleContinueChat = () => {
-    // Close insights modal and open insight chat modal
     setInsightsModalOpen(false);
     setInsightChatModalOpen(true);
   };
 
   const handleSendInsightChatMessage = async (message: string) => {
-    if (!currentInsightId || !insight) return;
-
-    // Create a temporary optimistic message
-    const tempId = -Date.now();
-    const tempMessage: ChatMessage = {
-      id: tempId,
-      role: "user",
-      content: message,
-      timestamp: Date.now(),
-    };
-
-    // Optimistically add the user's message
-    setChatMessages((prev) => [...prev, tempMessage]);
-    setChatLoading(true);
-    setChatStreamingMessage("");
+    if (!insightGen.currentInsightId || !insightGen.insight) return;
 
     try {
-      // Send message to server with streaming
-      await bibleService.sendChatMessage(
-        currentInsightId,
+      await insightChat.sendMessage(
+        insightGen.currentInsightId,
         message,
-        selectedText,
-        selectedReference,
-        insight,
-        (token: string) => {
-          // Accumulate tokens as they arrive
-          setChatStreamingMessage((prev) => prev + token);
-        },
+        insightGen.selectedText,
+        insightGen.selectedReference,
+        insightGen.insight,
       );
-
-      // After successful send, reload authoritative messages from server
-      const messages = await bibleService.getChatMessages(currentInsightId);
-      setChatMessages(messages);
-      setChatStreamingMessage("");
     } catch (err) {
       console.error("Failed to send chat message:", err);
-
       const usageLimitError = getUsageLimitErrorMessage(err);
       if (usageLimitError) {
         setError(usageLimitError);
       } else {
         setError("Failed to send message. Please try again.");
       }
-
-      // Remove the optimistic temp message on failure
-      setChatMessages((prev) => prev.filter((m) => m.id !== tempId));
-      setChatStreamingMessage("");
-    } finally {
-      setChatLoading(false);
     }
   };
 
@@ -906,9 +432,8 @@ function App() {
                   className="mt-4 flex-1 overflow-y-auto px-4"
                 >
                   <InsightsHistoryComponent
-                    history={insightsHistory}
                     onSelect={handleHistorySelect}
-                    onClear={handleClearHistory}
+                    onError={(msg) => setError(msg)}
                   />
                 </TabsContent>
                 <TabsContent
@@ -916,9 +441,8 @@ function App() {
                   className="mt-4 flex-1 overflow-y-auto px-4"
                 >
                   <ChatHistory
-                    chats={chatHistory}
                     onSelect={handleChatHistorySelect}
-                    onDelete={handleDeleteChat}
+                    onError={(msg) => setError(msg)}
                   />
                 </TabsContent>
                 <TabsContent
@@ -928,7 +452,10 @@ function App() {
                   <UserSettings
                     onError={(msg) => setError(msg)}
                     onSuccess={(msg) => setSuccessMessage(msg)}
-                    onOpenDeviceLinking={() => setDeviceLinkModalOpen(true)}
+                    onOpenDeviceLinking={() => {
+                      loadDevices();
+                      setDeviceLinkModalOpen(true);
+                    }}
                   />
                 </TabsContent>
               </Tabs>
@@ -970,14 +497,14 @@ function App() {
           <div className="max-w-4xl lg:mx-auto flex-1 w-full min-h-0">
             <div className="bg-card rounded-none lg:rounded-lg shadow-none lg:shadow-sm border-0 lg:border h-full flex flex-col">
               <BibleReader
-                passage={passage}
+                passage={biblePassage.passage}
                 onTextSelected={handleTextSelected}
                 onAskQuestion={handleAskQuestion}
-                onNavigate={handleNavigate}
-                onTranslationChange={handleTranslationChange}
-                loading={loading}
-                highlightVerseStart={highlightVerseStart}
-                highlightVerseEnd={highlightVerseEnd}
+                onNavigate={biblePassage.handleNavigate}
+                onTranslationChange={biblePassage.handleTranslationChange}
+                loading={biblePassage.loading}
+                highlightVerseStart={biblePassage.highlightVerseStart}
+                highlightVerseEnd={biblePassage.highlightVerseEnd}
               />
             </div>
           </div>
@@ -988,11 +515,11 @@ function App() {
       <InsightsModal
         open={insightsModalOpen}
         onOpenChange={setInsightsModalOpen}
-        insight={insight}
-        selectedText={selectedText}
-        reference={selectedReference}
-        insightId={currentInsightId}
-        chatMessages={chatMessages}
+        insight={insightGen.insight}
+        selectedText={insightGen.selectedText}
+        reference={insightGen.selectedReference}
+        insightId={insightGen.currentInsightId}
+        chatMessages={insightChat.messages}
         onContinueChat={handleContinueChat}
       />
 
@@ -1000,9 +527,9 @@ function App() {
       <DefinitionModal
         open={definitionModalOpen}
         onOpenChange={setDefinitionModalOpen}
-        definition={definition}
-        word={selectedWord}
-        reference={selectedReference}
+        definition={insightGen.definition}
+        word={insightGen.selectedWord}
+        reference={insightGen.selectedReference}
       />
 
       {/* Standalone Chat Modal */}
@@ -1011,20 +538,18 @@ function App() {
         onOpenChange={(open) => {
           setChatModalOpen(open);
           if (!open) {
-            // Clear both pending and current passage when modal closes
-            setPendingChatPassage(null);
-            setCurrentChatPassage(null);
+            standaloneChat.clearChat();
             setError(null);
           }
         }}
         title="Chat"
-        passageText={currentChatPassage?.text}
-        passageReference={currentChatPassage?.reference}
-        passageParams={currentChatPassage?.params}
-        messages={standaloneChatMessages}
+        passageText={standaloneChat.currentChatPassage?.text}
+        passageReference={standaloneChat.currentChatPassage?.reference}
+        passageParams={standaloneChat.currentChatPassage?.params}
+        messages={standaloneChat.messages}
         onSendMessage={handleSendStandaloneChatMessage}
-        loading={standaloneChatLoading}
-        streamingMessage={standaloneChatStreamingMessage}
+        loading={standaloneChat.loading}
+        streamingMessage={standaloneChat.streamingMessage}
         error={error}
       />
 
@@ -1036,14 +561,20 @@ function App() {
           if (!open) setError(null);
         }}
         title="Continue Chat"
-        subtitle={selectedReference}
-        passageText={selectedText}
-        passageReference={selectedReference}
-        passageParams={selectedPassageParams || undefined}
-        messages={chatMessages}
+        subtitle={insightGen.selectedReference}
+        passageText={insightGen.selectedText}
+        passageReference={insightGen.selectedReference}
+        passageParams={{
+          book: biblePassage.currentBook,
+          chapter: biblePassage.currentChapter,
+          verseStart: biblePassage.highlightVerseStart,
+          verseEnd: biblePassage.highlightVerseEnd,
+          translation: biblePassage.currentTranslation,
+        }}
+        messages={insightChat.messages}
         onSendMessage={handleSendInsightChatMessage}
-        loading={chatLoading}
-        streamingMessage={chatStreamingMessage}
+        loading={insightChat.loading}
+        streamingMessage={insightChat.streamingMessage}
         error={error}
       />
 
@@ -1051,18 +582,20 @@ function App() {
       <DeviceLinkModal
         open={deviceLinkModalOpen}
         onOpenChange={setDeviceLinkModalOpen}
-        devices={linkedDevices}
-        onDevicesChange={setLinkedDevices}
+        devices={devices}
+        onDevicesChange={setDevices}
         onSuccess={(msg) => setSuccessMessage(msg)}
         onError={(msg) => setError(msg)}
       />
 
       {/* Loading overlays */}
-      {insightLoading && <LoadingOverlay message="Generating insights..." />}
-      {definitionLoading && (
+      {insightGen.insightLoading && (
+        <LoadingOverlay message="Generating insights..." />
+      )}
+      {insightGen.definitionLoading && (
         <LoadingOverlay message="Generating definition..." />
       )}
-      {standaloneChatLoading && !chatModalOpen && (
+      {standaloneChat.loading && !chatModalOpen && (
         <LoadingOverlay message="Starting chat..." />
       )}
 
