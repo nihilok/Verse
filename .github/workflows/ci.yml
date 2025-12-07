@@ -60,6 +60,27 @@ jobs:
         cd frontend
         bun run lint
 
+  frontend-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v1
+      with:
+        bun-version: latest
+
+    - name: Install dependencies
+      run: |
+        cd frontend
+        bun install
+
+    - name: Run tests
+      run: |
+        cd frontend
+        bun run test:unit
+
   docker-build:
     runs-on: ubuntu-latest
 
