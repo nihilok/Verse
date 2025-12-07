@@ -19,11 +19,11 @@ Please be respectful and constructive in all interactions with the project.
 
 ## Development Setup
 
-See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed setup instructions.
+See the [Development Guide](docs/guides/development.md) for detailed setup instructions.
 
 ## Project Structure
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for the architecture overview.
+See the [Architecture Overview](docs/architecture/README.md) for the system architecture.
 
 ## Testing
 
