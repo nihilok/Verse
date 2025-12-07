@@ -19,6 +19,7 @@ class SQLiteBibleClient(BibleClient):
         "WEB": "ENGWEBP",  # World English Bible
         "KJV": "eng_kjv",  # King James Version
         "BSB": "BSB",  # Berean Standard Bible
+        "NRSV": "NRSV",  # New Revised Standard Version
         "ASV": "eng_asv",  # American Standard Version (1901)
         "LSV": "eng_lsv",  # Literal Standard Version
         "BST": "eng_bre",  # Brenton English Septuagint

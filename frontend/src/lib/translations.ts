@@ -4,6 +4,7 @@
  */
 export const TRANSLATIONS = [
   { code: "KJV", name: "King James Version" },
+  { code: "NRSV", name: "New Revised Standard Version" },
   { code: "ASV", name: "American Standard Version" },
   { code: "LSV", name: "Literal Standard Version" },
   { code: "WEB", name: "World English Bible" },
