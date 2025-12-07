@@ -60,6 +60,8 @@ export default defineConfig(({ mode }) => {
         },
         workbox: {
           globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2}"],
+          skipWaiting: false,
+          clientsClaim: false,
           runtimeCaching: [
             {
               urlPattern: /^https:\/\/api\.*/i,

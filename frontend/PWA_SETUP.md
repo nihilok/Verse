@@ -8,7 +8,7 @@ Verse is now a fully installable Progressive Web App! This means users can insta
 - **Offline Support**: The app works offline with cached content
 - **Fast Loading**: Assets are cached for instant loading
 - **Native Feel**: Runs in standalone mode without browser UI
-- **Auto-updates**: Service worker automatically updates when new versions are available
+- **Smart Updates**: Service worker checks for updates hourly and prompts users with a non-intrusive notification when new versions are available
 
 ## How It Works
 
@@ -29,6 +29,16 @@ The app includes a custom install prompt component (`InstallPrompt.tsx`) that:
 - Can be dismissed and will reappear after 7 days
 - Provides a better UX than the browser's default install prompt
 - Only shows on supported browsers
+
+### Update Prompt
+
+The app includes a smart update mechanism (`UpdatePrompt.tsx`) that:
+
+- Automatically checks for updates every hour
+- Shows a non-intrusive notification at the top of the screen when an update is available
+- Allows users to update immediately or dismiss and update later
+- Ensures a smooth update experience without forcing immediate reloads
+- Handles service worker activation and page refresh gracefully
 
 ## Installation for Users
 
@@ -148,10 +158,13 @@ The web app manifest defines:
 
 ### Service Worker Not Updating
 
+The app now includes an automatic update prompt that appears when new versions are available. If you don't see the update prompt:
+
 1. Close all tabs with the app
 2. Unregister old service workers (DevTools → Application → Service Workers)
 3. Clear cache (DevTools → Application → Clear storage)
 4. Hard reload (Ctrl/Cmd + Shift + R)
+5. Wait up to an hour for the next automatic update check
 
 ### Icons Not Showing
 

@@ -27,6 +27,7 @@ import ChatHistory from "./components/ChatHistory";
 import UserSettings from "./components/UserSettings";
 import DeviceLinkModal from "./components/DeviceLinkModal";
 import InstallPrompt from "./components/InstallPrompt";
+import UpdatePrompt from "./components/UpdatePrompt";
 import LoadingOverlay from "./components/LoadingOverlay";
 import { ModeToggle } from "./components/mode-toggle";
 import { bibleService } from "./services/api";
@@ -1067,6 +1068,9 @@ function App() {
 
       {/* PWA Install Prompt */}
       <InstallPrompt />
+
+      {/* PWA Update Prompt */}
+      <UpdatePrompt />
     </div>
   );
 }
