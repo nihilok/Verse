@@ -32,13 +32,16 @@ AsyncTestingSessionLocal = async_sessionmaker(
 Base.metadata.create_all(bind=engine)
 
 
-def override_get_db():
-    """Override database dependency for tests."""
-    try:
-        db = TestingSessionLocal()
-        yield db
-    finally:
-        db.close()
+async def override_get_db():
+    """Override database dependency for tests (async)."""
+    async with AsyncTestingSessionLocal() as session:
+        try:
+            # Create tables if they don't exist
+            async with async_engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            yield session
+        finally:
+            pass
 
 
 app.dependency_overrides[get_db] = override_get_db
