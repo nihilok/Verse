@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "test": "vitest --environment jsdom",
-    "test:unit": "vitest run --environment jsdom",
+    "test": "vitest",
+    "test:unit": "vitest run",
     "build": "tsc && vite build",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

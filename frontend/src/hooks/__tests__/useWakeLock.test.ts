@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { renderHook, act, waitFor } from "@testing-library/react";
+import { renderHook, act } from "@testing-library/react";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { useWakeLock } from "../useWakeLock";
 
@@ -107,9 +107,8 @@ describe("useWakeLock", () => {
       await Promise.resolve();
     });
 
-    await waitFor(() => {
-      expect(sentinel!.released).toBe(true);
-    });
+    // Check directly without waitFor when using fake timers
+    expect(sentinel!.released).toBe(true);
 
     vi.useRealTimers();
   });
@@ -157,9 +156,8 @@ describe("useWakeLock", () => {
       await Promise.resolve();
     });
 
-    await waitFor(() => {
-      expect(sentinel!.released).toBe(true);
-    });
+    // Check directly without waitFor when using fake timers
+    expect(sentinel!.released).toBe(true);
 
     vi.useRealTimers();
   });
@@ -210,20 +208,16 @@ describe("useWakeLock", () => {
       await Promise.resolve();
     });
 
-    await waitFor(() => {
-      expect(sentinel!.released).toBe(true);
-    });
+    // Check directly without waitFor when using fake timers
+    expect(sentinel!.released).toBe(true);
 
     vi.useRealTimers();
   });
 
   it("should handle unsupported Wake Lock API gracefully", async () => {
-    // Remove wake lock support
-    Object.defineProperty(navigator, "wakeLock", {
-      value: undefined,
-      writable: true,
-      configurable: true,
-    });
+    // Remove wake lock support by deleting the property
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    delete (navigator as any).wakeLock;
 
     const { result } = renderHook(() => useWakeLock());
 
