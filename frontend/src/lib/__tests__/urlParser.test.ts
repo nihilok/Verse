@@ -29,7 +29,7 @@ describe("urlParser", () => {
 
     it("should parse verse range with verseStart and verseEnd", () => {
       const params = new URLSearchParams(
-        "book=John&chapter=3&verseStart=16&verseEnd=17"
+        "book=John&chapter=3&verseStart=16&verseEnd=17",
       );
       const result = parsePassageFromURL(params);
       expect(result).toEqual({
@@ -42,7 +42,7 @@ describe("urlParser", () => {
 
     it("should parse translation", () => {
       const params = new URLSearchParams(
-        "book=John&chapter=3&verse=16&translation=KJV"
+        "book=John&chapter=3&verse=16&translation=KJV",
       );
       const result = parsePassageFromURL(params);
       expect(result).toEqual({
@@ -83,7 +83,7 @@ describe("urlParser", () => {
 
     it("should prioritize verse parameter over verseStart/verseEnd", () => {
       const params = new URLSearchParams(
-        "book=John&chapter=3&verse=16&verseStart=20&verseEnd=22"
+        "book=John&chapter=3&verse=16&verseStart=20&verseEnd=22",
       );
       const result = parsePassageFromURL(params);
       expect(result).toEqual({

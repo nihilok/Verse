@@ -73,6 +73,16 @@ export interface DefinitionHistory {
   timestamp: number;
 }
 
+export interface TranslationInfo {
+  code: string;
+  name: string;
+  requires_pro: boolean;
+}
+
+export interface TranslationsResponse {
+  translations: TranslationInfo[];
+}
+
 export interface PassageQuery {
   book: string;
   chapter: number;

@@ -28,11 +28,9 @@ describe("passageLinks", () => {
           chapter: 3,
           verseStart: 16,
         },
-        baseUrl
+        baseUrl,
       );
-      expect(link).toBe(
-        "http://localhost:5173?book=John&chapter=3&verse=16"
-      );
+      expect(link).toBe("http://localhost:5173?book=John&chapter=3&verse=16");
     });
 
     it("should create a link for a verse range", () => {
@@ -43,10 +41,10 @@ describe("passageLinks", () => {
           verseStart: 16,
           verseEnd: 17,
         },
-        baseUrl
+        baseUrl,
       );
       expect(link).toBe(
-        "http://localhost:5173?book=John&chapter=3&verseStart=16&verseEnd=17"
+        "http://localhost:5173?book=John&chapter=3&verseStart=16&verseEnd=17",
       );
     });
 
@@ -58,10 +56,10 @@ describe("passageLinks", () => {
           verseStart: 16,
           translation: "KJV",
         },
-        baseUrl
+        baseUrl,
       );
       expect(link).toBe(
-        "http://localhost:5173?book=John&chapter=3&verse=16&translation=KJV"
+        "http://localhost:5173?book=John&chapter=3&verse=16&translation=KJV",
       );
     });
 
@@ -72,7 +70,7 @@ describe("passageLinks", () => {
           chapter: 3,
           verseStart: 16,
         },
-        "https://example.com"
+        "https://example.com",
       );
       expect(link).toBe("https://example.com?book=John&chapter=3&verse=16");
     });
@@ -85,10 +83,10 @@ describe("passageLinks", () => {
       const mdLink = createMarkdownPassageLink(
         { book: "John", chapter: 3, verseStart: 16 },
         "Read John 3:16",
-        baseUrl
+        baseUrl,
       );
       expect(mdLink).toBe(
-        "[Read John 3:16](http://localhost:5173?book=John&chapter=3&verse=16)"
+        "[Read John 3:16](http://localhost:5173?book=John&chapter=3&verse=16)",
       );
     });
 
@@ -100,10 +98,10 @@ describe("passageLinks", () => {
           verseStart: 16,
         },
         undefined,
-        baseUrl
+        baseUrl,
       );
       expect(mdLink).toBe(
-        "[John 3:16](http://localhost:5173?book=John&chapter=3&verse=16)"
+        "[John 3:16](http://localhost:5173?book=John&chapter=3&verse=16)",
       );
     });
 
@@ -116,10 +114,10 @@ describe("passageLinks", () => {
           verseEnd: 17,
         },
         undefined,
-        baseUrl
+        baseUrl,
       );
       expect(mdLink).toBe(
-        "[John 3:16-17](http://localhost:5173?book=John&chapter=3&verseStart=16&verseEnd=17)"
+        "[John 3:16-17](http://localhost:5173?book=John&chapter=3&verseStart=16&verseEnd=17)",
       );
     });
   });

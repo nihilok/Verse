@@ -95,7 +95,7 @@ def test_build_engagement_guidelines_includes_linking_guidance():
     """Test that engagement guidelines include Bible passage linking instructions."""
     for for_passage in [True, False]:
         result = build_engagement_guidelines(for_passage=for_passage)
-        
+
         assert "When referencing Bible passages:" in result
         assert "Create clickable links using Markdown format:" in result
         assert "[Genesis 1:14-17](/?book=Genesis&chapter=1&verseStart=14&verseEnd=17)" in result

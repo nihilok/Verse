@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.rate_limiter import AI_ENDPOINT_LIMIT, CHAT_ENDPOINT_LIMIT, limiter
 from app.models.models import User
+from app.schemas.translation import TranslationsResponse
 from app.services.bible_service import BibleService
 from app.services.chat_service import CHAT_ID_MARKER, ChatService
 from app.services.definition_service import DefinitionService
@@ -44,16 +45,17 @@ async def get_current_user(request: Request, db: AsyncSession = Depends(get_db))
     return user
 
 
-async def check_and_enforce_usage_limit(
-    db: AsyncSession, user_id: int, usage_service: UsageService
-) -> None:
+async def check_and_enforce_usage_limit(db: AsyncSession, user_id: int, usage_service: UsageService) -> None:
     """Check usage limit and raise HTTPException if exceeded."""
     can_call, current_usage, limit = await usage_service.can_make_llm_call(db, user_id)
     if not can_call:
         raise HTTPException(
             status_code=429,
             detail={
-                "message": f"Daily limit of {limit} AI requests reached. Please try again tomorrow or upgrade to pro.",
+                "message": (
+                    f"Daily limit of {limit} AI requests reached. "
+                    "Please try again tomorrow or upgrade to pro."
+                ),
                 "current_usage": current_usage,
                 "limit": limit,
                 "is_pro": False,
@@ -131,6 +133,16 @@ class DefinitionRequestModel(BaseModel):
         return v.strip() if v else v
 
 
+@router.get("/translations", response_model=TranslationsResponse)
+async def get_translations(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get available Bible translations based on user's subscription status."""
+    translations = BibleService.get_available_translations(is_pro=current_user.pro_subscription)
+    return TranslationsResponse(translations=translations)
+
+
 @router.get("/passage")
 async def get_passage(
     book: str = Query(..., description="Book name (e.g., 'John', 'Genesis')"),
@@ -140,10 +152,14 @@ async def get_passage(
     translation: str = Query("WEB", description="Bible translation (default: WEB)"),
     save: bool = Query(False, description="Save passage to database"),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Get a Bible passage."""
     service = BibleService()
     try:
+        # Validate translation access
+        service.validate_translation_access(translation, current_user)
+
         passage = await service.get_passage(
             book=book,
             chapter=chapter,
@@ -170,10 +186,14 @@ async def get_chapter(
     translation: str = Query("WEB", description="Bible translation"),
     save: bool = Query(False, description="Save chapter to database"),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Get an entire chapter."""
     service = BibleService()
     try:
+        # Validate translation access
+        service.validate_translation_access(translation, current_user)
+
         passage = await service.get_chapter(book=book, chapter=chapter, translation=translation)
 
         if not passage:

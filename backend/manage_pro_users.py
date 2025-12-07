@@ -64,7 +64,9 @@ async def add_pro(anonymous_id: str):
         print(f"Linked devices: {len(devices)}")
         if devices:
             for device in devices:
-                print(f"  - Device {device.id}: {device.device_name or 'Unnamed'} ({device.device_type or 'unknown'})")
+                device_name = device.device_name or "Unnamed"
+                device_type = device.device_type or "unknown"
+                print(f"  - Device {device.id}: {device_name} ({device_type})")
 
         return True
 
@@ -118,9 +120,9 @@ async def list_pro_users():
             print(f"  Devices: {len(devices)}")
             if devices:
                 for device in devices:
-                    print(
-                        f"    - Device {device.id}: {device.device_name or 'Unnamed'} ({device.device_type or 'unknown'})"
-                    )
+                    device_name = device.device_name or "Unnamed"
+                    device_type = device.device_type or "unknown"
+                    print(f"    - Device {device.id}: {device_name} ({device_type})")
             print()
 
 
@@ -146,9 +148,9 @@ async def check_status(anonymous_id: str):
         print(f"  Linked Devices: {len(devices)}")
         if devices:
             for device in devices:
-                print(
-                    f"    - Device {device.id}: {device.device_name or 'Unnamed'} ({device.device_type or 'unknown'})"
-                )
+                device_name = device.device_name or "Unnamed"
+                device_type = device.device_type or "unknown"
+                print(f"    - Device {device.id}: {device_name} ({device_type})")
                 print(f"      Last Active: {device.last_active}")
 
         # Get usage information
@@ -166,14 +168,14 @@ async def check_status(anonymous_id: str):
         usage = result.scalar_one_or_none()
 
         if usage:
-            print(f"\n  Today's Usage:")
+            print("\n  Today's Usage:")
             print(f"    LLM Calls: {usage.llm_calls}")
             if not user.pro_subscription:
                 from app.services.usage_service import FREE_USER_DAILY_LIMIT
 
                 print(f"    Remaining: {max(0, FREE_USER_DAILY_LIMIT - usage.llm_calls)}")
         else:
-            print(f"\n  Today's Usage: 0 LLM calls")
+            print("\n  Today's Usage: 0 LLM calls")
             if not user.pro_subscription:
                 from app.services.usage_service import FREE_USER_DAILY_LIMIT
 

@@ -26,10 +26,7 @@ def main():
     # Check if alembic_version table exists
     with engine.connect() as conn:
         result = conn.execute(
-            text(
-                "SELECT EXISTS (SELECT FROM information_schema.tables "
-                "WHERE table_name = 'alembic_version')"
-            )
+            text("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'alembic_version')")
         )
         alembic_exists = result.scalar()
 
@@ -43,7 +40,7 @@ def main():
     # Check if tables exist (meaning this is an existing DB)
     with engine.connect() as conn:
         result = conn.execute(
-            text("SELECT EXISTS (SELECT FROM information_schema.tables " "WHERE table_name = 'users')")
+            text("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'users')")
         )
         tables_exist = result.scalar()
 

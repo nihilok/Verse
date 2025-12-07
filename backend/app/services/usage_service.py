@@ -1,10 +1,11 @@
 """Service for managing user LLM usage limits."""
+
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.models import User, UsageTracking
+from app.models.models import UsageTracking, User
 
 # Daily limit for free users
 FREE_USER_DAILY_LIMIT = 10
@@ -182,8 +183,6 @@ class UsageService:
         """
         cutoff_date = datetime.now(UTC) - timedelta(days=days_to_keep)
 
-        result = await db.execute(
-            UsageTracking.__table__.delete().where(UsageTracking.date < cutoff_date)
-        )
+        result = await db.execute(UsageTracking.__table__.delete().where(UsageTracking.date < cutoff_date))
 
         return result.rowcount

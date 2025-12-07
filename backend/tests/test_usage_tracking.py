@@ -1,10 +1,11 @@
 """Tests for usage tracking functionality."""
 
-import pytest
 from datetime import UTC, datetime, timedelta
 
+import pytest
+
 from app.models.models import UsageTracking
-from app.services.usage_service import UsageService, FREE_USER_DAILY_LIMIT
+from app.services.usage_service import FREE_USER_DAILY_LIMIT, UsageService
 
 
 @pytest.mark.asyncio
@@ -188,9 +189,7 @@ async def test_cleanup_old_usage_records(async_db, async_test_user):
     from sqlalchemy import select
 
     result = await async_db.execute(
-        select(UsageTracking).where(
-            UsageTracking.user_id == async_test_user.id, UsageTracking.date == today
-        )
+        select(UsageTracking).where(UsageTracking.user_id == async_test_user.id, UsageTracking.date == today)
     )
     remaining_usage = result.scalar_one_or_none()
     assert remaining_usage is not None
@@ -209,7 +208,7 @@ async def test_usage_tracking_unique_constraint(async_db, async_test_user):
         await async_db.commit()
 
     # Verify only one record exists for today
-    from sqlalchemy import select, func
+    from sqlalchemy import func, select
 
     result = await async_db.execute(
         select(func.count(UsageTracking.id)).where(
@@ -221,9 +220,7 @@ async def test_usage_tracking_unique_constraint(async_db, async_test_user):
 
     # Verify the count is correct
     result = await async_db.execute(
-        select(UsageTracking).where(
-            UsageTracking.user_id == async_test_user.id, UsageTracking.date == today
-        )
+        select(UsageTracking).where(UsageTracking.user_id == async_test_user.id, UsageTracking.date == today)
     )
     usage = result.scalar_one()
     assert usage.llm_calls == 5

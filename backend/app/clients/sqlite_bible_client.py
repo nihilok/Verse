@@ -14,6 +14,9 @@ class SQLiteBibleClient(BibleClient):
     # Default database path relative to backend directory
     DEFAULT_DB_PATH = Path(__file__).parent.parent.parent / "bible.eng.db"
 
+    # Translations that require pro subscription
+    PRO_TRANSLATIONS = {"NRSV"}
+
     # Map user-friendly translation names to database translation IDs
     TRANSLATION_IDS = {
         "WEB": "ENGWEBP",  # World English Bible
@@ -129,6 +132,11 @@ class SQLiteBibleClient(BibleClient):
     def _normalize_translation(self, translation: str) -> str:
         """Normalize translation name to database translation ID."""
         return self.TRANSLATION_IDS.get(translation, translation)
+
+    @classmethod
+    def is_pro_translation(cls, translation: str) -> bool:
+        """Check if a translation requires pro subscription."""
+        return translation in cls.PRO_TRANSLATIONS
 
     async def get_verse(
         self, book: str, chapter: int, verse: int, translation: str = "WEB"

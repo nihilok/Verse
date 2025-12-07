@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { Search } from "lucide-react";
+import { Search, Crown } from "lucide-react";
 import { CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,8 @@ import {
   getBookIndex,
   clampChapterForBook,
 } from "@/lib/bibleStructure";
-import { TRANSLATIONS } from "@/lib/translations";
+import { TranslationInfo } from "@/types";
+import { bibleService } from "@/services/api";
 import toast from "@/lib/toast";
 
 // Derive a simple list of book names from the canonical structure
@@ -45,6 +46,28 @@ const PassageSearch: React.FC<PassageSearchProps> = ({ onSearch }) => {
   const [translation, setTranslation] = useState(
     savedState?.translation || "WEB",
   );
+  const [translations, setTranslations] = useState<TranslationInfo[]>([]);
+  const [translationsLoading, setTranslationsLoading] = useState(true);
+
+  // Fetch available translations on mount
+  useEffect(() => {
+    const fetchTranslations = async () => {
+      try {
+        const response = await bibleService.getTranslations();
+        setTranslations(response.translations);
+      } catch (error) {
+        console.error("Failed to fetch translations:", error);
+        toast({
+          title: "Error loading translations",
+          description: "Using default translation (WEB)",
+        });
+      } finally {
+        setTranslationsLoading(false);
+      }
+    };
+
+    fetchTranslations();
+  }, []);
 
   // Compute the maximum chapter for the currently selected book
   const currentBookIndex = getBookIndex(book);
@@ -202,14 +225,23 @@ const PassageSearch: React.FC<PassageSearchProps> = ({ onSearch }) => {
 
           <div className="space-y-2">
             <Label htmlFor="translation">Translation</Label>
-            <Select value={translation} onValueChange={setTranslation}>
+            <Select
+              value={translation}
+              onValueChange={setTranslation}
+              disabled={translationsLoading}
+            >
               <SelectTrigger id="translation">
                 <SelectValue placeholder="Select translation" />
               </SelectTrigger>
               <SelectContent>
-                {TRANSLATIONS.map((trans) => (
+                {translations.map((trans) => (
                   <SelectItem key={trans.code} value={trans.code}>
-                    {trans.name}
+                    <div className="flex items-center gap-2">
+                      <span>{trans.name}</span>
+                      {trans.requires_pro && (
+                        <Crown className="h-3 w-3 text-yellow-500" />
+                      )}
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>

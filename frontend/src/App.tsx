@@ -169,7 +169,7 @@ function App() {
           await insightChat.loadMessages(insightGen.currentInsightId);
         } else {
           setError(
-            "Failed to load insight messages. Insight ID was not set. Please try again."
+            "Failed to load insight messages. Insight ID was not set. Please try again.",
           );
           console.error("Insight ID is null after generateInsight");
         }

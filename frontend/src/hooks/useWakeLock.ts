@@ -10,7 +10,7 @@ interface UseWakeLockOptions {
 /**
  * Custom hook to manage the Screen Wake Lock API
  * Automatically releases the wake lock after a configurable period of inactivity
- * 
+ *
  * @param options - Configuration options
  * @returns Object with methods to request and release wake lock
  */

@@ -46,9 +46,7 @@ export default function UserSettings({
     setWakeLockTimeout(savedTimeout);
   }, []);
 
-  const handleWakeLockTimeoutChange = (
-    e: ChangeEvent<HTMLSelectElement>,
-  ) => {
+  const handleWakeLockTimeoutChange = (e: ChangeEvent<HTMLSelectElement>) => {
     const newTimeout = parseInt(e.target.value);
     setWakeLockTimeout(newTimeout);
     saveWakeLockTimeout(newTimeout);

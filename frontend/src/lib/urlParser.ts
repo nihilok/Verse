@@ -14,13 +14,15 @@ export interface PassageParams {
  * Parse URL search parameters into passage parameters
  * Expected format: ?book=John&chapter=3&verse=16 or ?book=John&chapter=3&verseStart=16&verseEnd=17
  */
-export function parsePassageFromURL(searchParams: URLSearchParams): PassageParams | null {
-  const book = searchParams.get('book');
-  const chapterStr = searchParams.get('chapter');
-  const verseStr = searchParams.get('verse');
-  const verseStartStr = searchParams.get('verseStart');
-  const verseEndStr = searchParams.get('verseEnd');
-  const translation = searchParams.get('translation');
+export function parsePassageFromURL(
+  searchParams: URLSearchParams,
+): PassageParams | null {
+  const book = searchParams.get("book");
+  const chapterStr = searchParams.get("chapter");
+  const verseStr = searchParams.get("verse");
+  const verseStartStr = searchParams.get("verseStart");
+  const verseEndStr = searchParams.get("verseEnd");
+  const translation = searchParams.get("translation");
 
   if (!book || !chapterStr) {
     return null;
@@ -74,21 +76,24 @@ export function parsePassageFromURL(searchParams: URLSearchParams): PassageParam
  */
 export function generatePassageURL(params: PassageParams): string {
   const searchParams = new URLSearchParams();
-  searchParams.set('book', params.book);
-  searchParams.set('chapter', params.chapter.toString());
+  searchParams.set("book", params.book);
+  searchParams.set("chapter", params.chapter.toString());
 
   if (params.verseStart !== undefined) {
     // If verseStart and verseEnd are the same, use single verse param
-    if (params.verseEnd === params.verseStart || params.verseEnd === undefined) {
-      searchParams.set('verse', params.verseStart.toString());
+    if (
+      params.verseEnd === params.verseStart ||
+      params.verseEnd === undefined
+    ) {
+      searchParams.set("verse", params.verseStart.toString());
     } else {
-      searchParams.set('verseStart', params.verseStart.toString());
-      searchParams.set('verseEnd', params.verseEnd.toString());
+      searchParams.set("verseStart", params.verseStart.toString());
+      searchParams.set("verseEnd", params.verseEnd.toString());
     }
   }
 
   if (params.translation) {
-    searchParams.set('translation', params.translation);
+    searchParams.set("translation", params.translation);
   }
 
   return `?${searchParams.toString()}`;
@@ -100,7 +105,7 @@ export function generatePassageURL(params: PassageParams): string {
 export function isVerseHighlighted(
   verseNumber: number,
   highlightStart?: number,
-  highlightEnd?: number
+  highlightEnd?: number,
 ): boolean {
   if (highlightStart === undefined) {
     return false;

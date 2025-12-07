@@ -16,6 +16,7 @@ import {
   LinkCodeResponse,
   LinkDeviceResponse,
   UnlinkDeviceResponse,
+  TranslationsResponse,
 } from "../types";
 
 const API_BASE_URL = "/api";
@@ -115,6 +116,13 @@ async function handleSSEStream(
 }
 
 export const bibleService = {
+  async getTranslations(): Promise<TranslationsResponse> {
+    const response = await axios.get<TranslationsResponse>(
+      `${API_BASE_URL}/translations`,
+    );
+    return response.data;
+  },
+
   async getPassage(query: PassageQuery): Promise<BiblePassage> {
     const params = new URLSearchParams({
       book: query.book,
