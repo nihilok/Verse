@@ -1,19 +1,30 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { MessageCircle, Trash2, Calendar } from "lucide-react";
 import type { StandaloneChat } from "../types";
 import { Button } from "@/components/ui/button";
+import { useChatHistory } from "../hooks/useChatHistory";
 
 interface ChatHistoryProps {
-  chats: StandaloneChat[];
   onSelect: (chat: StandaloneChat) => void;
-  onDelete: (chatId: number) => void;
+  onError?: (msg: string) => void;
 }
 
-const ChatHistory: React.FC<ChatHistoryProps> = ({
-  chats,
-  onSelect,
-  onDelete,
-}) => {
+const ChatHistory: React.FC<ChatHistoryProps> = ({ onSelect, onError }) => {
+  const { chatHistory, loadHistory, deleteChat } = useChatHistory();
+
+  useEffect(() => {
+    loadHistory();
+  }, [loadHistory]);
+
+  const handleDelete = async (chatId: number) => {
+    try {
+      await deleteChat(chatId);
+    } catch {
+      onError?.("Failed to delete chat. Please try again.");
+    }
+  };
+
+  const chats = chatHistory;
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
     const now = new Date();
@@ -76,7 +87,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
               onClick={(e) => {
                 e.stopPropagation();
                 if (confirm("Are you sure you want to delete this chat?")) {
-                  onDelete(chat.id);
+                  handleDelete(chat.id);
                 }
               }}
             >
