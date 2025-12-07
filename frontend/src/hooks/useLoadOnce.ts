@@ -17,8 +17,11 @@ export function useLoadOnce() {
    * Wraps a load function with loading state management.
    * If already loaded, returns early without calling the load function.
    * Sets loading to true before calling, and false in finally block.
-   * Sets loaded to true after execution, even if the function throws an error,
-   * to prevent repeated failed attempts.
+   * 
+   * IMPORTANT: Sets loaded to true after execution, even if the function throws.
+   * This prevents repeated failed attempts which could hammer a failing endpoint.
+   * Errors are still propagated to the caller for proper error handling (logging, 
+   * user notification, etc.), but the hook will not automatically retry.
    *
    * @param loadFn The async function to execute
    */
