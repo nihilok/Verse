@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Search, Crown } from "lucide-react";
-import { CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SidebarTabWrapper } from "./SidebarTabWrapper";
 import { loadPassageSearch, savePassageSearch } from "@/lib/storage";
 import {
   BIBLE_BOOKS,
@@ -145,116 +145,118 @@ const PassageSearch: React.FC<PassageSearchProps> = ({ onSearch }) => {
   };
 
   return (
-    <>
-      <CardContent className="pt-0 px-4">
-        <p className="text-sm text-muted-foreground mb-4">
-          Search for any Bible passage by book, chapter, and verse
-        </p>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="book">Book</Label>
-            <Select value={book} onValueChange={setBook}>
-              <SelectTrigger id="book">
-                <SelectValue placeholder="Select a book" />
-              </SelectTrigger>
-              <SelectContent className="max-h-60 overflow-y-auto border border-border">
-                {BOOK_NAMES.map((bookName) => (
-                  <SelectItem key={bookName} value={bookName}>
-                    {bookName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+    <SidebarTabWrapper title="Passage Search" icon={Search}>
+      <div className="flex-1 overflow-y-auto min-h-0 scrollbar-overlay">
+        <div>
+          <p className="text-sm text-muted-foreground mb-4">
+            Search for any Bible passage by book, chapter, and verse
+          </p>
+          <form onSubmit={handleSubmit} className="space-y-4 max-w-full">
+            <div className="space-y-2">
+              <Label htmlFor="book">Book</Label>
+              <Select value={book} onValueChange={setBook}>
+                <SelectTrigger id="book">
+                  <SelectValue placeholder="Select a book" />
+                </SelectTrigger>
+                <SelectContent className="max-h-60 overflow-y-auto border border-border">
+                  {BOOK_NAMES.map((bookName) => (
+                    <SelectItem key={bookName} value={bookName}>
+                      {bookName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="chapter">Chapter</Label>
-            <Input
-              id="chapter"
-              type="number"
-              value={chapter}
-              onChange={(e) => {
-                const v = e.target.value;
-                // allow empty while typing but clamp to max if provided
-                if (v === "") {
-                  setChapter(v);
-                  return;
-                }
-                const num = parseInt(v);
-                if (isNaN(num)) {
-                  setChapter(v);
-                  return;
-                }
-                if (maxChapters && num > maxChapters) {
-                  setChapter(String(maxChapters));
-                } else if (num < 1) {
-                  setChapter("1");
-                } else {
-                  setChapter(String(num));
-                }
-              }}
-              min="1"
-              max={maxChapters}
-              required
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="chapter">Chapter</Label>
+              <Input
+                id="chapter"
+                type="number"
+                value={chapter}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  // allow empty while typing but clamp to max if provided
+                  if (v === "") {
+                    setChapter(v);
+                    return;
+                  }
+                  const num = parseInt(v);
+                  if (isNaN(num)) {
+                    setChapter(v);
+                    return;
+                  }
+                  if (maxChapters && num > maxChapters) {
+                    setChapter(String(maxChapters));
+                  } else if (num < 1) {
+                    setChapter("1");
+                  } else {
+                    setChapter(String(num));
+                  }
+                }}
+                min="1"
+                max={maxChapters}
+                required
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="verseStart">Verse Start (optional)</Label>
-            <Input
-              id="verseStart"
-              type="number"
-              value={verseStart}
-              onChange={(e) => setVerseStart(e.target.value)}
-              min="1"
-              placeholder="Optional"
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="verseStart">Verse Start (optional)</Label>
+              <Input
+                id="verseStart"
+                type="number"
+                value={verseStart}
+                onChange={(e) => setVerseStart(e.target.value)}
+                min="1"
+                placeholder="Optional"
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="verseEnd">Verse End (optional)</Label>
-            <Input
-              id="verseEnd"
-              type="number"
-              value={verseEnd}
-              onChange={(e) => setVerseEnd(e.target.value)}
-              min="1"
-              placeholder="Optional"
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="verseEnd">Verse End (optional)</Label>
+              <Input
+                id="verseEnd"
+                type="number"
+                value={verseEnd}
+                onChange={(e) => setVerseEnd(e.target.value)}
+                min="1"
+                placeholder="Optional"
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="translation">Translation</Label>
-            <Select
-              value={translation}
-              onValueChange={setTranslation}
-              disabled={translationsLoading}
-            >
-              <SelectTrigger id="translation">
-                <SelectValue placeholder="Select translation" />
-              </SelectTrigger>
-              <SelectContent>
-                {translations.map((trans) => (
-                  <SelectItem key={trans.code} value={trans.code}>
-                    <div className="flex items-center gap-2">
-                      <span>{trans.name}</span>
-                      {trans.requires_pro && (
-                        <Crown className="h-3 w-3 text-yellow-500" />
-                      )}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="translation">Translation</Label>
+              <Select
+                value={translation}
+                onValueChange={setTranslation}
+                disabled={translationsLoading}
+              >
+                <SelectTrigger id="translation">
+                  <SelectValue placeholder="Select translation" />
+                </SelectTrigger>
+                <SelectContent>
+                  {translations.map((trans) => (
+                    <SelectItem key={trans.code} value={trans.code}>
+                      <div className="flex items-center gap-2">
+                        <span>{trans.name}</span>
+                        {trans.requires_pro && (
+                          <Crown className="h-3 w-3 text-yellow-500" />
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          <Button type="submit" className="w-full">
-            <Search size={18} />
-            Load Passage
-          </Button>
-        </form>
-      </CardContent>
-    </>
+            <Button type="submit" className="w-full">
+              <Search size={18} />
+              Load Passage
+            </Button>
+          </form>
+        </div>
+      </div>
+    </SidebarTabWrapper>
   );
 };
 

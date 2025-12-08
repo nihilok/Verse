@@ -386,7 +386,7 @@ function App() {
                 Discover wisdom through AI-powered insights
               </p>
             </SidebarHeader>
-            <SidebarContent className="flex-1 min-h-0 overflow-y-auto">
+            <SidebarContent className="flex-1 min-h-0">
               <Tabs
                 defaultValue="search"
                 className="w-full h-full flex flex-col"
@@ -421,34 +421,19 @@ function App() {
                     <span className="hidden sm:inline">Settings</span>
                   </TabsTrigger>
                 </TabsList>
-                <TabsContent
-                  value="search"
-                  className="mt-4 flex-1 overflow-y-auto"
-                >
+                <TabsContent value="search" className="mt-4 flex-1 px-4">
                   <PassageSearch onSearch={handleSearch} />
                 </TabsContent>
-                <TabsContent
-                  value="insights"
-                  className="mt-4 flex-1 overflow-y-auto px-4"
-                >
-                  <InsightsHistoryComponent
-                    onSelect={handleHistorySelect}
-                    onError={(msg) => setError(msg)}
-                  />
+                <TabsContent value="insights" className="mt-4 flex-1 px-4">
+                  <InsightsHistoryComponent onSelect={handleHistorySelect} />
                 </TabsContent>
-                <TabsContent
-                  value="chats"
-                  className="mt-4 flex-1 overflow-y-auto px-4"
-                >
+                <TabsContent value="chats" className="mt-4 flex-1 px-4">
                   <ChatHistory
                     onSelect={handleChatHistorySelect}
                     onError={(msg) => setError(msg)}
                   />
                 </TabsContent>
-                <TabsContent
-                  value="settings"
-                  className="mt-4 flex-1 overflow-y-auto px-4"
-                >
+                <TabsContent value="settings" className="mt-4 flex-1 px-4">
                   <UserSettings
                     onError={(msg) => setError(msg)}
                     onSuccess={(msg) => setSuccessMessage(msg)}
