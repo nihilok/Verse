@@ -26,9 +26,9 @@ BIBLE_PASSAGE_LINKING_GUIDANCE = """When referencing Bible passages:
 - For single verses, use: [John 3:16](/?book=John&chapter=3&verse=16)
 - For whole chapters, omit verse params: [Genesis 1](/?book=Genesis&chapter=1)
 - For whole books, reference the first chapter: [Genesis](/?book=Genesis&chapter=1)
-- Include the translation that the user initially referenced if there was one; alternatively, include a
-  different translation if you are specifically referencing a different one:
-  [Genesis 1:1](/?book=Genesis&chapter=1&verse=1&translation=BST)
+- If you are specifically referencing a particular translation, include the &translation=CODE parameter:
+  [Genesis 1:1](/?book=Genesis&chapter=1&verse=1&translation=BST); consider including this if the user's
+  question relates to translation differences, to ensure your link always points to the intended version.
 - This allows users to navigate directly to referenced passages in the app"""
 
 
@@ -64,11 +64,14 @@ def build_available_translations_note() -> str:
     available = []
     for code in supported_codes:
         if code in translation_names:
-            available.append(f"- {code}: {translation_names[code]}")
+            available.append(f"- {code} ({translation_names[code]})")
+        else:
+            available.append(f"- {code}")
 
     translations_list = "\n".join(sorted(available))
 
     return f"""Available Bible Translations:
+_- CODE (Full Name):_
 {translations_list}
 
 These translations can be referenced in passage links by adding &translation=CODE to the URL."""
@@ -78,23 +81,24 @@ These translations can be referenced in passage links by adding &translation=COD
 STUDY_COMPANION_ROLE_GENERAL = """Context About Your Role:
 - Users are on a journey of biblical discovery and may be at different levels of familiarity
 - They might ask about specific passages, broader theological concepts, or how to apply Scripture
-- You serve as their thoughtful study companion—helpful, warm, and knowledgeable
+- You serve as their thoughtful study companion —- helpful, warm, and knowledgeable
 - Remember their previous questions and build on what you've discussed together
 - Connect ideas to biblical texts they might want to explore in the app"""
 
 
-def build_passage_context(passage_reference: str, passage_text: str) -> str:
+def build_passage_context(passage_reference: str, passage_text: str, action: str = "Studying") -> str:
     """
     Build formatted passage context section.
 
     Args:
         passage_reference: Bible reference (e.g., "John 3:16")
         passage_text: The actual passage text
+        action: Action the user is taking with the passage (e.g., "Studying", "Reading")
 
     Returns:
         Formatted passage context string
     """
-    return f"""The Passage They're Studying:
+    return f"""The Passage They're {action}:
 Reference: {passage_reference}
 Text: {passage_text}
 
@@ -114,13 +118,7 @@ def build_passage_context_exploration(passage_reference: str, passage_text: str)
     Returns:
         Formatted passage context string with exploration framing
     """
-    return f"""The Passage They're Exploring:
-Reference: {passage_reference}
-Text: {passage_text}
-
-Note: The user has the ability to switch between multiple Bible translations. The passage text provided
-may come from one or more translations, but there may be a translation specified with the passage reference,
-in which case focus on that translation only."""
+    return build_passage_context(passage_reference, passage_text, action="Exploring")
 
 
 def build_insights_context(
