@@ -146,7 +146,7 @@ const PassageSearch: React.FC<PassageSearchProps> = ({ onSearch }) => {
 
   return (
     <SidebarTabWrapper title="Passage Search" icon={Search}>
-      <div className="flex-1 overflow-y-auto min-h-0 scrollbar-overlay">
+      <div className="flex-1 overflow-y-auto min-h-0 px-2">
         <div>
           <p className="text-sm text-muted-foreground mb-4">
             Search for any Bible passage by book, chapter, and verse

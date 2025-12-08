@@ -171,7 +171,7 @@ export default function UserSettings({
 
   return (
     <SidebarTabWrapper title="Settings" icon={Settings}>
-      <div className="flex-1 overflow-y-auto min-h-0 scrollbar-overlay">
+      <div className="flex-1 overflow-y-auto min-h-0 px-2">
         <div className="space-y-6">
           {/* Data Management Section */}
           <div className="space-y-2">
@@ -253,7 +253,7 @@ export default function UserSettings({
                 Your anonymous user ID for pro subscription management.
               </p>
               <div className="flex gap-2">
-                <div className="flex-1 bg-muted rounded-md px-3 py-2 text-xs font-mono break-all">
+                <div className="flex-1 bg-muted rounded-md px-3 py-2 text-xs font-mono truncate text-ellipsis">
                   {userSession.anonymous_id}
                 </div>
                 <Button
@@ -277,7 +277,7 @@ export default function UserSettings({
           )}
 
           {/* Wake Lock Settings */}
-          <div className="space-y-2">
+          <div className="space-y-2 mb-4">
             <h3 className="text-sm font-medium flex items-center gap-2">
               <Moon className="h-4 w-4" />
               Wake Lock

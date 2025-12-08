@@ -36,7 +36,8 @@ import {
   SidebarContent,
 } from "./components/ui/sidebar";
 import { Button } from "./components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "./components/ui/tabs";
+import { SidebarTabContent } from "./components/SidebarTabContent";
 import { InsightHistory, StandaloneChat } from "./types";
 import { useBiblePassage } from "./hooks/useBiblePassage";
 import { useInsightGeneration } from "./hooks/useInsightGeneration";
@@ -425,19 +426,19 @@ function App() {
                     <span className="hidden sm:inline">Settings</span>
                   </TabsTrigger>
                 </TabsList>
-                <TabsContent value="search" className="mt-4 flex-1 px-4">
+                <SidebarTabContent value="search">
                   <PassageSearch onSearch={handleSearch} />
-                </TabsContent>
-                <TabsContent value="insights" className="mt-4 flex-1 px-4">
+                </SidebarTabContent>
+                <SidebarTabContent value="insights">
                   <InsightsHistoryComponent onSelect={handleHistorySelect} />
-                </TabsContent>
-                <TabsContent value="chats" className="mt-4 flex-1 px-4">
+                </SidebarTabContent>
+                <SidebarTabContent value="chats">
                   <ChatHistory
                     onSelect={handleChatHistorySelect}
                     onError={(msg) => setError(msg)}
                   />
-                </TabsContent>
-                <TabsContent value="settings" className="mt-4 flex-1 px-4">
+                </SidebarTabContent>
+                <SidebarTabContent value="settings">
                   <UserSettings
                     onError={(msg) => setError(msg)}
                     onSuccess={(msg) => setSuccessMessage(msg)}
@@ -446,7 +447,7 @@ function App() {
                       setDeviceLinkModalOpen(true);
                     }}
                   />
-                </TabsContent>
+                </SidebarTabContent>
               </Tabs>
             </SidebarContent>
             {/* ModeToggle at the bottom of the sidebar */}
