@@ -173,41 +173,7 @@ export default function UserSettings({
     <SidebarTabWrapper title="Settings" icon={Settings}>
       <div className="flex-1 overflow-y-auto min-h-0 scrollbar-overlay">
         <div className="space-y-6">
-          {/* Wake Lock Settings */}
-          <div className="space-y-2">
-            <h3 className="text-sm font-medium flex items-center gap-2">
-              <Moon className="h-4 w-4" />
-              Wake Lock
-            </h3>
-            <p className="text-xs text-muted-foreground">
-              Keep your device awake while reading. The wake lock will
-              automatically release after the specified timeout period of
-              inactivity.
-            </p>
-            <div className="flex items-center gap-2">
-              <label
-                htmlFor="wake-lock-timeout"
-                className="text-xs text-muted-foreground"
-              >
-                Timeout:
-              </label>
-              <select
-                id="wake-lock-timeout"
-                value={wakeLockTimeout}
-                onChange={handleWakeLockTimeoutChange}
-                className="flex h-8 rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              >
-                <option value="1">1 minute</option>
-                <option value="2">2 minutes</option>
-                <option value="5">5 minutes</option>
-                <option value="10">10 minutes</option>
-                <option value="15">15 minutes</option>
-                <option value="30">30 minutes</option>
-                <option value="0">Disabled</option>
-              </select>
-            </div>
-          </div>
-
+          {/* Data Management Section */}
           <div className="space-y-2">
             <h3 className="text-sm font-medium">Data Management</h3>
             <p className="text-xs text-muted-foreground">
@@ -309,6 +275,41 @@ export default function UserSettings({
               </div>
             </div>
           )}
+
+          {/* Wake Lock Settings */}
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium flex items-center gap-2">
+              <Moon className="h-4 w-4" />
+              Wake Lock
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              Keep your device awake while reading. The wake lock will
+              automatically release after the specified timeout period of
+              inactivity.
+            </p>
+            <div className="flex items-center gap-2">
+              <label
+                htmlFor="wake-lock-timeout"
+                className="text-xs text-muted-foreground"
+              >
+                Timeout:
+              </label>
+              <select
+                id="wake-lock-timeout"
+                value={wakeLockTimeout}
+                onChange={handleWakeLockTimeoutChange}
+                className="flex h-8 rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="1">1 minute</option>
+                <option value="2">2 minutes</option>
+                <option value="5">5 minutes</option>
+                <option value="10">10 minutes</option>
+                <option value="15">15 minutes</option>
+                <option value="30">30 minutes</option>
+                <option value="0">Disabled</option>
+              </select>
+            </div>
+          </div>
         </div>
       </div>
     </SidebarTabWrapper>
