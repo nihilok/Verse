@@ -83,7 +83,7 @@ export default function UpdatePrompt() {
 
   return (
     <div className="fixed top-4 left-4 right-4 md:left-auto md:right-4 md:max-w-md z-50 animate-in slide-in-from-top-5">
-      <Card className="p-4 shadow-lg border-2 border-primary/20 bg-primary/5">
+      <Card className="p-4 shadow-lg border-2 border-primary/20 bg-card">
         <div className="flex items-start gap-3">
           <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
             <RefreshCw className="text-primary" size={20} />
