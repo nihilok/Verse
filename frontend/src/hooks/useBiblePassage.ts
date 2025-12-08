@@ -132,12 +132,18 @@ export function useBiblePassage() {
   const loadFromURL = useCallback(() => {
     const urlParams = parsePassageFromURL(searchParams);
     if (urlParams) {
+      // If no translation in URL, use the last saved translation if available
+      let translation = urlParams.translation;
+      if (!translation) {
+        const lastPassage = loadLastPassage();
+        translation = lastPassage?.translation || "WEB";
+      }
       handleSearch(
         urlParams.book,
         urlParams.chapter,
         urlParams.verseStart,
         urlParams.verseEnd,
-        urlParams.translation || "WEB",
+        translation,
       );
       return true;
     }

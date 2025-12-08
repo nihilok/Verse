@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   motion,
   AnimatePresence,
@@ -73,6 +74,7 @@ function getUsageLimitErrorMessage(err: unknown): string | null {
 }
 
 function App() {
+  const [searchParams] = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -110,11 +112,13 @@ function App() {
     setSidebarFullyHidden(latest <= -320);
   });
 
+  const { loadFromURL, loadLastViewedPassage } = biblePassage;
+
   useEffect(() => {
-    if (!biblePassage.loadFromURL()) {
-      biblePassage.loadLastViewedPassage();
+    if (!loadFromURL()) {
+      loadLastViewedPassage();
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchParams, loadFromURL, loadLastViewedPassage]);
 
   const handleSearch = async (
     book: string,
