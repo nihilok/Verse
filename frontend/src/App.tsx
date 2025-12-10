@@ -29,6 +29,9 @@ import DeviceLinkModal from "./components/DeviceLinkModal";
 import InstallPrompt from "./components/InstallPrompt";
 import UpdatePrompt from "./components/UpdatePrompt";
 import LoadingOverlay from "./components/LoadingOverlay";
+import LandingPageModal, {
+  useLandingModal,
+} from "./components/LandingPageModal";
 import { ModeToggle } from "./components/mode-toggle";
 import {
   Sidebar,
@@ -86,6 +89,8 @@ function App() {
   const [insightChatModalOpen, setInsightChatModalOpen] = useState(false);
   const [deviceLinkModalOpen, setDeviceLinkModalOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
+  const shouldShowLandingModal = useLandingModal();
+  const [landingModalOpen, setLandingModalOpen] = useState(false);
 
   // Custom hooks
   const biblePassage = useBiblePassage();
@@ -114,6 +119,12 @@ function App() {
   });
 
   const { loadFromURL, loadLastViewedPassage } = biblePassage;
+
+  useEffect(() => {
+    if (shouldShowLandingModal) {
+      setLandingModalOpen(true);
+    }
+  }, [shouldShowLandingModal]);
 
   useEffect(() => {
     if (!loadFromURL()) {
@@ -594,6 +605,12 @@ function App() {
 
       {/* PWA Update Prompt */}
       <UpdatePrompt />
+
+      {/* Landing Page Modal */}
+      <LandingPageModal
+        open={landingModalOpen}
+        onOpenChange={setLandingModalOpen}
+      />
     </div>
   );
 }
