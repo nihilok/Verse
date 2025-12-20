@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, MessageSquare } from "lucide-react";
 import type { BiblePassage } from "../types";
 import { formatReferenceWithTranslation } from "../types";
 import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -35,6 +35,7 @@ interface BibleReaderProps {
     verseStart?: number,
     verseEnd?: number,
   ) => void;
+  onStartStandaloneChat?: () => void;
   onNavigate?: (direction: "prev" | "next") => void;
   onTranslationChange?: (translation: string) => void;
   loading?: boolean;
@@ -46,6 +47,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({
   passage,
   onTextSelected,
   onAskQuestion,
+  onStartStandaloneChat,
   onNavigate,
   onTranslationChange,
   loading = false,
@@ -563,6 +565,19 @@ const BibleReader: React.FC<BibleReaderProps> = ({
           >
             Next Chapter
             <ChevronRight size={16} />
+          </button>
+        </div>
+      )}
+      {/* Standalone Chat Button */}
+      {onStartStandaloneChat && !loading && passage && (
+        <div className="flex justify-center px-4 pb-4 flex-shrink-0">
+          <button
+            onClick={onStartStandaloneChat}
+            className="flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg transition-all shadow-md hover:shadow-lg"
+            aria-label="Start or continue chat about this chapter"
+          >
+            <MessageSquare size={18} />
+            Verse AI
           </button>
         </div>
       )}
