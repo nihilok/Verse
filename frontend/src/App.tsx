@@ -240,6 +240,9 @@ function App() {
       fullReference += ` (${biblePassage.currentTranslation})`;
     }
 
+    // Clear last chat context since we're starting a selection-based chat
+    setLastChatContext(null);
+
     standaloneChat.startNewChat(text, fullReference, {
       book: biblePassage.currentBook,
       chapter: biblePassage.currentChapter,
@@ -252,6 +255,9 @@ function App() {
 
   const handleChatHistorySelect = async (chat: StandaloneChat) => {
     try {
+      // Clear last chat context since we're loading a historical chat
+      setLastChatContext(null);
+      
       await standaloneChat.loadExistingChat(
         chat.id,
         chat.passage_text || "",
