@@ -341,7 +341,9 @@ function App() {
         chapter: currentChapter,
       });
 
-      // Start new chat with an empty initial message to set context
+      // Start new chat with empty passage text (user will type first message in modal)
+      // The chapter reference provides context for the AI
+      // startNewChat just sets up local state - actual chat creation happens when user sends first message
       standaloneChat.startNewChat("", referenceWithTranslation, {
         book: currentBook,
         chapter: currentChapter,
