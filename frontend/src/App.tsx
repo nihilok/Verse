@@ -91,6 +91,11 @@ function App() {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
   const shouldShowLandingModal = useLandingModal();
   const [landingModalOpen, setLandingModalOpen] = useState(false);
+  // Track the last chat context to determine if we should continue or start new
+  const [lastChatContext, setLastChatContext] = useState<{
+    book: string;
+    chapter: number;
+  } | null>(null);
 
   // Custom hooks
   const biblePassage = useBiblePassage();
@@ -235,6 +240,9 @@ function App() {
       fullReference += ` (${biblePassage.currentTranslation})`;
     }
 
+    // Clear last chat context since we're starting a selection-based chat
+    setLastChatContext(null);
+
     standaloneChat.startNewChat(text, fullReference, {
       book: biblePassage.currentBook,
       chapter: biblePassage.currentChapter,
@@ -247,6 +255,9 @@ function App() {
 
   const handleChatHistorySelect = async (chat: StandaloneChat) => {
     try {
+      // Clear last chat context since we're loading a historical chat
+      setLastChatContext(null);
+      
       await standaloneChat.loadExistingChat(
         chat.id,
         chat.passage_text || "",
@@ -300,6 +311,46 @@ function App() {
       } else {
         setError("Failed to send message. Please try again.");
       }
+    }
+  };
+
+  const handleStartStandaloneChat = () => {
+    const currentBook = biblePassage.currentBook;
+    const currentChapter = biblePassage.currentChapter;
+    
+    // Check if we should continue an existing chat or start a new one
+    const shouldContinue =
+      lastChatContext &&
+      lastChatContext.book === currentBook &&
+      lastChatContext.chapter === currentChapter &&
+      standaloneChat.currentChatId !== null;
+
+    if (shouldContinue) {
+      // Continue the existing chat
+      setChatModalOpen(true);
+    } else {
+      // Start a new chat with the current chapter as context
+      const fullReference = `${currentBook} ${currentChapter}`;
+      const referenceWithTranslation = biblePassage.currentTranslation
+        ? `${fullReference} (${biblePassage.currentTranslation})`
+        : fullReference;
+
+      // Set the context for this chat
+      setLastChatContext({
+        book: currentBook,
+        chapter: currentChapter,
+      });
+
+      // Start new chat with empty passage text (user will type first message in modal)
+      // The chapter reference provides context for the AI
+      // startNewChat just sets up local state - actual chat creation happens when user sends first message
+      standaloneChat.startNewChat("", referenceWithTranslation, {
+        book: currentBook,
+        chapter: currentChapter,
+        translation: biblePassage.currentTranslation,
+      });
+      
+      setChatModalOpen(true);
     }
   };
 
@@ -501,6 +552,7 @@ function App() {
                 passage={biblePassage.passage}
                 onTextSelected={handleTextSelected}
                 onAskQuestion={handleAskQuestion}
+                onStartStandaloneChat={handleStartStandaloneChat}
                 onNavigate={biblePassage.handleNavigate}
                 onTranslationChange={biblePassage.handleTranslationChange}
                 loading={biblePassage.loading}
@@ -540,6 +592,7 @@ function App() {
           setChatModalOpen(open);
           if (!open) {
             standaloneChat.clearChat();
+            setLastChatContext(null);
             setError(null);
           }
         }}
