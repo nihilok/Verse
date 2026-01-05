@@ -6,7 +6,11 @@ const STORAGE_KEYS = {
   PASSAGE_SEARCH: "verse_passage_search",
   LAST_PASSAGE: "verse_last_passage",
   WAKE_LOCK_TIMEOUT: "verse_wake_lock_timeout",
+  FONT_SIZE: "verse_font_size",
 } as const;
+
+// Font size types
+export type FontSize = "small" | "medium" | "large" | "extra-large";
 
 /**
  * Safely get an item from localStorage with error handling
@@ -98,4 +102,26 @@ export function loadWakeLockTimeout(): number {
     STORAGE_KEYS.WAKE_LOCK_TIMEOUT,
     DEFAULT_WAKE_LOCK_TIMEOUT_MINUTES,
   );
+}
+
+// Font size persistence
+const DEFAULT_FONT_SIZE: FontSize = "medium";
+
+export function saveFontSize(fontSize: FontSize): void {
+  setStorageItem(STORAGE_KEYS.FONT_SIZE, fontSize);
+}
+
+export function loadFontSize(): FontSize {
+  return getStorageItem<FontSize>(STORAGE_KEYS.FONT_SIZE, DEFAULT_FONT_SIZE);
+}
+
+// Font size CSS class mapping
+export function getFontSizeClass(fontSize: FontSize): string {
+  const sizeMap: Record<FontSize, string> = {
+    small: "text-sm",
+    medium: "text-base",
+    large: "text-lg",
+    "extra-large": "text-xl",
+  };
+  return sizeMap[fontSize];
 }

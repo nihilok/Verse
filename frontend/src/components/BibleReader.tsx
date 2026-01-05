@@ -8,7 +8,8 @@ import SelectionButtons from "./SelectionButtons";
 import TranslationDropdown from "./TranslationDropdown";
 import { isVerseHighlighted } from "@/lib/urlParser";
 import { useWakeLock } from "@/hooks/useWakeLock";
-import { loadWakeLockTimeout } from "@/lib/storage";
+import { loadWakeLockTimeout, getFontSizeClass } from "@/lib/storage";
+import type { FontSize } from "@/lib/storage";
 
 // Selection timing constants
 const SELECTION_CHANGE_DELAY = 100; // ms to wait after selection change before capturing
@@ -40,6 +41,7 @@ interface BibleReaderProps {
   loading?: boolean;
   highlightVerseStart?: number;
   highlightVerseEnd?: number;
+  fontSize?: FontSize;
 }
 
 const BibleReader: React.FC<BibleReaderProps> = ({
@@ -51,6 +53,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({
   loading = false,
   highlightVerseStart,
   highlightVerseEnd,
+  fontSize = "medium",
 }) => {
   const [selectedText, setSelectedText] = useState("");
   const [selectionPosition, setSelectionPosition] = useState<{
@@ -525,7 +528,9 @@ const BibleReader: React.FC<BibleReaderProps> = ({
                   <span className="verse-number text-primary/70 font-semibold min-w-[28px] text-right select-none">
                     {verse.verse}
                   </span>
-                  <span className="text-base leading-relaxed">
+                  <span
+                    className={`${getFontSizeClass(fontSize)} leading-relaxed`}
+                  >
                     {verse.text}
                   </span>
                 </div>
