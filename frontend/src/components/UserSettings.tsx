@@ -19,7 +19,10 @@ import {
   saveWakeLockTimeout,
   loadFontSize,
   saveFontSize,
+  loadFontFamily,
+  saveFontFamily,
   type FontSize,
+  type FontFamily,
 } from "../lib/storage";
 import { SidebarTabWrapper } from "./SidebarTabWrapper";
 import { SettingsSection } from "./SettingsSection";
@@ -30,6 +33,7 @@ interface UserSettingsProps {
   onSuccess: (message: string) => void;
   onOpenDeviceLinking?: () => void;
   onFontSizeChange?: (fontSize: FontSize) => void;
+  onFontFamilyChange?: (fontFamily: FontFamily) => void;
 }
 
 export default function UserSettings({
@@ -37,12 +41,14 @@ export default function UserSettings({
   onSuccess,
   onOpenDeviceLinking,
   onFontSizeChange,
+  onFontFamilyChange,
 }: UserSettingsProps) {
   const [loading, setLoading] = useState(false);
   const [userSession, setUserSession] = useState<UserSession | null>(null);
   const [copied, setCopied] = useState(false);
   const [wakeLockTimeout, setWakeLockTimeout] = useState<number>(5);
   const [fontSize, setFontSize] = useState<FontSize>("medium");
+  const [fontFamily, setFontFamily] = useState<FontFamily>("inter");
 
   useEffect(() => {
     const loadSession = async () => {
@@ -62,6 +68,10 @@ export default function UserSettings({
     // Load font size from localStorage
     const savedFontSize = loadFontSize();
     setFontSize(savedFontSize);
+
+    // Load font family from localStorage
+    const savedFontFamily = loadFontFamily();
+    setFontFamily(savedFontFamily);
   }, []);
 
   const handleWakeLockTimeoutChange = (e: ChangeEvent<HTMLSelectElement>) => {
@@ -78,6 +88,13 @@ export default function UserSettings({
     setFontSize(newFontSize);
     saveFontSize(newFontSize);
     onFontSizeChange?.(newFontSize);
+  };
+
+  const handleFontFamilyChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    const newFontFamily = e.target.value as FontFamily;
+    setFontFamily(newFontFamily);
+    saveFontFamily(newFontFamily);
+    onFontFamilyChange?.(newFontFamily);
   };
 
   const handleClearData = async () => {
@@ -315,6 +332,25 @@ export default function UserSettings({
                 { value: "medium", label: "Medium" },
                 { value: "large", label: "Large" },
                 { value: "extra-large", label: "Extra Large" },
+              ]}
+            />
+          </SettingsSection>
+
+          <SettingsSection
+            title="Font Family"
+            description="Choose a typeface for the Bible text."
+            icon={Type}
+          >
+            <SettingsSelect
+              id="font-family"
+              label="Font:"
+              value={fontFamily}
+              onChange={handleFontFamilyChange}
+              options={[
+                { value: "inter", label: "Inter (Default)" },
+                { value: "serif", label: "Serif" },
+                { value: "atkinson", label: "Atkinson Hyperlegible" },
+                { value: "open-dyslexic", label: "OpenDyslexic" },
               ]}
             />
           </SettingsSection>

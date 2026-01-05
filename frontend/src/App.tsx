@@ -47,7 +47,12 @@ import { useInsightGeneration } from "./hooks/useInsightGeneration";
 import { useStandaloneChat } from "./hooks/useStandaloneChat";
 import { useInsightChat } from "./hooks/useInsightChat";
 import { useDevices } from "./hooks/useDevices";
-import { loadFontSize, type FontSize } from "./lib/storage";
+import {
+  loadFontSize,
+  loadFontFamily,
+  type FontSize,
+  type FontFamily,
+} from "./lib/storage";
 import "./App.css";
 
 function getUsageLimitErrorMessage(err: unknown): string | null {
@@ -93,6 +98,7 @@ function App() {
   const shouldShowLandingModal = useLandingModal();
   const [landingModalOpen, setLandingModalOpen] = useState(false);
   const [fontSize, setFontSize] = useState<FontSize>(loadFontSize);
+  const [fontFamily, setFontFamily] = useState<FontFamily>(loadFontFamily);
 
   // Custom hooks
   const biblePassage = useBiblePassage();
@@ -460,6 +466,7 @@ function App() {
                       setDeviceLinkModalOpen(true);
                     }}
                     onFontSizeChange={setFontSize}
+                    onFontFamilyChange={setFontFamily}
                   />
                 </SidebarTabContent>
               </Tabs>
@@ -510,6 +517,7 @@ function App() {
                 highlightVerseStart={biblePassage.highlightVerseStart}
                 highlightVerseEnd={biblePassage.highlightVerseEnd}
                 fontSize={fontSize}
+                fontFamily={fontFamily}
               />
             </div>
           </div>

@@ -28,8 +28,9 @@
     "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
   --font-serif:
-    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
+    "Libre Baskerville", Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-dyslexic: "OpenDyslexic", sans-serif;
+  --font-atkinson: "Atkinson Hyperlegible", sans-serif;
 
   /* Border radius - modern and clean */
   --radius-lg: 0.75rem;
@@ -84,6 +85,15 @@
   h2 {
     font-size: 2rem;
     color: oklch(20% 0 0);
+  }
+
+  /* Font family utilities */
+  .font-dyslexic {
+    font-family: var(--font-dyslexic);
+  }
+
+  .font-atkinson {
+    font-family: var(--font-atkinson);
   }
 
   /* Text selection colors matching theme */

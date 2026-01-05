@@ -7,10 +7,14 @@ const STORAGE_KEYS = {
   LAST_PASSAGE: "verse_last_passage",
   WAKE_LOCK_TIMEOUT: "verse_wake_lock_timeout",
   FONT_SIZE: "verse_font_size",
+  FONT_FAMILY: "verse_font_family",
 } as const;
 
 // Font size types
 export type FontSize = "small" | "medium" | "large" | "extra-large";
+
+// Font family types
+export type FontFamily = "inter" | "serif" | "open-dyslexic" | "atkinson";
 
 /**
  * Safely get an item from localStorage with error handling
@@ -124,4 +128,29 @@ export function getFontSizeClass(fontSize: FontSize): string {
     "extra-large": "text-xl",
   };
   return sizeMap[fontSize];
+}
+
+// Font family persistence
+const DEFAULT_FONT_FAMILY: FontFamily = "inter";
+
+export function saveFontFamily(fontFamily: FontFamily): void {
+  setStorageItem(STORAGE_KEYS.FONT_FAMILY, fontFamily);
+}
+
+export function loadFontFamily(): FontFamily {
+  return getStorageItem<FontFamily>(
+    STORAGE_KEYS.FONT_FAMILY,
+    DEFAULT_FONT_FAMILY,
+  );
+}
+
+// Font family CSS class mapping
+export function getFontFamilyClass(fontFamily: FontFamily): string {
+  const familyMap: Record<FontFamily, string> = {
+    inter: "font-sans",
+    serif: "font-serif",
+    "open-dyslexic": "font-dyslexic",
+    atkinson: "font-atkinson",
+  };
+  return familyMap[fontFamily];
 }
