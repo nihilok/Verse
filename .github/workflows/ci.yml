@@ -60,6 +60,27 @@ jobs:
         cd frontend
         bun run lint
 
+  frontend-build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v1
+      with:
+        bun-version: latest
+
+    - name: Install dependencies
+      run: |
+        cd frontend
+        bun install
+
+    - name: TypeScript type check and build
+      run: |
+        cd frontend
+        bun run build
+
   frontend-tests:
     runs-on: ubuntu-latest
 
@@ -87,8 +108,8 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Build Docker images
+    - name: Build production Docker images
       run: |
-        docker compose build
+        docker compose -f docker-compose.prod.yml build
       env:
         ANTHROPIC_API_KEY: test_key_for_ci
