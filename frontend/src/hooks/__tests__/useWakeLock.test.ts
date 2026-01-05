@@ -1,7 +1,8 @@
 /**
  * @vitest-environment jsdom
  */
-import { renderHook, waitFor, act } from "@testing-library/react";
+import { renderHook } from "@testing-library/react";
+import { act } from "react";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { useWakeLock } from "../useWakeLock";
 
@@ -102,14 +103,11 @@ describe("useWakeLock", () => {
 
     // Fast-forward time by timeout
     await act(async () => {
-      vi.advanceTimersByTime(timeout);
-      // Allow promises to resolve
-      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(timeout);
     });
 
-    await waitFor(() => {
-      expect(sentinel!.released).toBe(true);
-    });
+    // Check immediately after advancing time
+    expect(sentinel!.released).toBe(true);
 
     vi.useRealTimers();
   });
@@ -135,7 +133,7 @@ describe("useWakeLock", () => {
 
     // Advance time by half the timeout
     await act(async () => {
-      vi.advanceTimersByTime(timeout / 2);
+      await vi.advanceTimersByTimeAsync(timeout / 2);
     });
 
     // Second refresh should reset the timer
@@ -145,7 +143,7 @@ describe("useWakeLock", () => {
 
     // Advance time by half the timeout again
     await act(async () => {
-      vi.advanceTimersByTime(timeout / 2);
+      await vi.advanceTimersByTimeAsync(timeout / 2);
     });
 
     // Should still be active since we reset the timer
@@ -153,13 +151,11 @@ describe("useWakeLock", () => {
 
     // Advance the remaining time
     await act(async () => {
-      vi.advanceTimersByTime(timeout / 2);
-      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(timeout / 2);
     });
 
-    await waitFor(() => {
-      expect(sentinel!.released).toBe(true);
-    });
+    // Check immediately after advancing time
+    expect(sentinel!.released).toBe(true);
 
     vi.useRealTimers();
   });
@@ -206,24 +202,19 @@ describe("useWakeLock", () => {
 
     // Default timeout is 5 minutes (300000ms)
     await act(async () => {
-      vi.advanceTimersByTime(300000);
-      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(300000);
     });
 
-    await waitFor(() => {
-      expect(sentinel!.released).toBe(true);
-    });
+    // Check immediately after advancing time
+    expect(sentinel!.released).toBe(true);
 
     vi.useRealTimers();
   });
 
   it("should handle unsupported Wake Lock API gracefully", async () => {
-    // Remove wake lock support
-    Object.defineProperty(navigator, "wakeLock", {
-      value: undefined,
-      writable: true,
-      configurable: true,
-    });
+    // Remove wake lock support completely
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    delete (navigator as any).wakeLock;
 
     const { result } = renderHook(() => useWakeLock());
 

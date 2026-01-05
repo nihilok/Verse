@@ -30,18 +30,25 @@ describe("TranslationDropdown", () => {
     });
   });
 
-  it("renders the component with Radix UI Select", () => {
+  it("renders the component with Radix UI Select", async () => {
     render(<TranslationDropdown value="WEB" onChange={onChange} />);
 
-    // Check that the trigger button is rendered
-    const trigger = screen.getByRole("combobox");
-    expect(trigger).toBeTruthy();
+    // Wait for loading to complete
+    await waitFor(() => {
+      const trigger = screen.getByRole("combobox");
+      expect(trigger).toBeTruthy();
+    });
   });
 
-  it("displays the selected translation code in the trigger", () => {
+  it("displays the selected translation code in the trigger", async () => {
     const { container } = render(
       <TranslationDropdown value="KJV" onChange={onChange} />,
     );
+
+    // Wait for loading to complete
+    await waitFor(() => {
+      expect(screen.getByRole("combobox")).toBeTruthy();
+    });
 
     // The trigger should display "KJV"
     expect(container.textContent).toContain("KJV");
@@ -87,6 +94,11 @@ describe("TranslationDropdown", () => {
   it("calls onChange callback when a translation is selected", async () => {
     render(<TranslationDropdown value="WEB" onChange={onChange} />);
 
+    // Wait for loading
+    await waitFor(() => {
+      expect(screen.getByRole("combobox")).toBeTruthy();
+    });
+
     const trigger = screen.getByRole("combobox");
     fireEvent.click(trigger);
 
@@ -103,6 +115,11 @@ describe("TranslationDropdown", () => {
   it("does not call onChange when the same translation is selected", async () => {
     render(<TranslationDropdown value="WEB" onChange={onChange} />);
 
+    // Wait for loading
+    await waitFor(() => {
+      expect(screen.getByRole("combobox")).toBeTruthy();
+    });
+
     const trigger = screen.getByRole("combobox");
     fireEvent.click(trigger);
 
@@ -118,20 +135,31 @@ describe("TranslationDropdown", () => {
     }
   });
 
-  it("renders correctly when disabled prop is true", () => {
+  it("renders correctly when disabled prop is true", async () => {
     render(<TranslationDropdown value="WEB" onChange={onChange} disabled />);
 
+    // Wait for loading
+    await waitFor(() => {
+      const trigger = screen.getByRole("combobox");
+      expect(trigger).toBeTruthy();
+    });
+
     const trigger = screen.getByRole("combobox");
-    expect(trigger).toBeTruthy();
 
     // Check that the trigger has disabled attribute (Radix UI sets data-disabled)
     expect(trigger.hasAttribute("data-disabled")).toBe(true);
   });
 
-  it("renders correctly when disabled prop is false", () => {
+  it("renders correctly when disabled prop is false", async () => {
     render(
       <TranslationDropdown value="WEB" onChange={onChange} disabled={false} />,
     );
+
+    // Wait for loading
+    await waitFor(() => {
+      const trigger = screen.getByRole("combobox");
+      expect(trigger).toBeTruthy();
+    });
 
     const trigger = screen.getByRole("combobox");
     expect(trigger).toBeTruthy();
