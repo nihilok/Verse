@@ -6,9 +6,13 @@ const STORAGE_KEYS = {
   PASSAGE_SEARCH: "verse_passage_search",
   LAST_PASSAGE: "verse_last_passage",
   WAKE_LOCK_TIMEOUT: "verse_wake_lock_timeout",
+  VERSE_LAYOUT: "verse_layout",
   FONT_SIZE: "verse_font_size",
   FONT_FAMILY: "verse_font_family",
 } as const;
+
+// Verse layout types
+export type VerseLayout = "verse-by-verse" | "paragraph";
 
 // Font size types
 export type FontSize = "small" | "medium" | "large" | "extra-large";
@@ -105,6 +109,20 @@ export function loadWakeLockTimeout(): number {
   return getStorageItem<number>(
     STORAGE_KEYS.WAKE_LOCK_TIMEOUT,
     DEFAULT_WAKE_LOCK_TIMEOUT_MINUTES,
+  );
+}
+
+// Verse layout persistence
+const DEFAULT_VERSE_LAYOUT: VerseLayout = "verse-by-verse";
+
+export function saveVerseLayout(layout: VerseLayout): void {
+  setStorageItem(STORAGE_KEYS.VERSE_LAYOUT, layout);
+}
+
+export function loadVerseLayout(): VerseLayout {
+  return getStorageItem<VerseLayout>(
+    STORAGE_KEYS.VERSE_LAYOUT,
+    DEFAULT_VERSE_LAYOUT,
   );
 }
 

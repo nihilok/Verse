@@ -9,18 +9,22 @@ import {
   Check,
   Moon,
   Settings,
+  AlignLeft,
   Type,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { bibleService } from "../services/api";
-import type { UserSession } from "@/types";
+import type { UserSession } from "../types";
 import {
   loadWakeLockTimeout,
   saveWakeLockTimeout,
+  loadVerseLayout,
+  saveVerseLayout,
   loadFontSize,
   saveFontSize,
   loadFontFamily,
   saveFontFamily,
+  type VerseLayout,
   type FontSize,
   type FontFamily,
 } from "../lib/storage";
@@ -32,6 +36,7 @@ interface UserSettingsProps {
   onError: (message: string) => void;
   onSuccess: (message: string) => void;
   onOpenDeviceLinking?: () => void;
+  onVerseLayoutChange?: (layout: VerseLayout) => void;
   onFontSizeChange?: (fontSize: FontSize) => void;
   onFontFamilyChange?: (fontFamily: FontFamily) => void;
 }
@@ -40,6 +45,7 @@ export default function UserSettings({
   onError,
   onSuccess,
   onOpenDeviceLinking,
+  onVerseLayoutChange,
   onFontSizeChange,
   onFontFamilyChange,
 }: UserSettingsProps) {
@@ -47,6 +53,7 @@ export default function UserSettings({
   const [userSession, setUserSession] = useState<UserSession | null>(null);
   const [copied, setCopied] = useState(false);
   const [wakeLockTimeout, setWakeLockTimeout] = useState<number>(5);
+  const [verseLayout, setVerseLayout] = useState<VerseLayout>("verse-by-verse");
   const [fontSize, setFontSize] = useState<FontSize>("medium");
   const [fontFamily, setFontFamily] = useState<FontFamily>("inter");
 
@@ -65,6 +72,10 @@ export default function UserSettings({
     const savedTimeout = loadWakeLockTimeout();
     setWakeLockTimeout(savedTimeout);
 
+    // Load verse layout from localStorage
+    const savedLayout = loadVerseLayout();
+    setVerseLayout(savedLayout);
+
     // Load font size from localStorage
     const savedFontSize = loadFontSize();
     setFontSize(savedFontSize);
@@ -81,6 +92,13 @@ export default function UserSettings({
     onSuccess(
       "Wake lock timeout updated. The new setting will apply to new reading sessions.",
     );
+  };
+
+  const handleVerseLayoutChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    const newLayout = e.target.value as VerseLayout;
+    setVerseLayout(newLayout);
+    saveVerseLayout(newLayout);
+    onVerseLayoutChange?.(newLayout);
   };
 
   const handleFontSizeChange = (e: ChangeEvent<HTMLSelectElement>) => {
@@ -334,6 +352,30 @@ export default function UserSettings({
                 { value: "extra-large", label: "Extra Large" },
               ]}
             />
+          </SettingsSection>
+
+          {/* Verse Layout Settings */}
+          <SettingsSection
+            title="Verse Layout"
+            description="Choose how verses are displayed. Verse-by-verse shows each verse numbered on its own line. Paragraph view combines verses into flowing paragraphs for more natural reading."
+            icon={AlignLeft}
+          >
+            <SettingsSelect
+              id="verse-layout"
+              label="Layout:"
+              value={verseLayout}
+              onChange={handleVerseLayoutChange}
+              options={[
+                { value: "verse-by-verse", label: "Verse-by-verse" },
+                { value: "paragraph", label: "Paragraph" },
+              ]}
+            />
+            {verseLayout === "paragraph" && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                ⚠ Paragraph layout is experimental and may not display correctly
+                for all books.
+              </p>
+            )}
           </SettingsSection>
 
           <SettingsSection

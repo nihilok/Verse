@@ -1,9 +1,10 @@
+import json
 import logging
 from pathlib import Path
 
 import aiosqlite
 
-from app.clients.bible_client import BibleClient, BiblePassage, BibleVerse
+from app.clients.bible_client import BibleClient, BiblePassage, BibleVerse, ChapterContent
 
 logger = logging.getLogger(__name__)
 
@@ -124,6 +125,22 @@ class SQLiteBibleClient(BibleClient):
         self.db_path = Path(db_path) if db_path else self.DEFAULT_DB_PATH
         if not self.db_path.exists():
             raise FileNotFoundError(f"Database file not found: {self.db_path}")
+        self._has_text_parts: bool | None = None  # Cached check for textParts column
+
+    async def _check_has_text_parts(self, db: aiosqlite.Connection) -> bool:
+        """Check if the database has the contentJson column."""
+        if self._has_text_parts is not None:
+            return self._has_text_parts
+
+        try:
+            cursor = await db.execute("PRAGMA table_info(ChapterVerse)")
+            columns = await cursor.fetchall()
+            column_names = [col[1] for col in columns]
+            self._has_text_parts = "contentJson" in column_names
+        except Exception:
+            self._has_text_parts = False
+
+        return self._has_text_parts
 
     def _normalize_book_name(self, book: str) -> str:
         """Normalize book names to database book IDs."""
@@ -147,23 +164,38 @@ class SQLiteBibleClient(BibleClient):
             translation_id = self._normalize_translation(translation)
 
             async with aiosqlite.connect(self.db_path) as db:
-                cursor = await db.execute(
+                has_text_parts = await self._check_has_text_parts(db)
+
+                if has_text_parts:
+                    query = """
+                        SELECT number, chapterNumber, text, contentJson
+                        FROM ChapterVerse
+                        WHERE bookId = ? AND chapterNumber = ? AND number = ? AND translationId = ?
                     """
-                    SELECT number, chapterNumber, text
-                    FROM ChapterVerse
-                    WHERE bookId = ? AND chapterNumber = ? AND number = ? AND translationId = ?
-                    """,
-                    (book_id, chapter, verse, translation_id),
-                )
+                else:
+                    query = """
+                        SELECT number, chapterNumber, text
+                        FROM ChapterVerse
+                        WHERE bookId = ? AND chapterNumber = ? AND number = ? AND translationId = ?
+                    """
+
+                cursor = await db.execute(query, (book_id, chapter, verse, translation_id))
                 row = await cursor.fetchone()
 
                 if row:
+                    text_parts = None
+                    if has_text_parts and len(row) > 3 and row[3]:
+                        try:
+                            text_parts = json.loads(row[3])
+                        except json.JSONDecodeError:
+                            logger.warning(f"Failed to parse textParts for {book} {chapter}:{verse}")
                     return BibleVerse(
                         book=book,
                         chapter=chapter,
                         verse=row[0],
                         text=row[2],
                         translation=translation,
+                        text_parts=text_parts,
                     )
                 return None
         except Exception as e:
@@ -187,28 +219,49 @@ class SQLiteBibleClient(BibleClient):
             translation_id = self._normalize_translation(translation)
 
             async with aiosqlite.connect(self.db_path) as db:
-                cursor = await db.execute(
+                has_text_parts = await self._check_has_text_parts(db)
+
+                if has_text_parts:
+                    query = """
+                        SELECT number, chapterNumber, text, contentJson
+                        FROM ChapterVerse
+                        WHERE bookId = ? AND chapterNumber = ?
+                          AND number BETWEEN ? AND ?
+                          AND translationId = ?
+                        ORDER BY number
                     """
-                    SELECT number, chapterNumber, text
-                    FROM ChapterVerse
-                    WHERE bookId = ? AND chapterNumber = ? AND number BETWEEN ? AND ? AND translationId = ?
-                    ORDER BY number
-                    """,
-                    (book_id, chapter, verse_start, verse_end, translation_id),
-                )
+                else:
+                    query = """
+                        SELECT number, chapterNumber, text
+                        FROM ChapterVerse
+                        WHERE bookId = ? AND chapterNumber = ?
+                          AND number BETWEEN ? AND ?
+                          AND translationId = ?
+                        ORDER BY number
+                    """
+
+                cursor = await db.execute(query, (book_id, chapter, verse_start, verse_end, translation_id))
                 rows = await cursor.fetchall()
 
                 if rows:
-                    verses = [
-                        BibleVerse(
-                            book=book,
-                            chapter=chapter,
-                            verse=row[0],
-                            text=row[2],
-                            translation=translation,
+                    verses = []
+                    for row in rows:
+                        text_parts = None
+                        if has_text_parts and len(row) > 3 and row[3]:
+                            try:
+                                text_parts = json.loads(row[3])
+                            except json.JSONDecodeError:
+                                logger.warning(f"Failed to parse textParts for {book} {chapter}:{row[0]}")
+                        verses.append(
+                            BibleVerse(
+                                book=book,
+                                chapter=chapter,
+                                verse=row[0],
+                                text=row[2],
+                                translation=translation,
+                                text_parts=text_parts,
+                            )
                         )
-                        for row in rows
-                    ]
                     reference = f"{book} {chapter}:{verse_start}-{verse_end}"
                     return BiblePassage(reference=reference, verses=verses, translation=translation)
                 return None
@@ -226,34 +279,93 @@ class SQLiteBibleClient(BibleClient):
             translation_id = self._normalize_translation(translation)
 
             async with aiosqlite.connect(self.db_path) as db:
-                cursor = await db.execute(
+                has_text_parts = await self._check_has_text_parts(db)
+
+                if has_text_parts:
+                    query = """
+                        SELECT number, chapterNumber, text, contentJson
+                        FROM ChapterVerse
+                        WHERE bookId = ? AND chapterNumber = ? AND translationId = ?
+                        ORDER BY number
                     """
-                    SELECT number, chapterNumber, text
-                    FROM ChapterVerse
-                    WHERE bookId = ? AND chapterNumber = ? AND translationId = ?
-                    ORDER BY number
-                    """,
-                    (book_id, chapter, translation_id),
-                )
+                else:
+                    query = """
+                        SELECT number, chapterNumber, text
+                        FROM ChapterVerse
+                        WHERE bookId = ? AND chapterNumber = ? AND translationId = ?
+                        ORDER BY number
+                    """
+
+                cursor = await db.execute(query, (book_id, chapter, translation_id))
                 rows = await cursor.fetchall()
 
                 if rows:
-                    verses = [
-                        BibleVerse(
-                            book=book,
-                            chapter=chapter,
-                            verse=row[0],
-                            text=row[2],
-                            translation=translation,
+                    verses = []
+                    for row in rows:
+                        text_parts = None
+                        if has_text_parts and len(row) > 3 and row[3]:
+                            try:
+                                text_parts = json.loads(row[3])
+                            except json.JSONDecodeError:
+                                logger.warning(f"Failed to parse textParts for {book} {chapter}:{row[0]}")
+                        verses.append(
+                            BibleVerse(
+                                book=book,
+                                chapter=chapter,
+                                verse=row[0],
+                                text=row[2],
+                                translation=translation,
+                                text_parts=text_parts,
+                            )
                         )
-                        for row in rows
-                    ]
                     reference = f"{book} {chapter}"
                     return BiblePassage(reference=reference, verses=verses, translation=translation)
                 return None
         except Exception as e:
             logger.error(
                 f"Error fetching chapter {book} {chapter} ({translation}): {e}",
+                exc_info=True,
+            )
+            return None
+
+    async def get_chapter_content(
+        self, book: str, chapter: int, translation: str = "WEB"
+    ) -> ChapterContent | None:
+        """Get rich chapter content with formatting from the Chapter table."""
+        try:
+            book_id = self._normalize_book_name(book)
+            translation_id = self._normalize_translation(translation)
+
+            async with aiosqlite.connect(self.db_path) as db:
+                cursor = await db.execute(
+                    """
+                    SELECT json
+                    FROM Chapter
+                    WHERE bookId = ? AND number = ? AND translationId = ?
+                    """,
+                    (book_id, chapter, translation_id),
+                )
+                row = await cursor.fetchone()
+
+                if row and row[0]:
+                    try:
+                        chapter_data = json.loads(row[0])
+                        content = chapter_data.get("content", [])
+                        reference = f"{book} {chapter}"
+                        return ChapterContent(
+                            book=book,
+                            chapter=chapter,
+                            translation=translation,
+                            reference=reference,
+                            content=content,
+                        )
+                    except json.JSONDecodeError:
+                        logger.warning(f"Failed to parse Chapter JSON for {book} {chapter}")
+                        return None
+                return None
+        except Exception as e:
+            logger.error(
+                f"Error fetching chapter content {book} {chapter} ({translation}): {e}",
                 exc_info=True,
             )
             return None

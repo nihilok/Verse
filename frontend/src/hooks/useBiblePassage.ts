@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { bibleService } from "../services/api";
-import { BiblePassage } from "../types";
+import { BiblePassage, ChapterContent } from "../types";
 import { loadLastPassage, saveLastPassage } from "../lib/storage";
 import { BIBLE_BOOKS, getBookIndex } from "../lib/bibleStructure";
 import { parsePassageFromURL, generatePassageURL } from "../lib/urlParser";
@@ -9,6 +9,9 @@ import { parsePassageFromURL, generatePassageURL } from "../lib/urlParser";
 export function useBiblePassage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [passage, setPassage] = useState<BiblePassage | null>(null);
+  const [chapterContent, setChapterContent] = useState<ChapterContent | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
   const [currentBook, setCurrentBook] = useState("John");
   const [currentChapter, setCurrentChapter] = useState(3);
@@ -45,12 +48,16 @@ export function useBiblePassage() {
       setSearchParams(newUrl.slice(1));
 
       try {
-        const result = await bibleService.getChapter(
-          book,
-          chapter,
-          translation,
-        );
-        setPassage(result);
+        // Fetch both passage and chapter content in parallel
+        const [passageResult, contentResult] = await Promise.all([
+          bibleService.getChapter(book, chapter, translation),
+          bibleService
+            .getChapterContent(book, chapter, translation)
+            .catch(() => null),
+        ]);
+
+        setPassage(passageResult);
+        setChapterContent(contentResult);
 
         saveLastPassage({
           book,
@@ -60,7 +67,7 @@ export function useBiblePassage() {
           translation,
         });
 
-        return result;
+        return passageResult;
       } catch (err) {
         console.error("Error loading passage:", err);
         throw err;
@@ -167,6 +174,7 @@ export function useBiblePassage() {
 
   return {
     passage,
+    chapterContent,
     loading,
     currentBook,
     currentChapter,

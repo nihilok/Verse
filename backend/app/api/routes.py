@@ -229,6 +229,29 @@ async def get_chapter(
         await service.close()
 
 
+@router.get("/chapter/content")
+async def get_chapter_content(
+    book: str = Query(..., description="Book name"),
+    chapter: int = Query(..., description="Chapter number"),
+    translation: str = Query("WEB", description="Bible translation"),
+    current_user: User = Depends(get_current_user),
+):
+    """Get rich chapter content with formatting (paragraphs, headings, etc.)."""
+    service = BibleService()
+    try:
+        # Validate translation access
+        service.validate_translation_access(translation, current_user)
+
+        content = await service.get_chapter_content(book=book, chapter=chapter, translation=translation)
+
+        if not content:
+            raise HTTPException(status_code=404, detail="Chapter content not found")
+
+        return content
+    finally:
+        await service.close()
+
+
 @router.post("/insights")
 @limiter.limit(AI_ENDPOINT_LIMIT)
 async def generate_insights(

@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -11,6 +12,7 @@ class BibleVerse(BaseModel):
     verse: int
     text: str
     translation: str
+    text_parts: list[Any] | None = None  # Rich formatting data (poem indentation, line breaks)
 
 
 class BiblePassage(BaseModel):
@@ -19,6 +21,16 @@ class BiblePassage(BaseModel):
     reference: str
     verses: list[BibleVerse]
     translation: str
+
+
+class ChapterContent(BaseModel):
+    """Model for rich chapter content with formatting."""
+
+    book: str
+    chapter: int
+    translation: str
+    reference: str
+    content: list[dict[str, Any]]  # Array of verse, heading, line_break elements
 
 
 class BibleClient(ABC):
@@ -47,3 +59,9 @@ class BibleClient(ABC):
     async def get_chapter(self, book: str, chapter: int, translation: str = "WEB") -> BiblePassage | None:
         """Get an entire chapter."""
         pass
+
+    async def get_chapter_content(
+        self, book: str, chapter: int, translation: str = "WEB"
+    ) -> ChapterContent | None:
+        """Get rich chapter content with formatting (optional - not all clients support this)."""
+        return None

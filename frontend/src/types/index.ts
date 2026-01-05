@@ -1,9 +1,55 @@
+// Text part types for rich verse formatting
+export interface TextPartText {
+  text: string;
+  poem?: number; // Indentation level (1 = first level, 2 = second level, etc.)
+}
+
+export interface TextPartLineBreak {
+  lineBreak: true;
+}
+
+export interface TextPartNote {
+  noteId: number;
+}
+
+export type TextPart = TextPartText | TextPartLineBreak | TextPartNote | string;
+
+// Chapter content types for rich chapter formatting
+export interface ChapterContentVerse {
+  type: "verse";
+  number: number;
+  content: (string | TextPartText | TextPartLineBreak | TextPartNote)[];
+}
+
+export interface ChapterContentHeading {
+  type: "heading";
+  content: string[];
+}
+
+export interface ChapterContentLineBreak {
+  type: "line_break";
+}
+
+export type ChapterContentElement =
+  | ChapterContentVerse
+  | ChapterContentHeading
+  | ChapterContentLineBreak;
+
+export interface ChapterContent {
+  book: string;
+  chapter: number;
+  translation: string;
+  reference: string;
+  content: ChapterContentElement[];
+}
+
 export interface BibleVerse {
   book: string;
   chapter: number;
   verse: number;
   text: string;
   translation: string;
+  text_parts?: TextPart[] | null; // Rich formatting data
 }
 
 export interface BiblePassage {

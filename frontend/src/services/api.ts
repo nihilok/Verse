@@ -1,6 +1,7 @@
 import axios from "axios";
 import {
   BiblePassage,
+  ChapterContent,
   Insight,
   PassageQuery,
   InsightHistory,
@@ -156,6 +157,23 @@ export const bibleService = {
 
     const response = await axios.get<BiblePassage>(
       `${API_BASE_URL}/chapter?${params}`,
+    );
+    return response.data;
+  },
+
+  async getChapterContent(
+    book: string,
+    chapter: number,
+    translation: string = "WEB",
+  ): Promise<ChapterContent> {
+    const params = new URLSearchParams({
+      book,
+      chapter: chapter.toString(),
+      translation,
+    });
+
+    const response = await axios.get<ChapterContent>(
+      `${API_BASE_URL}/chapter/content?${params}`,
     );
     return response.data;
   },

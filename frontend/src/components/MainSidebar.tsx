@@ -17,7 +17,7 @@ import UserSettings from "./UserSettings";
 import { ModeToggle } from "./mode-toggle";
 import { useUI } from "../context/UIContext";
 import { InsightHistory, StandaloneChat } from "../types";
-import { FontSize, FontFamily } from "../lib/storage";
+import { VerseLayout, FontSize, FontFamily } from "../lib/storage";
 
 interface MainSidebarProps {
   onSearch: (
@@ -32,6 +32,7 @@ interface MainSidebarProps {
   onError: (msg: string) => void;
   onSuccess: (msg: string) => void;
   onOpenDeviceLinking: () => void;
+  onVerseLayoutChange: (layout: VerseLayout) => void;
   onFontSizeChange: (size: FontSize) => void;
   onFontFamilyChange: (font: FontFamily) => void;
 }
@@ -43,6 +44,7 @@ export default function MainSidebar({
   onError,
   onSuccess,
   onOpenDeviceLinking,
+  onVerseLayoutChange,
   onFontSizeChange,
   onFontFamilyChange,
 }: MainSidebarProps) {
@@ -110,6 +112,7 @@ export default function MainSidebar({
                 onError={onError}
                 onSuccess={onSuccess}
                 onOpenDeviceLinking={onOpenDeviceLinking}
+                onVerseLayoutChange={onVerseLayoutChange}
                 onFontSizeChange={onFontSizeChange}
                 onFontFamilyChange={onFontFamilyChange}
               />

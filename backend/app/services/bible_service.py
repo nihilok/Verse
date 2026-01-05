@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.clients.bible_client import BibleClient, BiblePassage
+from app.clients.bible_client import BibleClient, BiblePassage, ChapterContent
 from app.clients.helloao_client import HelloAOBibleClient
 from app.clients.sqlite_bible_client import SQLiteBibleClient
 from app.core.config import get_settings
@@ -47,6 +47,12 @@ class BibleService:
     async def get_chapter(self, book: str, chapter: int, translation: str = "WEB") -> BiblePassage | None:
         """Get an entire chapter."""
         return await self.client.get_chapter(book, chapter, translation)
+
+    async def get_chapter_content(
+        self, book: str, chapter: int, translation: str = "WEB"
+    ) -> ChapterContent | None:
+        """Get rich chapter content with formatting."""
+        return await self.client.get_chapter_content(book, chapter, translation)
 
     async def save_passage(self, db: AsyncSession, passage: BiblePassage) -> SavedPassage:
         """Save a passage to the database."""

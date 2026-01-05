@@ -78,11 +78,11 @@
 
 .verse-number {
   display: inline-block;
-  min-width: 30px;
   color: var(--secondary-color);
   font-weight: bold;
-  font-size: 0.9rem;
-  margin-right: 0.5rem;
+  font-size: 0.7rem;
+  margin-right: 0.5em;
+  pointer-events: none;
 }
 
 .verse-text {

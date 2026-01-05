@@ -180,4 +180,15 @@
   .prose code {
     @apply bg-muted px-1.5 py-0.5 rounded text-sm font-mono text-foreground;
   }
+
+  .verse-number {
+    @apply text-muted-foreground;
+    font-size: 0.5em;
+    vertical-align: super;
+    font-weight: 600;
+  }
+
+  .chat-message > .prose.llm-response {
+    font-size: 0.9rem;
+  }
 }

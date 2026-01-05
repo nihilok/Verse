@@ -17,8 +17,10 @@ import { useStandaloneChat } from "./hooks/useStandaloneChat";
 import { useInsightChat } from "./hooks/useInsightChat";
 import { useDevices } from "./hooks/useDevices";
 import {
+  loadVerseLayout,
   loadFontSize,
   loadFontFamily,
+  type VerseLayout,
   type FontSize,
   type FontFamily,
 } from "./lib/storage";
@@ -62,6 +64,7 @@ function App() {
   const [searchParams] = useSearchParams();
   const [chatError, setChatError] = useState<string | null>(null);
   const [insightChatError, setInsightChatError] = useState<string | null>(null);
+  const [verseLayout, setVerseLayout] = useState<VerseLayout>(loadVerseLayout);
   const [fontSize, setFontSize] = useState<FontSize>(loadFontSize);
   const [fontFamily, setFontFamily] = useState<FontFamily>(loadFontFamily);
 
@@ -99,6 +102,8 @@ function App() {
           setChatError={setChatError}
           insightChatError={insightChatError}
           setInsightChatError={setInsightChatError}
+          verseLayout={verseLayout}
+          setVerseLayout={setVerseLayout}
           fontSize={fontSize}
           setFontSize={setFontSize}
           fontFamily={fontFamily}
@@ -121,6 +126,8 @@ function AppContent({
   setChatError,
   insightChatError,
   setInsightChatError,
+  verseLayout,
+  setVerseLayout,
   fontSize,
   setFontSize,
   fontFamily,
@@ -301,6 +308,7 @@ function AppContent({
             loadDevices();
             openModal("deviceLink");
           }}
+          onVerseLayoutChange={setVerseLayout}
           onFontSizeChange={setFontSize}
           onFontFamilyChange={setFontFamily}
         />
@@ -310,6 +318,7 @@ function AppContent({
         <div className="bg-card rounded-none lg:rounded-lg shadow-none lg:shadow-sm border-0 lg:border h-full flex flex-col">
           <BibleReader
             passage={biblePassage.passage}
+            chapterContent={biblePassage.chapterContent}
             onTextSelected={handleTextSelected}
             onAskQuestion={handleAskQuestion}
             onNavigate={biblePassage.handleNavigate}
@@ -317,6 +326,7 @@ function AppContent({
             loading={biblePassage.loading}
             highlightVerseStart={biblePassage.highlightVerseStart}
             highlightVerseEnd={biblePassage.highlightVerseEnd}
+            verseLayout={verseLayout}
             fontSize={fontSize}
             fontFamily={fontFamily}
           />

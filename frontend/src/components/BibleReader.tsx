@@ -1,19 +1,15 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import type { BiblePassage } from "../types";
+import type { BiblePassage, ChapterContent } from "../types";
 import { formatReferenceWithTranslation } from "../types";
 import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import SelectionButtons from "./SelectionButtons";
 import TranslationDropdown from "./TranslationDropdown";
-import { isVerseHighlighted } from "@/lib/urlParser";
+import { VerseByVerseLayout, ParagraphLayout } from "./verse";
 import { useWakeLock } from "@/hooks/useWakeLock";
-import {
-  loadWakeLockTimeout,
-  getFontSizeClass,
-  getFontFamilyClass,
-} from "@/lib/storage";
-import type { FontSize, FontFamily } from "@/lib/storage";
+import { loadWakeLockTimeout } from "@/lib/storage";
+import type { VerseLayout, FontSize, FontFamily } from "@/lib/storage";
 
 // Selection timing constants
 const SELECTION_CHANGE_DELAY = 100; // ms to wait after selection change before capturing
@@ -26,6 +22,7 @@ const SWIPE_MAX_VERTICAL = 100; // maximum vertical movement allowed for horizon
 
 interface BibleReaderProps {
   passage: BiblePassage | null;
+  chapterContent?: ChapterContent | null;
   onTextSelected: (
     text: string,
     reference: string,
@@ -45,12 +42,14 @@ interface BibleReaderProps {
   loading?: boolean;
   highlightVerseStart?: number;
   highlightVerseEnd?: number;
+  verseLayout?: VerseLayout;
   fontSize?: FontSize;
   fontFamily?: FontFamily;
 }
 
 const BibleReader: React.FC<BibleReaderProps> = ({
   passage,
+  chapterContent,
   onTextSelected,
   onAskQuestion,
   onNavigate,
@@ -58,6 +57,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({
   loading = false,
   highlightVerseStart,
   highlightVerseEnd,
+  verseLayout = "verse-by-verse",
   fontSize = "medium",
   fontFamily = "inter",
 }) => {
@@ -515,33 +515,24 @@ const BibleReader: React.FC<BibleReaderProps> = ({
               ))}
             </div>
           ) : passage ? (
-            passage.verses.map((verse, index) => {
-              const highlighted = isVerseHighlighted(
-                verse.verse,
-                highlightVerseStart,
-                highlightVerseEnd,
-              );
-              return (
-                <div
-                  key={`${verse.chapter}:${verse.verse}`}
-                  id={`verse-${verse.verse}`}
-                  className={`mb-3 flex items-start gap-2 group ${index === 0 ? "mt-2" : ""} ${
-                    highlighted
-                      ? "bg-yellow-100 dark:bg-yellow-900/30 -mx-2 px-2 py-2 rounded-md transition-colors duration-300"
-                      : ""
-                  }`}
-                >
-                  <span className="verse-number text-primary/70 font-semibold min-w-[28px] text-right select-none">
-                    {verse.verse}
-                  </span>
-                  <span
-                    className={`${getFontSizeClass(fontSize)} ${getFontFamilyClass(fontFamily)} leading-relaxed`}
-                  >
-                    {verse.text}
-                  </span>
-                </div>
-              );
-            })
+            verseLayout === "paragraph" ? (
+              <ParagraphLayout
+                verses={passage.verses}
+                chapterContent={chapterContent || undefined}
+                fontSize={fontSize}
+                fontFamily={fontFamily}
+                highlightVerseStart={highlightVerseStart}
+                highlightVerseEnd={highlightVerseEnd}
+              />
+            ) : (
+              <VerseByVerseLayout
+                verses={passage.verses}
+                fontSize={fontSize}
+                fontFamily={fontFamily}
+                highlightVerseStart={highlightVerseStart}
+                highlightVerseEnd={highlightVerseEnd}
+              />
+            )
           ) : null}
 
           {/* Selection Tooltip */}
