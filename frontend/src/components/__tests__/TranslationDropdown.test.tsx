@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
 import TranslationDropdown from "../TranslationDropdown";
 import { bibleService } from "@/services/api";
 
@@ -18,7 +18,7 @@ const MOCK_TRANSLATIONS = [
 ];
 
 describe("TranslationDropdown", () => {
-  let onChange: ReturnType<typeof vi.fn>;
+  let onChange: Mock<(value: string) => void>;
 
   beforeEach(() => {
     onChange = vi.fn();
