@@ -9,28 +9,40 @@ import {
   Check,
   Moon,
   Settings,
+  Type,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { bibleService } from "../services/api";
-import type { UserSession } from "../types";
-import { loadWakeLockTimeout, saveWakeLockTimeout } from "../lib/storage";
+import type { UserSession } from "@/types";
+import {
+  loadWakeLockTimeout,
+  saveWakeLockTimeout,
+  loadFontSize,
+  saveFontSize,
+  type FontSize,
+} from "../lib/storage";
 import { SidebarTabWrapper } from "./SidebarTabWrapper";
+import { SettingsSection } from "./SettingsSection";
+import { SettingsSelect } from "./SettingsSelect";
 
 interface UserSettingsProps {
   onError: (message: string) => void;
   onSuccess: (message: string) => void;
   onOpenDeviceLinking?: () => void;
+  onFontSizeChange?: (fontSize: FontSize) => void;
 }
 
 export default function UserSettings({
   onError,
   onSuccess,
   onOpenDeviceLinking,
+  onFontSizeChange,
 }: UserSettingsProps) {
   const [loading, setLoading] = useState(false);
   const [userSession, setUserSession] = useState<UserSession | null>(null);
   const [copied, setCopied] = useState(false);
   const [wakeLockTimeout, setWakeLockTimeout] = useState<number>(5);
+  const [fontSize, setFontSize] = useState<FontSize>("medium");
 
   useEffect(() => {
     const loadSession = async () => {
@@ -46,6 +58,10 @@ export default function UserSettings({
     // Load wake lock timeout from localStorage
     const savedTimeout = loadWakeLockTimeout();
     setWakeLockTimeout(savedTimeout);
+
+    // Load font size from localStorage
+    const savedFontSize = loadFontSize();
+    setFontSize(savedFontSize);
   }, []);
 
   const handleWakeLockTimeoutChange = (e: ChangeEvent<HTMLSelectElement>) => {
@@ -55,6 +71,13 @@ export default function UserSettings({
     onSuccess(
       "Wake lock timeout updated. The new setting will apply to new reading sessions.",
     );
+  };
+
+  const handleFontSizeChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    const newFontSize = e.target.value as FontSize;
+    setFontSize(newFontSize);
+    saveFontSize(newFontSize);
+    onFontSizeChange?.(newFontSize);
   };
 
   const handleClearData = async () => {
@@ -232,7 +255,7 @@ export default function UserSettings({
 
           <div className="bg-muted rounded-md p-3 text-xs space-y-1">
             <div className="flex items-start gap-2">
-              <Info className="h-4 w-4 mt-0.5 flex-shrink-0 text-muted-foreground" />
+              <Info className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
               <div className="space-y-1 text-muted-foreground">
                 <p>
                   Your data is stored anonymously and linked to your device via
@@ -260,7 +283,7 @@ export default function UserSettings({
                   variant="outline"
                   size="sm"
                   onClick={handleCopyUserId}
-                  className="flex-shrink-0"
+                  className="shrink-0"
                 >
                   {copied ? (
                     <>
@@ -276,40 +299,50 @@ export default function UserSettings({
             </div>
           )}
 
+          {/* Reading Settings */}
+          <SettingsSection
+            title="Font Size"
+            description="Adjust the text size for comfortable reading."
+            icon={Type}
+          >
+            <SettingsSelect
+              id="font-size"
+              label="Size:"
+              value={fontSize}
+              onChange={handleFontSizeChange}
+              options={[
+                { value: "small", label: "Small" },
+                { value: "medium", label: "Medium" },
+                { value: "large", label: "Large" },
+                { value: "extra-large", label: "Extra Large" },
+              ]}
+            />
+          </SettingsSection>
+
           {/* Wake Lock Settings */}
-          <div className="space-y-2 mb-4">
-            <h3 className="text-sm font-medium flex items-center gap-2">
-              <Moon className="h-4 w-4" />
-              Wake Lock
-            </h3>
-            <p className="text-xs text-muted-foreground">
-              Keep your device awake while reading. The wake lock will
-              automatically release after the specified timeout period of
-              inactivity.
-            </p>
-            <div className="flex items-center gap-2">
-              <label
-                htmlFor="wake-lock-timeout"
-                className="text-xs text-muted-foreground"
-              >
-                Timeout:
-              </label>
-              <select
-                id="wake-lock-timeout"
-                value={wakeLockTimeout}
-                onChange={handleWakeLockTimeoutChange}
-                className="flex h-8 rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              >
-                <option value="1">1 minute</option>
-                <option value="2">2 minutes</option>
-                <option value="5">5 minutes</option>
-                <option value="10">10 minutes</option>
-                <option value="15">15 minutes</option>
-                <option value="30">30 minutes</option>
-                <option value="0">Disabled</option>
-              </select>
-            </div>
-          </div>
+          <SettingsSection
+            title="Wake Lock"
+            description="Keep your device awake while reading. The wake lock will automatically release after the specified timeout period of inactivity."
+            icon={Moon}
+          >
+            <SettingsSelect
+              id="wake-lock-timeout"
+              label="Timeout:"
+              value={wakeLockTimeout}
+              onChange={handleWakeLockTimeoutChange}
+              options={[
+                { value: 1, label: "1 minute" },
+                { value: 2, label: "2 minutes" },
+                { value: 5, label: "5 minutes" },
+                { value: 10, label: "10 minutes" },
+                { value: 15, label: "15 minutes" },
+                { value: 30, label: "30 minutes" },
+                { value: 0, label: "Disabled" },
+              ]}
+            />
+          </SettingsSection>
+
+          <div className="mb-4" />
         </div>
       </div>
     </SidebarTabWrapper>
