@@ -1,5 +1,5 @@
 // Keep storage mocked globally to avoid localStorage access during imports
-import { vi } from "vitest";
+import { vi, Mock } from "vitest";
 
 vi.mock("@/lib/storage", () => ({
   __esModule: true,
@@ -40,7 +40,7 @@ describe("PassageSearch (tests)", () => {
 
     const { default: PassageSearch } = await import("../PassageSearch");
 
-    const onSearch = vi.fn();
+    const onSearch: Mock<(book: string, chapter: number) => void> = vi.fn();
     render(<PassageSearch onSearch={onSearch} />);
 
     const chapterInput = screen.getByLabelText(/Chapter/i) as HTMLInputElement;
