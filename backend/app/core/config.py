@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     max_tokens_insights: int = Field(default=2000, ge=500, le=16000)
     max_tokens_definition: int = Field(default=1000, ge=500, le=16000)
     max_tokens_chat: int = Field(default=3000, ge=500, le=16000)
+    conversation_history_char_limit: int = Field(default=100_000, ge=10_000)
 
     # Application
     environment: str = "development"

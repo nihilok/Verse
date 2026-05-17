@@ -254,6 +254,7 @@ class ConversationSummary(Base):
     conversation_id = Column(Integer, nullable=False)
     summary_text = Column(Text, nullable=False)
     message_count = Column(Integer, nullable=False)  # For cache invalidation
+    last_message_id = Column(Integer, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 

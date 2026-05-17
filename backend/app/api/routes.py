@@ -3,7 +3,7 @@ import logging
 from typing import Any
 
 import anthropic
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -467,6 +467,7 @@ async def clear_definitions_history(
 async def send_chat_message(
     request: Request,
     chat_request: ChatMessageRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -489,6 +490,7 @@ async def send_chat_message(
                 passage_text=chat_request.passage_text,
                 passage_reference=chat_request.passage_reference,
                 insight_context=chat_request.insight_context,
+                background_tasks=background_tasks,
             ):
                 if chunk:  # Send non-empty content chunks
                     yield f"event: token\ndata: {json.dumps({'token': chunk})}\n\n"
@@ -510,6 +512,7 @@ async def send_chat_message(
 
     return StreamingResponse(
         event_stream(),
+        background=background_tasks,
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
@@ -558,6 +561,7 @@ async def clear_chat_messages(
 async def create_standalone_chat(
     request: Request,
     chat_create_request: StandaloneChatCreateRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -607,6 +611,7 @@ async def create_standalone_chat(
 
     return StreamingResponse(
         event_stream(),
+        background=background_tasks,
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
@@ -621,6 +626,7 @@ async def create_standalone_chat(
 async def send_standalone_chat_message(
     request: Request,
     chat_message_request: StandaloneChatMessageRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -643,6 +649,7 @@ async def send_standalone_chat_message(
                 chat_id=chat_message_request.chat_id,
                 user_id=current_user.id,
                 user_message=chat_message_request.message,
+                background_tasks=background_tasks,
             ):
                 if chunk:  # Send non-empty content chunks
                     yield f"event: token\ndata: {json.dumps({'token': chunk})}\n\n"
@@ -664,6 +671,7 @@ async def send_standalone_chat_message(
 
     return StreamingResponse(
         event_stream(),
+        background=background_tasks,
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

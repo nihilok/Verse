@@ -5,6 +5,7 @@ Prompts for ongoing conversations about passages and general biblical topics.
 """
 
 from app.prompts.base_prompts import (
+    add_conversation_summary,
     add_rag_context,
     build_continued_study_prompt,
     build_engagement_guidelines,
@@ -23,6 +24,7 @@ def build_chat_system_prompt(
     practical_application: str,
     rag_context: str = "",
     max_context_length: int = 1000,
+    conversation_summary: str = "",
 ) -> str:
     """
     Build system prompt for chat about a specific passage (with insights).
@@ -35,6 +37,7 @@ def build_chat_system_prompt(
         practical_application: Practical application insight
         rag_context: Formatted RAG context from RagService
         max_context_length: Maximum length for insight fields
+        conversation_summary: Summary of the conversation so far
 
     Returns:
         Complete system prompt for passage-based chat
@@ -57,13 +60,15 @@ def build_chat_system_prompt(
 
 {guidelines}"""
 
-    return add_rag_context(base_prompt, rag_context)
+    prompt_with_rag = add_rag_context(base_prompt, rag_context)
+    return add_conversation_summary(prompt_with_rag, conversation_summary)
 
 
 def build_standalone_chat_system_prompt(
     passage_reference: str | None = None,
     passage_text: str | None = None,
     rag_context: str = "",
+    conversation_summary: str = "",
 ) -> str:
     """
     Build system prompt for standalone chat (general questions or passage without insights).
@@ -72,6 +77,7 @@ def build_standalone_chat_system_prompt(
         passage_reference: Optional Bible reference if discussing a specific passage
         passage_text: Optional passage text if discussing a specific passage
         rag_context: Formatted RAG context from RagService
+        conversation_summary: Summary of the conversation so far
 
     Returns:
         Complete system prompt for standalone chat
@@ -105,4 +111,5 @@ Context About Your Role:
 
 {guidelines}"""
 
-    return add_rag_context(base_prompt, rag_context)
+    prompt_with_rag = add_rag_context(base_prompt, rag_context)
+    return add_conversation_summary(prompt_with_rag, conversation_summary)

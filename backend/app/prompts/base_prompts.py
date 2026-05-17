@@ -207,7 +207,29 @@ def add_rag_context(base_prompt: str, rag_context: str) -> str:
         Prompt with RAG context appended
     """
     if rag_context:
-        return f"{base_prompt}\n\n{rag_context}"
+        return (
+            f"{base_prompt}\n\n"
+            f"=== This is what you remember of past conversations that might be relevant ===\n"
+            f"{rag_context}"
+        )
+    return base_prompt
+
+
+def add_conversation_summary(base_prompt: str, conversation_summary: str) -> str:
+    """
+    Add a conversation summary section to a prompt if available.
+
+    Args:
+        base_prompt: The base system prompt (possibly already containing RAG context)
+        conversation_summary: Summary of the conversation so far (or empty string)
+
+    Returns:
+        Prompt with conversation summary appended, or base_prompt unchanged if empty
+    """
+    if conversation_summary:
+        return (
+            f"{base_prompt}\n\n" f"=== A summary of this conversation so far ===\n" f"{conversation_summary}"
+        )
     return base_prompt
 
 

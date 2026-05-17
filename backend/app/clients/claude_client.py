@@ -308,6 +308,7 @@ class ClaudeAIClient(AIClient):
         insight_context: dict,
         chat_history: list,
         rag_context: str = "",
+        conversation_summary: str = "",
     ) -> AsyncGenerator[tuple[str, str | None]]:
         """
         Generate a streaming chat response using Claude with conversation context.
@@ -341,6 +342,7 @@ class ClaudeAIClient(AIClient):
                 practical_application=insight_context.get("practical_application", ""),
                 rag_context=rag_context,
                 max_context_length=self.MAX_CONTEXT_LENGTH,
+                conversation_summary=conversation_summary,
             )
 
             # Build conversation messages
@@ -374,6 +376,7 @@ class ClaudeAIClient(AIClient):
         passage_reference: str | None = None,
         chat_history: list = None,
         rag_context: str = "",
+        conversation_summary: str = "",
     ) -> AsyncGenerator[tuple[str, str | None]]:
         """
         Generate a streaming chat response for standalone chats (not linked to insights).
@@ -408,6 +411,7 @@ class ClaudeAIClient(AIClient):
                 passage_reference=truncated_reference,
                 passage_text=truncated_passage,
                 rag_context=rag_context,
+                conversation_summary=conversation_summary,
             )
 
             # Build conversation messages
@@ -480,4 +484,54 @@ Summarize the following conversation in 1-2 sentences, focusing on the main topi
 
         except Exception as e:
             logger.error(f"Error generating conversation summary: {e}", exc_info=True)
+            return None
+
+    async def generate_truncation_summary(self, conversation_text: str) -> str | None:
+        """
+        Generate a detailed summary of a conversation using Claude Haiku.
+
+        This is used when a conversation grows too long and older messages need
+        to be replaced with a comprehensive summary for context. Uses Haiku for
+        cost efficiency but with more tokens than the RAG summary.
+
+        Args:
+            conversation_text: Formatted conversation history
+
+        Returns:
+            Detailed summary text or None on error
+        """
+        try:
+            # Use Haiku for fast, cheap summaries
+            haiku_model = "claude-3-haiku-20240307"
+            max_tokens_summary = 500  # More detailed than the 100-token RAG summary
+
+            system_prompt = (
+                "You are a helpful assistant that creates detailed summaries of Bible study conversations. "
+                "Summarize the following conversation comprehensively, capturing the key questions asked, "
+                "passages discussed, insights shared, and conclusions reached. Be thorough — this summary "
+                "will replace the full conversation history as context."
+            )
+
+            message = self.client.messages.create(
+                model=haiku_model,
+                max_tokens=max_tokens_summary,
+                system=system_prompt,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": f"Summarize this conversation:\n\n{conversation_text}",
+                    }
+                ],
+            )
+
+            if message.content and len(message.content) > 0:
+                summary = message.content[0].text.strip()
+                logger.debug(f"Generated truncation summary: {summary[:100]}...")
+                return summary
+            else:
+                logger.warning("Empty response from Claude Haiku for truncation summary generation")
+                return None
+
+        except Exception as e:
+            logger.error(f"Error generating truncation summary: {e}", exc_info=True)
             return None

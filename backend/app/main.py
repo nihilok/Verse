@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -12,6 +13,7 @@ from app.core.database import async_engine
 from app.core.middleware import AnonymousUserMiddleware
 from app.core.rate_limiter import limiter
 from app.core.security_headers import SecurityHeadersMiddleware
+from app.services.chat_service import ChatService
 
 # Configure logging for the application
 logging.basicConfig(
@@ -32,6 +34,7 @@ async def lifespan(app: FastAPI):
     """Manage application lifespan events."""
     # Database tables are created by Alembic migrations
     # See backend/MIGRATIONS.md for details
+    asyncio.create_task(ChatService().startup_summarize_long_conversations())
     yield
     # Shutdown: Dispose of async engine
     await async_engine.dispose()

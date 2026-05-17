@@ -1,15 +1,17 @@
 import logging
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import delete, select
+from fastapi import BackgroundTasks
+from sqlalchemy import delete, not_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.sql import func
+from sqlalchemy.sql import func, true
 
 from app.clients.claude_client import ClaudeAIClient
 from app.clients.embedding_client import EmbeddingClient
 from app.clients.openai_embedding_client import OpenAIEmbeddingClient
 from app.core.config import get_settings
-from app.models.models import ChatMessage, StandaloneChat, StandaloneChatMessage
+from app.core.database import AsyncSessionLocal
+from app.models.models import ChatMessage, ConversationSummary, StandaloneChat, StandaloneChatMessage
 from app.services.rag_service import RagService
 
 logger = logging.getLogger(__name__)
@@ -47,6 +49,19 @@ class ChatService:
 
         # Initialize RAG service
         self.rag_service = RagService(embedding_client=self.embedding_client)
+
+    async def _get_conversation_summary(
+        self, db: AsyncSession, conversation_type: str, conversation_id: int
+    ) -> ConversationSummary | None:
+        """Fetch an existing conversation summary that has a last_message_id set."""
+        result = await db.execute(
+            select(ConversationSummary).where(
+                ConversationSummary.conversation_type == conversation_type,
+                ConversationSummary.conversation_id == conversation_id,
+                ConversationSummary.last_message_id.isnot(None),
+            )
+        )
+        return result.scalar_one_or_none()
 
     async def send_message(
         self,
@@ -158,11 +173,17 @@ class ChatService:
 
         return ai_response
 
-    async def get_chat_messages(self, db: AsyncSession, insight_id: int, user_id: int) -> list[ChatMessage]:
+    async def get_chat_messages(
+        self, db: AsyncSession, insight_id: int, user_id: int, after_message_id: int | None = None
+    ) -> list[ChatMessage]:
         """Get all chat messages for an insight for a specific user."""
         result = await db.execute(
             select(ChatMessage)
-            .where(ChatMessage.insight_id == insight_id, ChatMessage.user_id == user_id)
+            .where(
+                ChatMessage.insight_id == insight_id,
+                ChatMessage.user_id == user_id,
+                ChatMessage.id > after_message_id if after_message_id else true(),
+            )
             .order_by(ChatMessage.created_at)
         )
         return list(result.scalars().all())
@@ -484,7 +505,7 @@ class ChatService:
         return ai_response
 
     async def get_standalone_chat_messages(
-        self, db: AsyncSession, chat_id: int, user_id: int
+        self, db: AsyncSession, chat_id: int, user_id: int, after_message_id: int | None = None
     ) -> list[StandaloneChatMessage]:
         """Get all messages for a standalone chat for a specific user."""
         # Verify the chat belongs to the user
@@ -498,7 +519,10 @@ class ChatService:
 
         result = await db.execute(
             select(StandaloneChatMessage)
-            .where(StandaloneChatMessage.chat_id == chat_id)
+            .where(
+                StandaloneChatMessage.chat_id == chat_id,
+                StandaloneChatMessage.id > after_message_id if after_message_id else true(),
+            )
             .order_by(StandaloneChatMessage.created_at)
         )
         return list(result.scalars().all())
@@ -531,6 +555,7 @@ class ChatService:
         passage_text: str,
         passage_reference: str,
         insight_context: dict,
+        background_tasks: BackgroundTasks | None = None,
     ):
         """
         Stream chat response and save to database after completion.
@@ -543,14 +568,25 @@ class ChatService:
             passage_text: The Bible passage text
             passage_reference: The Bible passage reference
             insight_context: The original insights (historical, theological, practical)
+            background_tasks: Optional FastAPI BackgroundTasks for async summarization
 
         Yields:
             Tuple[str, Optional[str]]: (text_chunk, stop_reason)
                 - text_chunk: Text content from the stream
                 - stop_reason: None for intermediate chunks, set to stop reason on final chunk
         """
-        # Get previous chat history for this user
-        chat_history = await self.get_chat_messages(db, insight_id, user_id)
+        settings = get_settings()
+        conv_summary = await self._get_conversation_summary(db, "insight", insight_id)
+        summary_text = conv_summary.summary_text if conv_summary else ""
+        after_id = conv_summary.last_message_id if conv_summary else None
+
+        # Get previous chat history for this user (filtered by summary cutoff if present)
+        chat_history = await self.get_chat_messages(db, insight_id, user_id, after_message_id=after_id)
+
+        # Fallback tail-truncation if history still exceeds the char limit
+        total_chars = sum(len(m.content) for m in chat_history)
+        if total_chars > settings.conversation_history_char_limit:
+            chat_history = chat_history[-50:]
 
         # Get enhanced RAG context from past conversations
         rag_context_text = ""
@@ -591,6 +627,7 @@ class ChatService:
                 insight_context=insight_context,
                 chat_history=chat_history,
                 rag_context=rag_context_text,
+                conversation_summary=summary_text,
             ):
                 if chunk:  # Only yield non-empty chunks
                     complete_response += chunk
@@ -641,6 +678,14 @@ class ChatService:
             # Commit to save messages
             await db.commit()
 
+            # Trigger background summarization if total history exceeds the char limit
+            full_history_chars = (
+                sum(len(m.content) for m in chat_history) + len(complete_response) + len(user_message)
+            )
+            if full_history_chars > settings.conversation_history_char_limit and background_tasks:
+                logger.info(f"Triggering conversation summarization for insight {insight_id}")
+                background_tasks.add_task(self._run_summarization, "insight", insight_id, user_id)
+
             # Yield final chunk with stop_reason
             yield ("", stop_reason)
         except Exception as e:
@@ -651,7 +696,12 @@ class ChatService:
             raise
 
     async def send_standalone_message_stream(
-        self, db: AsyncSession, chat_id: int, user_id: int, user_message: str
+        self,
+        db: AsyncSession,
+        chat_id: int,
+        user_id: int,
+        user_message: str,
+        background_tasks: BackgroundTasks | None = None,
     ):
         """
         Stream standalone chat response and save to database after completion.
@@ -661,12 +711,18 @@ class ChatService:
             chat_id: ID of the chat session
             user_id: ID of the user sending the message
             user_message: The user's message
+            background_tasks: Optional FastAPI BackgroundTasks for async summarization
 
         Yields:
             Tuple[str, Optional[str]]: (text_chunk, stop_reason)
                 - text_chunk: Text content from the stream
                 - stop_reason: None for intermediate chunks, set to stop reason on final chunk
         """
+        settings = get_settings()
+        conv_summary = await self._get_conversation_summary(db, "standalone", chat_id)
+        summary_text = conv_summary.summary_text if conv_summary else ""
+        after_id = conv_summary.last_message_id if conv_summary else None
+
         # Get the chat session and verify it belongs to the user
         result = await db.execute(
             select(StandaloneChat).where(StandaloneChat.id == chat_id, StandaloneChat.user_id == user_id)
@@ -675,8 +731,15 @@ class ChatService:
         if not chat:
             raise ValueError(f"Chat {chat_id} not found for user {user_id}")
 
-        # Get previous chat history
-        chat_history = await self.get_standalone_chat_messages(db, chat_id, user_id)
+        # Get previous chat history (filtered by summary cutoff if present)
+        chat_history = await self.get_standalone_chat_messages(
+            db, chat_id, user_id, after_message_id=after_id
+        )
+
+        # Fallback tail-truncation if history still exceeds the char limit
+        total_chars = sum(len(m.content) for m in chat_history)
+        if total_chars > settings.conversation_history_char_limit:
+            chat_history = chat_history[-50:]
 
         # Get enhanced RAG context from past conversations
         rag_context_text = ""
@@ -717,6 +780,7 @@ class ChatService:
                 passage_reference=chat.passage_reference,
                 chat_history=chat_history,
                 rag_context=rag_context_text,
+                conversation_summary=summary_text,
             ):
                 if chunk:  # Only yield non-empty chunks
                     complete_response += chunk
@@ -768,6 +832,14 @@ class ChatService:
             # Commit to save messages
             await db.commit()
 
+            # Trigger background summarization if total history exceeds the char limit
+            full_history_chars = (
+                sum(len(m.content) for m in chat_history) + len(complete_response) + len(user_message)
+            )
+            if full_history_chars > settings.conversation_history_char_limit and background_tasks:
+                logger.info(f"Triggering conversation summarization for standalone chat {chat_id}")
+                background_tasks.add_task(self._run_summarization, "standalone", chat_id, user_id)
+
             # Yield final chunk with stop_reason
             yield ("", stop_reason)
         except Exception as e:
@@ -776,3 +848,131 @@ class ChatService:
                 exc_info=True,
             )
             raise
+
+    async def _run_summarization(self, conversation_type: str, conversation_id: int, user_id: int) -> None:
+        """
+        Background task: summarize the first 80% of a conversation and store/update the
+        ConversationSummary row so that future loads can start after last_message_id.
+        """
+        async with AsyncSessionLocal() as db:
+            try:
+                # Fetch all messages (no after_message_id — we want everything)
+                if conversation_type == "insight":
+                    messages = await self.get_chat_messages(db, conversation_id, user_id)
+                else:
+                    messages = await self.get_standalone_chat_messages(db, conversation_id, user_id)
+
+                if not messages:
+                    return
+
+                # Summarize the first 80% of messages
+                cutoff = max(1, int(len(messages) * 0.8))
+                to_summarize = messages[:cutoff]
+                last_msg = to_summarize[-1]
+
+                conversation_text = "\n".join(
+                    f"{'User' if m.role == 'user' else 'Assistant'}: {m.content}" for m in to_summarize
+                )
+
+                summary_text = await self.client.generate_truncation_summary(conversation_text)
+                if not summary_text:
+                    logger.warning(
+                        f"Failed to generate truncation summary for {conversation_type} {conversation_id}"
+                    )
+                    return
+
+                # Upsert ConversationSummary
+                result = await db.execute(
+                    select(ConversationSummary).where(
+                        ConversationSummary.conversation_type == conversation_type,
+                        ConversationSummary.conversation_id == conversation_id,
+                    )
+                )
+                existing = result.scalar_one_or_none()
+
+                if existing:
+                    existing.summary_text = summary_text
+                    existing.last_message_id = last_msg.id
+                    existing.message_count = len(to_summarize)
+                else:
+                    db.add(
+                        ConversationSummary(
+                            conversation_type=conversation_type,
+                            conversation_id=conversation_id,
+                            summary_text=summary_text,
+                            last_message_id=last_msg.id,
+                            message_count=len(to_summarize),
+                        )
+                    )
+
+                await db.commit()
+                logger.info(
+                    f"Saved truncation summary for {conversation_type} {conversation_id}, "
+                    f"last_message_id={last_msg.id}"
+                )
+            except Exception as e:
+                logger.error(f"Error in _run_summarization: {e}", exc_info=True)
+
+    async def startup_summarize_long_conversations(self) -> None:
+        """
+        One-shot startup scan: find all conversations over the char limit that have no
+        truncation summary yet and summarize them sequentially.
+        """
+        settings = get_settings()
+        limit = settings.conversation_history_char_limit
+
+        async with AsyncSessionLocal() as db:
+            already_insight = select(ConversationSummary.conversation_id).where(
+                ConversationSummary.conversation_type == "insight",
+                ConversationSummary.last_message_id.isnot(None),
+            )
+            insight_rows = (
+                await db.execute(
+                    select(
+                        ChatMessage.insight_id,
+                        ChatMessage.user_id,
+                        func.sum(func.length(ChatMessage.content)).label("total_chars"),
+                    )
+                    .where(not_(ChatMessage.insight_id.in_(already_insight)))
+                    .group_by(ChatMessage.insight_id, ChatMessage.user_id)
+                    .having(func.sum(func.length(ChatMessage.content)) > limit)
+                )
+            ).all()
+
+            already_standalone = select(ConversationSummary.conversation_id).where(
+                ConversationSummary.conversation_type == "standalone",
+                ConversationSummary.last_message_id.isnot(None),
+            )
+            standalone_rows = (
+                await db.execute(
+                    select(
+                        StandaloneChatMessage.chat_id,
+                        StandaloneChat.user_id,
+                        func.sum(func.length(StandaloneChatMessage.content)).label("total_chars"),
+                    )
+                    .join(StandaloneChat, StandaloneChat.id == StandaloneChatMessage.chat_id)
+                    .where(not_(StandaloneChatMessage.chat_id.in_(already_standalone)))
+                    .group_by(StandaloneChatMessage.chat_id, StandaloneChat.user_id)
+                    .having(func.sum(func.length(StandaloneChatMessage.content)) > limit)
+                )
+            ).all()
+
+        total = len(insight_rows) + len(standalone_rows)
+        if total == 0:
+            logger.info("Startup summarization scan: no conversations need summarizing")
+            return
+
+        logger.info(
+            f"Startup summarization scan: {total} conversations to summarize "
+            f"({len(insight_rows)} insight, {len(standalone_rows)} standalone)"
+        )
+
+        for insight_id, user_id, total_chars in insight_rows:
+            logger.info(f"Startup: summarizing insight {insight_id} ({total_chars} chars)")
+            await self._run_summarization("insight", insight_id, user_id)
+
+        for chat_id, user_id, total_chars in standalone_rows:
+            logger.info(f"Startup: summarizing standalone chat {chat_id} ({total_chars} chars)")
+            await self._run_summarization("standalone", chat_id, user_id)
+
+        logger.info("Startup summarization scan: complete")
