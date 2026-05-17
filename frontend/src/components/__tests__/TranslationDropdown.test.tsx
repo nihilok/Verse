@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import TranslationDropdown from "../TranslationDropdown";
 import { bibleService } from "@/services/api";
 
@@ -18,7 +18,8 @@ const MOCK_TRANSLATIONS = [
 ];
 
 describe("TranslationDropdown", () => {
-  let onChange: Mock<(value: string) => void>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let onChange: any;
 
   beforeEach(() => {
     onChange = vi.fn();

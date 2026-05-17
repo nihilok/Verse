@@ -38,6 +38,7 @@ interface SSEEventData {
   stop_reason?: string;
   status?: string;
   error?: string;
+  error_type?: string;
 }
 
 async function handleSSEStream(
@@ -80,6 +81,10 @@ async function handleSSEStream(
             return;
           } else if (currentEvent === "error" && currentData) {
             const error = new Error(currentData.error || "Unknown error");
+            if (currentData.error_type) {
+              (error as Error & { errorType: string }).errorType =
+                currentData.error_type;
+            }
             if (handlers.onError) {
               handlers.onError(error);
             }

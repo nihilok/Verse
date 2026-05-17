@@ -2,6 +2,7 @@ import json
 import logging
 from typing import Any
 
+import anthropic
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, field_validator
@@ -22,6 +23,27 @@ from app.services.user_service import UserService
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+_SSE_AUTH_ERROR = (
+    "event: error\ndata: "
+    + json.dumps(
+        {
+            "error": "API key is invalid or expired. Please check your server configuration.",
+            "error_type": "auth_error",
+        }
+    )
+    + "\n\n"
+)
+_SSE_CREDIT_ERROR = (
+    "event: error\ndata: "
+    + json.dumps(
+        {
+            "error": "API access denied. The account may be out of credits.",
+            "error_type": "auth_error",
+        }
+    )
+    + "\n\n"
+)
 
 
 async def get_current_user(request: Request, db: AsyncSession = Depends(get_db)) -> User:
@@ -455,6 +477,10 @@ async def send_chat_message(
 
             # Send completion event with stop_reason
             yield f"event: done\ndata: {json.dumps({'status': 'complete', 'stop_reason': stop_reason})}\n\n"
+        except anthropic.AuthenticationError:
+            yield _SSE_AUTH_ERROR
+        except anthropic.PermissionDeniedError:
+            yield _SSE_CREDIT_ERROR
         except Exception as e:
             logger.error(f"Error streaming chat: {e}", exc_info=True)
             yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
@@ -548,6 +574,10 @@ async def create_standalone_chat(
 
             # Send completion event with stop_reason
             yield f"event: done\ndata: {json.dumps({'status': 'complete', 'stop_reason': stop_reason})}\n\n"
+        except anthropic.AuthenticationError:
+            yield _SSE_AUTH_ERROR
+        except anthropic.PermissionDeniedError:
+            yield _SSE_CREDIT_ERROR
         except Exception as e:
             logger.error(f"Error streaming standalone chat creation: {e}", exc_info=True)
             yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
@@ -601,6 +631,10 @@ async def send_standalone_chat_message(
 
             # Send completion event with stop_reason
             yield f"event: done\ndata: {json.dumps({'status': 'complete', 'stop_reason': stop_reason})}\n\n"
+        except anthropic.AuthenticationError:
+            yield _SSE_AUTH_ERROR
+        except anthropic.PermissionDeniedError:
+            yield _SSE_CREDIT_ERROR
         except Exception as e:
             logger.error(f"Error streaming standalone chat: {e}", exc_info=True)
             yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"

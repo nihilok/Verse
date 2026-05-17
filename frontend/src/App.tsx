@@ -1,46 +1,15 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import {
-  motion,
-  AnimatePresence,
-  useMotionValue,
-  useMotionValueEvent,
-} from "framer-motion";
-import {
-  BookOpen,
-  AlertCircle,
-  CheckCircle,
-  X,
-  History as HistoryIcon,
-  MessageSquare,
-  Menu,
-  Settings as SettingsIcon,
-  Search as SearchIcon,
-} from "lucide-react";
-import PassageSearch from "./components/PassageSearch";
+import { toast } from "sonner";
 import BibleReader from "./components/BibleReader";
-import InsightsModal from "./components/InsightsModal";
-import DefinitionModal from "./components/DefinitionModal";
-import ChatModal from "./components/ChatModal";
-import InsightsHistoryComponent from "./components/InsightsHistory";
-import ChatHistory from "./components/ChatHistory";
-import UserSettings from "./components/UserSettings";
-import DeviceLinkModal from "./components/DeviceLinkModal";
 import InstallPrompt from "./components/InstallPrompt";
 import UpdatePrompt from "./components/UpdatePrompt";
 import LoadingOverlay from "./components/LoadingOverlay";
-import LandingPageModal, {
-  useLandingModal,
-} from "./components/LandingPageModal";
-import { ModeToggle } from "./components/mode-toggle";
-import {
-  Sidebar,
-  SidebarHeader,
-  SidebarContent,
-} from "./components/ui/sidebar";
-import { Button } from "./components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "./components/ui/tabs";
-import { SidebarTabContent } from "./components/SidebarTabContent";
+import { UIProvider, useUI } from "./context/UIContext";
+import { ModalProvider, useModal } from "./context/ModalContext";
+import ModalManager from "./components/ModalManager";
+import RootLayout from "./layouts/RootLayout";
+import MainSidebar from "./components/MainSidebar";
 import { InsightHistory, StandaloneChat } from "./types";
 import { useBiblePassage } from "./hooks/useBiblePassage";
 import { useInsightGeneration } from "./hooks/useInsightGeneration";
@@ -55,7 +24,13 @@ import {
 } from "./lib/storage";
 import "./App.css";
 
-function getUsageLimitErrorMessage(err: unknown): string | null {
+function getApiErrorMessage(err: unknown): string | null {
+  if (err instanceof Error) {
+    const errorType = (err as Error & { errorType?: string }).errorType;
+    if (errorType === "auth_error") {
+      return err.message;
+    }
+  }
   if (
     err &&
     typeof err === "object" &&
@@ -85,18 +60,8 @@ function getUsageLimitErrorMessage(err: unknown): string | null {
 
 function App() {
   const [searchParams] = useSearchParams();
-  const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [sidebarFullyHidden, setSidebarFullyHidden] = useState(false);
-  const [insightsModalOpen, setInsightsModalOpen] = useState(false);
-  const [definitionModalOpen, setDefinitionModalOpen] = useState(false);
-  const [chatModalOpen, setChatModalOpen] = useState(false);
-  const [insightChatModalOpen, setInsightChatModalOpen] = useState(false);
-  const [deviceLinkModalOpen, setDeviceLinkModalOpen] = useState(false);
-  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
-  const shouldShowLandingModal = useLandingModal();
-  const [landingModalOpen, setLandingModalOpen] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
+  const [insightChatError, setInsightChatError] = useState<string | null>(null);
   const [fontSize, setFontSize] = useState<FontSize>(loadFontSize);
   const [fontFamily, setFontFamily] = useState<FontFamily>(loadFontFamily);
 
@@ -107,38 +72,63 @@ function App() {
   const insightChat = useInsightChat();
   const { devices, setDevices, loadDevices } = useDevices();
 
-  useEffect(() => {
-    const handleResize = () => {
-      const desktop = window.innerWidth >= 1024;
-      setIsDesktop(desktop);
-      if (desktop) {
-        setSidebarOpen(true);
-      }
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  const sidebarX = useMotionValue(0);
-
-  useMotionValueEvent(sidebarX, "change", (latest) => {
-    setSidebarFullyHidden(latest <= -320);
-  });
-
   const { loadFromURL, loadLastViewedPassage } = biblePassage;
-
-  useEffect(() => {
-    if (shouldShowLandingModal) {
-      setLandingModalOpen(true);
-    }
-  }, [shouldShowLandingModal]);
 
   useEffect(() => {
     if (!loadFromURL()) {
       loadLastViewedPassage();
     }
   }, [searchParams, loadFromURL, loadLastViewedPassage]);
+
+  // Handlers need access to hooks.
+  // We will define them in AppContent or pass them down.
+  // Since AppContent is inside providers, better to keep logic there or pass hooks result.
+
+  return (
+    <UIProvider>
+      <ModalProvider>
+        <AppContent
+          biblePassage={biblePassage}
+          insightGen={insightGen}
+          standaloneChat={standaloneChat}
+          insightChat={insightChat}
+          devices={devices}
+          setDevices={setDevices}
+          loadDevices={loadDevices}
+          chatError={chatError}
+          setChatError={setChatError}
+          insightChatError={insightChatError}
+          setInsightChatError={setInsightChatError}
+          fontSize={fontSize}
+          setFontSize={setFontSize}
+          fontFamily={fontFamily}
+          setFontFamily={setFontFamily}
+        />
+      </ModalProvider>
+    </UIProvider>
+  );
+}
+
+function AppContent({
+  biblePassage,
+  insightGen,
+  standaloneChat,
+  insightChat,
+  devices,
+  setDevices,
+  loadDevices,
+  chatError,
+  setChatError,
+  insightChatError,
+  setInsightChatError,
+  fontSize,
+  setFontSize,
+  fontFamily,
+  setFontFamily,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+}: any) {
+  const { setSidebarOpen, isDesktop } = useUI();
+  const { openModal, closeModal, isModalOpen } = useModal();
 
   const handleSearch = async (
     book: string,
@@ -147,7 +137,6 @@ function App() {
     verseEnd?: number,
     translation: string = "WEB",
   ) => {
-    setError(null);
     try {
       await biblePassage.handleSearch(
         book,
@@ -160,7 +149,7 @@ function App() {
         setSidebarOpen(false);
       }
     } catch (err) {
-      setError(
+      toast.error(
         "Failed to load passage. Please check your input and try again.",
       );
       console.error("Error loading passage:", err);
@@ -174,41 +163,35 @@ function App() {
     verseText?: string,
   ) => {
     if (isSingleWord && !verseText) {
-      setError(
+      toast.error(
         "Unable to find the verse containing this word. Please try selecting the full verse.",
       );
       return;
     }
 
-    setError(null);
-
     try {
       if (isSingleWord && verseText) {
         await insightGen.generateDefinition(text, verseText, reference);
-        setDefinitionModalOpen(true);
+        openModal("definition");
       } else {
         await insightGen.generateInsight(text, reference);
-        setInsightsModalOpen(true);
+        openModal("insights");
         if (insightGen.currentInsightId) {
           await insightChat.loadMessages(insightGen.currentInsightId);
         } else {
-          setError(
+          toast.error(
             "Failed to load insight messages. Insight ID was not set. Please try again.",
           );
           console.error("Insight ID is null after generateInsight");
         }
       }
     } catch (err) {
-      const usageLimitError = getUsageLimitErrorMessage(err);
-      if (usageLimitError) {
-        setError(usageLimitError);
-      } else {
-        setError(
-          isSingleWord
+      toast.error(
+        getApiErrorMessage(err) ??
+          (isSingleWord
             ? "Failed to generate definition. Please try again."
-            : "Failed to generate insights. Please try again.",
-        );
-      }
+            : "Failed to generate insights. Please try again."),
+      );
       console.error("Error generating content:", err);
     }
   };
@@ -221,7 +204,7 @@ function App() {
       item.insight,
     );
     await insightChat.loadMessages(parseInt(item.id));
-    setInsightsModalOpen(true);
+    openModal("insights");
   };
 
   const handleAskQuestion = (
@@ -250,7 +233,7 @@ function App() {
       verseEnd: end,
       translation: biblePassage.currentTranslation,
     });
-    setChatModalOpen(true);
+    openModal("chat");
   };
 
   const handleChatHistorySelect = async (chat: StandaloneChat) => {
@@ -260,13 +243,13 @@ function App() {
         chat.passage_text || "",
         chat.passage_reference || "",
       );
-      setChatModalOpen(true);
+      openModal("chat");
       if (!isDesktop) {
         setSidebarOpen(false);
       }
     } catch (err) {
       console.error("Failed to load chat messages:", err);
-      setError("Failed to load chat. Please try again.");
+      toast.error("Failed to load chat. Please try again.");
     }
   };
 
@@ -275,18 +258,14 @@ function App() {
       await standaloneChat.sendMessage(message);
     } catch (err) {
       console.error("Failed to send chat message:", err);
-      const usageLimitError = getUsageLimitErrorMessage(err);
-      if (usageLimitError) {
-        setError(usageLimitError);
-      } else {
-        setError("Failed to send message. Please try again.");
-      }
+      const apiError = getApiErrorMessage(err);
+      setChatError(apiError ?? "Failed to send message. Please try again.");
     }
   };
 
   const handleContinueChat = () => {
-    setInsightsModalOpen(false);
-    setInsightChatModalOpen(true);
+    closeModal("insights");
+    openModal("insightChat");
   };
 
   const handleSendInsightChatMessage = async (message: string) => {
@@ -302,303 +281,68 @@ function App() {
       );
     } catch (err) {
       console.error("Failed to send chat message:", err);
-      const usageLimitError = getUsageLimitErrorMessage(err);
-      if (usageLimitError) {
-        setError(usageLimitError);
-      } else {
-        setError("Failed to send message. Please try again.");
-      }
+      const apiError = getApiErrorMessage(err);
+      setInsightChatError(
+        apiError ?? "Failed to send message. Please try again.",
+      );
     }
   };
 
   return (
-    <div className="mobile-viewport-height flex flex-col bg-background">
-      {/* Book tab for opening sidebar on mobile, only visible when sidebar is fully hidden */}
-      {!sidebarOpen && sidebarFullyHidden && (
-        <button
-          aria-label="Open sidebar"
-          onClick={() => setSidebarOpen(true)}
-          className="fixed left-0 top-32 -translate-y-1/2 z-50 lg:hidden"
-          style={{
-            width: 20,
-            height: 60,
-            borderTopRightRadius: 40,
-            borderBottomRightRadius: 40,
-            background: "var(--color-card)",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            border: "1px solid var(--color-border)",
-            borderLeft: "none",
-            padding: 0,
+    <RootLayout
+      sidebar={
+        <MainSidebar
+          onSearch={handleSearch}
+          onHistorySelect={handleHistorySelect}
+          onChatHistorySelect={handleChatHistorySelect}
+          onError={(msg: string) => toast.error(msg)}
+          onSuccess={(msg: string) => toast.success(msg)}
+          onOpenDeviceLinking={() => {
+            loadDevices();
+            openModal("deviceLink");
           }}
-        >
-          <span
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              width: "100%",
-              height: "100%",
-              color: "var(--primary)",
-              fontWeight: 600,
-              fontSize: 18,
-              letterSpacing: 1,
-              userSelect: "none",
-            }}
-            className="p-5 text-secondary"
-          >
-            <Menu />
-          </span>
-        </button>
-      )}
-      <div className="flex-1 flex overflow-hidden min-h-0">
-        {/* Sidebar */}
-        <AnimatePresence>
-          {sidebarOpen && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="lg:hidden fixed inset-0 z-40 bg-black/50"
-              onClick={() => setSidebarOpen(false)}
-            />
-          )}
-        </AnimatePresence>
-
-        <motion.div
-          initial={false}
-          animate={{
-            x: sidebarOpen ? 0 : -320,
-          }}
-          transition={{
-            type: "spring",
-            damping: 30,
-            stiffness: 300,
-          }}
-          style={{ x: sidebarX }}
-          className="fixed lg:relative z-40 h-full"
-        >
-          <Sidebar className="h-full w-80 bg-card shadow-lg lg:shadow-none flex flex-col">
-            <SidebarHeader className="flex flex-col gap-2 flex-shrink-0 pb-4 border-b relative">
-              {!isDesktop && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setSidebarOpen(false)}
-                  className="absolute top-0 right-0"
-                >
-                  <X size={20} />
-                </Button>
-              )}
-              <div className="flex gap-2 w-full items-center justify-between">
-                <div className="flex gap-2 items-center">
-                  <BookOpen
-                    size={28}
-                    className="text-primary"
-                    strokeWidth={1.5}
-                  />
-                  <h2 className="font-semibold text-xl tracking-tight text-primary">
-                    Verse
-                  </h2>
-                </div>
-              </div>
-              <p className="w-full text-xs text-muted-foreground italic">
-                Discover wisdom through AI-powered insights
-              </p>
-            </SidebarHeader>
-            <SidebarContent className="flex-1 min-h-0">
-              <Tabs
-                defaultValue="search"
-                className="w-full h-full flex flex-col"
-              >
-                <TabsList className="grid w-full grid-cols-4 flex-shrink-0">
-                  <TabsTrigger
-                    value="search"
-                    className="flex items-center gap-1"
-                  >
-                    <SearchIcon size={16} className="sm:hidden" />
-                    <span className="hidden sm:inline">Search</span>
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="insights"
-                    className="flex items-center gap-1"
-                  >
-                    <HistoryIcon size={16} className="sm:hidden" />
-                    <span className="hidden sm:inline">Insights</span>
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="chats"
-                    className="flex items-center gap-1"
-                  >
-                    <MessageSquare size={16} className="sm:hidden" />
-                    <span className="hidden sm:inline">Chats</span>
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="settings"
-                    className="flex items-center gap-1"
-                  >
-                    <SettingsIcon size={16} className="sm:hidden" />
-                    <span className="hidden sm:inline">Settings</span>
-                  </TabsTrigger>
-                </TabsList>
-                <SidebarTabContent value="search">
-                  <PassageSearch onSearch={handleSearch} />
-                </SidebarTabContent>
-                <SidebarTabContent value="insights">
-                  <InsightsHistoryComponent onSelect={handleHistorySelect} />
-                </SidebarTabContent>
-                <SidebarTabContent value="chats">
-                  <ChatHistory
-                    onSelect={handleChatHistorySelect}
-                    onError={(msg) => setError(msg)}
-                  />
-                </SidebarTabContent>
-                <SidebarTabContent value="settings">
-                  <UserSettings
-                    onError={(msg) => setError(msg)}
-                    onSuccess={(msg) => setSuccessMessage(msg)}
-                    onOpenDeviceLinking={() => {
-                      loadDevices();
-                      setDeviceLinkModalOpen(true);
-                    }}
-                    onFontSizeChange={setFontSize}
-                    onFontFamilyChange={setFontFamily}
-                  />
-                </SidebarTabContent>
-              </Tabs>
-            </SidebarContent>
-            {/* ModeToggle at the bottom of the sidebar */}
-            <div className="w-full flex justify-center py-4 border-t mt-auto">
-              <ModeToggle />
-            </div>
-          </Sidebar>
-        </motion.div>
-
-        {/* Main Content */}
-        <main className="flex-1 flex flex-col overflow-hidden p-0 lg:p-6 min-h-0">
-          {error && (
-            <div className="mb-0 lg:mb-4 mx-0 lg:mx-auto flex items-center gap-2 rounded-none lg:rounded-lg border-x-0 lg:border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive max-w-4xl flex-shrink-0">
-              <AlertCircle size={20} />
-              <span className="flex-1">{error}</span>
-              <button
-                onClick={() => setError(null)}
-                className="hover:opacity-70 transition-opacity"
-              >
-                <X size={20} />
-              </button>
-            </div>
-          )}
-          {successMessage && (
-            <div className="mb-0 lg:mb-4 mx-0 lg:mx-auto flex items-center gap-2 rounded-none lg:rounded-lg border-x-0 lg:border border-green-500/50 bg-green-500/10 p-3 text-sm text-green-700 dark:text-green-400 max-w-4xl flex-shrink-0">
-              <CheckCircle size={20} />
-              <span className="flex-1">{successMessage}</span>
-              <button
-                onClick={() => setSuccessMessage(null)}
-                className="hover:opacity-70 transition-opacity"
-              >
-                <X size={20} />
-              </button>
-            </div>
-          )}
-
-          <div className="max-w-4xl lg:mx-auto flex-1 w-full min-h-0">
-            <div className="bg-card rounded-none lg:rounded-lg shadow-none lg:shadow-sm border-0 lg:border h-full flex flex-col">
-              <BibleReader
-                passage={biblePassage.passage}
-                onTextSelected={handleTextSelected}
-                onAskQuestion={handleAskQuestion}
-                onNavigate={biblePassage.handleNavigate}
-                onTranslationChange={biblePassage.handleTranslationChange}
-                loading={biblePassage.loading}
-                highlightVerseStart={biblePassage.highlightVerseStart}
-                highlightVerseEnd={biblePassage.highlightVerseEnd}
-                fontSize={fontSize}
-                fontFamily={fontFamily}
-              />
-            </div>
-          </div>
-        </main>
+          onFontSizeChange={setFontSize}
+          onFontFamilyChange={setFontFamily}
+        />
+      }
+    >
+      <div className="max-w-4xl lg:mx-auto flex-1 w-full min-h-0 p-0 lg:p-6">
+        <div className="bg-card rounded-none lg:rounded-lg shadow-none lg:shadow-sm border-0 lg:border h-full flex flex-col">
+          <BibleReader
+            passage={biblePassage.passage}
+            onTextSelected={handleTextSelected}
+            onAskQuestion={handleAskQuestion}
+            onNavigate={biblePassage.handleNavigate}
+            onTranslationChange={biblePassage.handleTranslationChange}
+            loading={biblePassage.loading}
+            highlightVerseStart={biblePassage.highlightVerseStart}
+            highlightVerseEnd={biblePassage.highlightVerseEnd}
+            fontSize={fontSize}
+            fontFamily={fontFamily}
+          />
+        </div>
       </div>
 
-      {/* Insights Modal */}
-      <InsightsModal
-        open={insightsModalOpen}
-        onOpenChange={setInsightsModalOpen}
-        insight={insightGen.insight}
-        selectedText={insightGen.selectedText}
-        reference={insightGen.selectedReference}
-        insightId={insightGen.currentInsightId}
-        chatMessages={insightChat.messages}
-        onContinueChat={handleContinueChat}
-      />
-
-      {/* Definition Modal */}
-      <DefinitionModal
-        open={definitionModalOpen}
-        onOpenChange={setDefinitionModalOpen}
-        definition={insightGen.definition}
-        word={insightGen.selectedWord}
-        reference={insightGen.selectedReference}
-      />
-
-      {/* Standalone Chat Modal */}
-      <ChatModal
-        open={chatModalOpen}
-        onOpenChange={(open) => {
-          setChatModalOpen(open);
-          if (!open) {
-            standaloneChat.clearChat();
-            setError(null);
-          }
-        }}
-        title="Chat"
-        passageText={standaloneChat.currentChatPassage?.text}
-        passageReference={standaloneChat.currentChatPassage?.reference}
-        passageParams={standaloneChat.currentChatPassage?.params}
-        messages={standaloneChat.messages}
-        onSendMessage={handleSendStandaloneChatMessage}
-        loading={standaloneChat.loading}
-        streamingMessage={standaloneChat.streamingMessage}
-        error={error}
-      />
-
-      {/* Insight Chat Modal */}
-      <ChatModal
-        open={insightChatModalOpen}
-        onOpenChange={(open) => {
-          setInsightChatModalOpen(open);
-          if (!open) setError(null);
-        }}
-        title="Continue Chat"
-        subtitle={insightGen.selectedReference}
-        passageText={insightGen.selectedText}
-        passageReference={insightGen.selectedReference}
-        passageParams={{
-          book: biblePassage.currentBook,
-          chapter: biblePassage.currentChapter,
-          verseStart: biblePassage.highlightVerseStart,
-          verseEnd: biblePassage.highlightVerseEnd,
-          translation: biblePassage.currentTranslation,
-        }}
-        messages={insightChat.messages}
-        onSendMessage={handleSendInsightChatMessage}
-        loading={insightChat.loading}
-        streamingMessage={insightChat.streamingMessage}
-        error={error}
-      />
-
-      {/* Device Link Modal */}
-      <DeviceLinkModal
-        open={deviceLinkModalOpen}
-        onOpenChange={setDeviceLinkModalOpen}
+      <ModalManager
+        biblePassage={biblePassage}
+        insightGen={insightGen}
+        standaloneChat={standaloneChat}
+        insightChat={insightChat}
         devices={devices}
-        onDevicesChange={setDevices}
-        onSuccess={(msg) => setSuccessMessage(msg)}
-        onError={(msg) => setError(msg)}
+        setDevices={setDevices}
+        setError={(msg: string | null) => {
+          if (msg) toast.error(msg);
+        }}
+        chatError={chatError}
+        setChatError={setChatError}
+        insightChatError={insightChatError}
+        setInsightChatError={setInsightChatError}
+        setSuccessMessage={(msg: string | null) => {
+          if (msg) toast.success(msg);
+        }}
+        handleSendStandaloneChatMessage={handleSendStandaloneChatMessage}
+        handleSendInsightChatMessage={handleSendInsightChatMessage}
+        handleContinueChat={handleContinueChat}
       />
 
       {/* Loading overlays */}
@@ -608,7 +352,7 @@ function App() {
       {insightGen.definitionLoading && (
         <LoadingOverlay message="Generating definition..." />
       )}
-      {standaloneChat.loading && !chatModalOpen && (
+      {standaloneChat.loading && !isModalOpen("chat") && (
         <LoadingOverlay message="Starting chat..." />
       )}
 
@@ -617,13 +361,7 @@ function App() {
 
       {/* PWA Update Prompt */}
       <UpdatePrompt />
-
-      {/* Landing Page Modal */}
-      <LandingPageModal
-        open={landingModalOpen}
-        onOpenChange={setLandingModalOpen}
-      />
-    </div>
+    </RootLayout>
   );
 }
 

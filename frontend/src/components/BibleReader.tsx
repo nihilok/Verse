@@ -490,7 +490,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({
       <CardContent
         ref={contentRef}
         key={passage && !loading ? passage.reference : "loading"}
-        className="flex-1 relative overflow-y-auto min-h-0 pt-6 px-4 sm:px-6 scrollbar-thin"
+        className="flex-1 relative overflow-y-auto min-h-0 pt-6 scrollbar-thin"
         onTouchStart={isTouchDevice ? handleTouchStart : undefined}
         onTouchMove={isTouchDevice ? handleTouchMove : undefined}
         onTouchEnd={isTouchDevice ? handleTouchEnd : undefined}
