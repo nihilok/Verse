@@ -131,10 +131,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`max-w-[95%] md:max-w-[85%] rounded-lg px-4 py-2 chat-message ${
+                className={`max-w-[95%] md:max-w-[85%] px-4 py-2 chat-message ${
                   msg.role === "user"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted"
+                    ? "bg-primary text-primary-foreground rounded-tl-2xl rounded-bl-2xl rounded-br-2xl rounded-tr-sm"
+                    : "bg-muted rounded-tr-2xl rounded-bl-2xl rounded-br-2xl rounded-tl-sm"
                 }`}
               >
                 {msg.role === "assistant" ? (
@@ -155,7 +155,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         )}
         {streamingMessage && (
           <div className="flex justify-start">
-            <div className="max-w-[95%] md:max-w-[85%] rounded-lg px-4 py-2 bg-muted">
+            <div className="max-w-[95%] md:max-w-[85%] px-4 py-2 bg-muted rounded-tr-2xl rounded-bl-2xl rounded-br-2xl rounded-tl-sm">
               <div className="prose prose-sm llm-response dark:prose-invert max-w-none">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
@@ -169,7 +169,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         )}
         {loading && !streamingMessage && (
           <div className="flex justify-start">
-            <div className="bg-muted rounded-lg px-4 py-2 flex items-center gap-2">
+            <div className="bg-muted px-4 py-2 flex items-center gap-2 rounded-tr-2xl rounded-bl-2xl rounded-br-2xl rounded-tl-sm">
               <Loader2 size={16} className="animate-spin" />
               <span className="text-sm text-muted-foreground">Thinking...</span>
             </div>
