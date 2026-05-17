@@ -456,7 +456,7 @@ class ClaudeAIClient(AIClient):
         """
         try:
             # Use Haiku for fast, cheap summaries
-            haiku_model = "claude-3-haiku-20240307"
+            haiku_model = "claude-haiku-4-5-20251001"
             max_tokens_summary = 100  # Keep summaries concise
 
             system_prompt = """You are a helpful assistant that creates concise summaries of conversations.
@@ -502,7 +502,7 @@ Summarize the following conversation in 1-2 sentences, focusing on the main topi
         """
         try:
             # Use Haiku for fast, cheap summaries
-            haiku_model = "claude-3-haiku-20240307"
+            haiku_model = "claude-haiku-4-5-20251001"
             max_tokens_summary = 500  # More detailed than the 100-token RAG summary
 
             system_prompt = (
