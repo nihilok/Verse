@@ -465,7 +465,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({
 
   return (
     <div className="flex flex-col h-full" ref={readerRef}>
-      <CardHeader className="flex flex-row items-center gap-2 pb-4 border-b flex-shrink-0 bg-muted/30 rounded-t-none lg:rounded-t-lg px-4 lg:px-6">
+      <CardHeader className="flex flex-row items-center gap-2 pb-4 border-b flex-shrink-0 bg-muted/30 rounded-t-none lg:rounded-t-lg pl-14 pr-4 lg:px-6">
         <CardTitle className="text-xl font-semibold tracking-tight">
           {passage ? (
             passage.reference
