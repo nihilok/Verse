@@ -1,5 +1,11 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  ReactNode,
+} from "react";
 
 export type ModalType =
   | "insights"
@@ -29,15 +35,15 @@ export function ModalProvider({ children }: { children: ReactNode }) {
     landing: false,
   });
 
-  const openModal = (modal: ModalType) => {
+  const openModal = useCallback((modal: ModalType) => {
     setOpenModals((prev) => ({ ...prev, [modal]: true }));
-  };
+  }, []);
 
-  const closeModal = (modal: ModalType) => {
+  const closeModal = useCallback((modal: ModalType) => {
     setOpenModals((prev) => ({ ...prev, [modal]: false }));
-  };
+  }, []);
 
-  const closeAllModals = () => {
+  const closeAllModals = useCallback(() => {
     setOpenModals((prev) => {
       const closed = { ...prev };
       (Object.keys(closed) as ModalType[]).forEach((key) => {
@@ -45,9 +51,12 @@ export function ModalProvider({ children }: { children: ReactNode }) {
       });
       return closed;
     });
-  };
+  }, []);
 
-  const isModalOpen = (modal: ModalType) => openModals[modal];
+  const isModalOpen = useCallback(
+    (modal: ModalType) => openModals[modal],
+    [openModals],
+  );
 
   return (
     <ModalContext.Provider
