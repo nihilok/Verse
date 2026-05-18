@@ -179,7 +179,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       </div>
 
       {/* Input area */}
-      <div className="border-t p-4 flex-shrink-0">
+      <div className="border-t p-4 flex-shrink-0 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
         <form onSubmit={handleSubmit} className="flex gap-2 items-end">
           <Textarea
             ref={textareaRef}

@@ -78,7 +78,7 @@ const ChatModal: React.FC<ChatModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col gap-2">
+      <DialogContent className="top-0 left-0 translate-x-0 translate-y-0 w-full max-w-none h-[100dvh] max-h-none rounded-none sm:top-[50%] sm:left-[50%] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:max-w-3xl sm:max-h-[90vh] sm:h-auto sm:rounded-lg overflow-hidden flex flex-col gap-2">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-2xl">
             <MessageCircle size={28} className="text-primary" />
