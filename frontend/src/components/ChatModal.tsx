@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { MessageCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
@@ -46,6 +46,19 @@ const ChatModal: React.FC<ChatModalProps> = ({
   streamingMessage,
   error,
 }) => {
+  const [mobileHeight, setMobileHeight] = useState<number | null>(null);
+
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!open || !vv || window.innerWidth >= 768) {
+      setMobileHeight(null);
+      return;
+    }
+    const update = () => setMobileHeight(vv.height);
+    update();
+    vv.addEventListener("resize", update);
+    return () => vv.removeEventListener("resize", update);
+  }, [open]);
   // Format reference with verse range if available
   const formattedReference = React.useMemo(() => {
     if (!passageParams) return passageReference;
@@ -78,7 +91,12 @@ const ChatModal: React.FC<ChatModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="top-0 left-0 translate-x-0 translate-y-0 w-full max-w-none h-[100dvh] max-h-none rounded-none sm:top-[50%] sm:left-[50%] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:max-w-3xl sm:max-h-[90vh] sm:h-auto sm:rounded-lg overflow-hidden flex flex-col gap-2">
+      <DialogContent
+        className="top-0 left-0 translate-x-0 translate-y-0 w-full max-w-none h-[100dvh] max-h-none rounded-none sm:top-[50%] sm:left-[50%] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:max-w-3xl sm:max-h-[90vh] sm:h-auto sm:rounded-lg overflow-hidden flex flex-col gap-2"
+        style={
+          mobileHeight != null ? { height: `${mobileHeight}px` } : undefined
+        }
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-2xl">
             <MessageCircle size={28} className="text-primary" />
